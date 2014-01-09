@@ -1,14 +1,14 @@
 # ===========================================================================
 #                  SeqAn - The Library for Sequence Analysis
 # ===========================================================================
-# File: /core/apps/seqanLast/CMakeLists.txt
+# File: /sandbox/meiers/apps/seqanLast/CMakeLists.txt
 #
 # CMakeLists.txt file for seqanLast.
 # ===========================================================================
 
 cmake_minimum_required (VERSION 2.8.2)
-project (seqan_core_apps_seqanLast)
-message (STATUS "Configuring core/apps/seqanLast")
+project (seqan_sandbox_meiers_apps_seqanLast)
+message (STATUS "Configuring sandbox/meiers/apps/seqanLast")
 
 # ----------------------------------------------------------------------------
 # Dependencies
@@ -29,7 +29,7 @@ include_directories (${SEQAN_INCLUDE_DIRS})
 add_definitions (${SEQAN_DEFINITIONS})
 
 # Update the list of file names below if you add source files to your application.
-add_executable (seqanLast seqanLast.cpp seqanLast_IO.h seqanLast_core.h)
+add_executable (seqanLast seqanLast.cpp seqanLast_core.h seqanLast_IO.h)
 
 # Add dependencies found by find_package (SeqAn).
 target_link_libraries (seqanLast ${SEQAN_LIBRARIES})

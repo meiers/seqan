@@ -1,6 +1,6 @@
-// ==========================================================================
+// ============================================================================
 //                               seqanLast_IO.h
-// ==========================================================================
+// ============================================================================
 // Copyright (c) 2006-2013, Knut Reinert, FU Berlin
 // All rights reserved.
 //
@@ -32,8 +32,8 @@
 // Author: Sascha Meiers <meiers@inf.fu-berlin.de>
 // =============================================================================
 
-#ifndef CORE_APPS_SEQANLAST_SEQANLAST_IO_H_
-#define CORE_APPS_SEQANLAST_SEQANLAST_IO_H_
+#ifndef SANDBOX_MEIERS_APPS_SEQANLAST_SEQANLAST_IO_H_
+#define SANDBOX_MEIERS_APPS_SEQANLAST_SEQANLAST_IO_H_
 using namespace seqan;
 
 // =============================================================================
@@ -67,6 +67,19 @@ struct SeqanLastOptions
 
     SeqanLastOptions() : verbosity(1)
     {}
+
+    void print() // could make an operator<< out of this
+    {
+        std::cout << "Options:" << std::endl;
+        std::cout << "   frequency:        " << frequency << std::endl;
+        std::cout << "   matchScore:       " << matchScore << std::endl;
+        std::cout << "   mismatchScore:    " << mismatchScore << std::endl;
+        std::cout << "   gapOpenScore:     " << gapOpenScore << std::endl;
+        std::cout << "   gapExtendScore:   " << gapExtendScore << std::endl;
+        std::cout << "   gappedXDrop:      " << gappedXDrop << std::endl;
+        std::cout << "   gaplessThreshold: " << gaplessThreshold << std::endl;
+        std::cout << "   gappedThreshold:  " << gappedThreshold << std::endl;
+    }
 };
 
 // =============================================================================
@@ -114,33 +127,33 @@ void _setParser(ArgumentParser & parser)
     addSection(parser, "Main Options");
 
     addOption(parser, ArgParseOption("F", "frequency", "Initial match frequency for adaptive seeds",
-                      ArgParseArgument::INTEGER));
-                      setDefaultValue(parser, "F", "10");
-                      setMinValue(parser, "F", "0");
+                                     ArgParseArgument::INTEGER));
+    setDefaultValue(parser, "F", "10");
+    setMinValue(parser, "F", "0");
     addOption(parser, ArgParseOption("r", "matchScore", "Match score for verification phase",
-                      ArgParseArgument::INTEGER));
-                      setDefaultValue(parser, "r", "1");
+                                     ArgParseArgument::INTEGER));
+    setDefaultValue(parser, "r", "1");
     addOption(parser, ArgParseOption("q", "mismatchScore", "Mismatch score for verification phase",
-                      ArgParseArgument::INTEGER));
-                      setDefaultValue(parser, "q", "-1");
+                                     ArgParseArgument::INTEGER));
+    setDefaultValue(parser, "q", "-1");
     addOption(parser, ArgParseOption("a", "gapOpenScore", "Gap opening score for verification phase",
-                      ArgParseArgument::INTEGER));
-                      setDefaultValue(parser, "a", "-7");
+                                     ArgParseArgument::INTEGER));
+    setDefaultValue(parser, "a", "-7");
     addOption(parser, ArgParseOption("b", "gapExtendScore", "Gap extension score for verification phase. "
-                      "Gaps of length k are scored with a+k*b", ArgParseArgument::INTEGER));
-                      setDefaultValue(parser, "b", "-1");
+                                     "Gaps of length k are scored with a+k*b", ArgParseArgument::INTEGER));
+    setDefaultValue(parser, "b", "-1");
     addOption(parser, ArgParseOption("x", "gappedXDrop", "Maximal x-drop score during the gapped alignment",
-                      ArgParseArgument::INTEGER));
-                      setDefaultValue(parser, "x", "10");
+                                     ArgParseArgument::INTEGER));
+    setDefaultValue(parser, "x", "10");
     addOption(parser, ArgParseOption("y", "gaplessXDrop", "Maximal x-drop score during the gapless extension",
-                      ArgParseArgument::INTEGER));
-                      setDefaultValue(parser, "y", "14");
+                                     ArgParseArgument::INTEGER));
+    setDefaultValue(parser, "y", "14");
     addOption(parser, ArgParseOption("d", "gaplessThreshold", "Minimum score of the gapless alignment to continue",
-                      ArgParseArgument::INTEGER));
-                      setDefaultValue(parser, "d", "12");
+                                     ArgParseArgument::INTEGER));
+    setDefaultValue(parser, "d", "12");
     addOption(parser, ArgParseOption("e", "gappedThreshold", "Minimum score of the gapped alignment to continue",
-                      ArgParseArgument::INTEGER));
-                      setDefaultValue(parser, "e", "25");
+                                     ArgParseArgument::INTEGER));
+    setDefaultValue(parser, "e", "25");
 
     addTextSection(parser, "References");
     addText(parser, "Kielbasa et al.: Adaptive seeds tame genomic sequence comparison. 2008");
@@ -267,4 +280,199 @@ _importSequences(TSeqSet & seqs, TIdSet & ids, CharString const & fileName, int 
     return true;
 }
 
-#endif  // #ifndef CORE_APPS_SEQANLAST_SEQANLAST_IO_H_
+// -----------------------------------------------------------------------------
+// Function _writeMatchGff()
+// -----------------------------------------------------------------------------
+
+///////////////////////////////////////////////////////////////////////////////
+// Determines the length and the number of matches of two alignment rows
+template<typename TRow, typename TSize>
+inline void
+_analyzeAlignment(TRow const & row0, TRow const & row1, TSize & aliLen, TSize & matches) {
+	TSize pos = 0;
+    SEQAN_ASSERT_EQ(length(row0), length(row1));
+    TSize end0 = length(row0);
+    TSize end1 = length(row1);
+
+	matches = 0;
+    while ((pos < end0) && (pos < end1)) {
+        if (!isGap(row0, pos) && !isGap(row1, pos)) {
+            if (value(row0, pos) == value(row1, pos)) {
+                ++matches;
+            }
+        }
+        ++pos;
+    }
+
+	aliLen = _max(end0, end1);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// Calculates the identity of two alignment rows (percentage of matching positions).
+template<typename TRow>
+double
+_computeIdentity(TRow const & row0, TRow const & row1) {
+    typedef typename Size<TRow>::Type TSize;
+    TSize matches, aliLen;
+	_analyzeAlignment(row0, row1, aliLen, matches);
+
+    return floor(1000000.0 * matches / aliLen) / 10000.0;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// Computes a CIGAR string and mutations from rows of StellarMatch.
+template<typename TRow, typename TString>
+void
+_getCigarLine(TRow const & row0, TRow const & row1, TString & cigar, TString & mutations) {
+    SEQAN_CHECKPOINT
+    typedef typename Size<TRow>::Type TSize;
+
+    TSize pos = 0;
+
+    SEQAN_ASSERT_EQ(length(row0), length(row1));
+    TSize dbEndPos = length(row0);
+    TSize queryEndPos = length(row1);
+
+    bool first = true;
+    TSize readBasePos = pos + clippedBeginPosition(row1);
+    TSize readPos = 0;
+	while (pos < dbEndPos || pos < queryEndPos) {
+		int matched = 0;
+		int inserted = 0;
+		int deleted = 0;
+		while (pos != dbEndPos && pos != queryEndPos &&
+               !isGap(row0, pos) && !isGap(row1, pos)) {
+            ++readPos;
+			if (value(row0, pos) != value(row1, pos)) {
+				if (first) first = false;
+				else mutations << ",";
+				mutations << readPos << value(source(row1), readBasePos);
+			}
+			++readBasePos;
+			++pos;
+			++matched;
+		}
+		if (matched > 0) cigar << matched << "M" ;
+		while (pos < dbEndPos && isGap(row1, pos)) {
+			++pos;
+			++deleted;
+		}
+		if (deleted > 0) cigar << deleted << "D";
+		while (pos < queryEndPos && isGap(row0, pos)) {
+			++pos;
+			++readPos;
+			if (first) first = false;
+			else mutations << ",";
+			mutations << readPos << value(source(row1), readBasePos);
+			++readBasePos;
+			++inserted;
+		}
+		if (inserted > 0) cigar << inserted << "I";
+	}
+}
+
+template<typename TId, typename TSize, typename TRow, typename TFile>
+void
+_writeMatchGff(TId const & databaseID,
+               TId const & patternID,
+               bool databaseStrand,
+               TSize lengthAdjustment,
+               TRow const & row0,
+               TRow const & row1,
+               TFile & file)
+{
+    typedef typename Value<typename Source<TRow>::Type>::Type TAlphabet;
+
+    for (typename Position<TId>::Type i = 0; i < length(databaseID) && value(databaseID, i) > 32; ++i) {
+        file << value(databaseID, i);
+    }
+
+    file << "\tseqanLast";
+    file << "\tseqanLast_match";
+
+    if (databaseStrand) {
+        file << "\t" << beginPosition(row0) + beginPosition(source(row0)) + 1;
+        file << "\t" << endPosition(row0) + beginPosition(source(row0));
+    } else {
+        file << "\t" << length(source(row0)) - (endPosition(row0) + beginPosition(source(row0))) + 1;
+        file << "\t" << length(source(row0)) - (beginPosition(row0) + beginPosition(source(row0)));
+    }
+
+    file << "\t" << _computeIdentity(row0, row1);
+
+    file << "\t" << (databaseStrand ? '+' : '-');
+
+    file << "\t.\t";
+    for (typename Position<TId>::Type i = 0; i < length(patternID) && value(patternID, i) > 32; ++i) {
+        file << value(patternID, i);
+    }
+
+    file << ";seq2Range=" << beginPosition(row1) + beginPosition(source(row1)) + 1;
+    file << "," << endPosition(row1) + beginPosition(source(row1));
+
+    //    if (IsSameType<TAlphabet, Dna5>::VALUE || IsSameType<TAlphabet, Rna5>::VALUE)
+    //        file << ";eValue=" << _computeEValue(row0, row1, lengthAdjustment);
+
+    std::stringstream cigar, mutations;
+    _getCigarLine(row0, row1, cigar, mutations);
+    file << ";cigar=" << cigar.str();
+    file << ";mutations=" << mutations.str();
+    file << "\n";
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// Writes rows of a StellarMatch in human readable format to file.
+template<typename TId, typename TSize, typename TRow, typename TFile>
+void
+_writeMatch(TId const & databaseID,
+            TId const & patternID,
+            bool const databaseStrand,
+			TSize lengthAdjustment,
+            TRow const & row0,
+            TRow const & row1,
+            TFile & file) {
+    //IOREV _recordreading_ _stub_
+    typedef typename Value<typename Source<TRow>::Type>::Type TAlphabet;
+
+	// write database ID
+	file << "Database sequence: " << databaseID;
+	if (!databaseStrand) file << " (complement)" << std::endl;
+	else file << std::endl;
+
+	// write database positions
+	file << "Database positions: ";
+	if (databaseStrand) {
+		file << beginPosition(row0) + beginPosition(source(row0));
+		file << ".." << endPosition(row0) + beginPosition(source(row0));
+	} else {
+		file << length(source(row0)) - beginPosition(row0) + beginPosition(source(row0));
+		file << ".." << length(source(row0)) - endPosition(row0) + beginPosition(source(row0));
+	}
+	file << std::endl;
+
+	// write query ID
+	file << "Query sequence: " << patternID << std::endl;
+
+	// write query positions
+	file << "Query positions: ";
+	file << beginPosition(row1) + beginPosition(source(row1));
+	file << ".." << endPosition(row1) + beginPosition(source(row1));
+	file << std::endl;
+
+    if (IsSameType<TAlphabet, Dna5>::VALUE || IsSameType<TAlphabet, Rna5>::VALUE)
+    {
+	    // write e-value
+	    file << "E-value: " << _computeEValue(row0, row1, lengthAdjustment) << std::endl;
+    }
+
+	file << std::endl;
+
+	// write match
+	Align<typename Source<TRow>::Type> align;
+	appendValue(align.data_rows, row0);
+	appendValue(align.data_rows, row1);
+	file << align;
+	file << "----------------------------------------------------------------------\n" << std::endl;
+}
+
+#endif  // #ifndef SANDBOX_MEIERS_APPS_SEQANLAST_SEQANLAST_IO_H_
