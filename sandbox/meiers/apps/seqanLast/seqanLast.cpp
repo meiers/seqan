@@ -1,6 +1,6 @@
-// =============================================================================
+// ==========================================================================
 //                                 seqanLast
-// =============================================================================
+// ==========================================================================
 // Copyright (c) 2006-2013, Knut Reinert, FU Berlin
 // All rights reserved.
 //
@@ -28,17 +28,23 @@
 // OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
 // DAMAGE.
 //
-// =============================================================================
+// ==========================================================================
 // Author: Sascha Meiers <meiers@inf.fu-berlin.de>
-// =============================================================================
+// ==========================================================================
 // Parts of this code are copied (and or modified) from the Stellar source code
 // by Birte Kehr, others might be taken from Martin Friths LAST code
 // (last.cbrc.jp).
 
 #include <seqan/sequence.h>
 #include <seqan/arg_parse.h>
+#include <seqan/index.h>
+#include <seqan/seeds.h>
+#include <seqan/align_extend.h>
 #include "seqanLast_IO.h"
 #include "seqanLast_core.h"
+
+//#include <seqan/align_extend.h>
+
 using namespace seqan;
 
 
@@ -57,7 +63,8 @@ using namespace seqan;
 int main(int argc, char const ** argv)
 {
     typedef Dna5 TAlphabet;
-    typedef StringSet<String<TAlphabet>, Owner<> > TSeqSet;
+    typedef StringSet<String<TAlphabet>, Owner<> > TSeqSet; // TODO: MAke this concat direct ??
+    typedef SeqanLastMatch<Size<TSeqSet>::Type, Gaps<Infix<String<TAlphabet> >::Type, ArrayGaps> > Match;
 
     // get options
     SeqanLastOptions options;
@@ -77,5 +84,30 @@ int main(int argc, char const ** argv)
     if (!_importSequences(queries, queryIDs, options.queryFile, options.verbosity))
         return 1;
 
+
+    // Get Indices
+    typedef Index<TSeqSet, IndexSa<> > TIndex;
+    TIndex index(databases);
+    typedef Index<TSeqSet, IndexQGram<Shape<AminoAcid, UngappedShape<2> > > > TTable;
+    TTable table(databases);
+    // TODO: Make hash table suit the SA
+
+
+    // Prepare Scores
+    Score<int, Simple> scoreMatrix(options.matchScore, options.mismatchScore, options.gapExtendScore,
+                                   options.gapExtendScore + options.gapOpenScore);
+
+    // Output Options:
+    if(options.verbosity > 1)
+        options.print();
+
+
+    // Do the main work: alignments
+    String<Match> results;
+    linearLastal(results, index, table, queries, options.frequency, scoreMatrix, options.gaplessXDrop,
+                 options.gappedXDrop, options.gaplessThreshold, options.gappedThreshold, options.verbosity);
+    
+    
+    
     return 0;
 }
