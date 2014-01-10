@@ -102,13 +102,13 @@ struct DiagonalTable
 // Struct SeqanLastMatch
 // -----------------------------------------------------------------------------
 
-template <typename TSize, typename TRow>
+template <typename TSize, typename TAlign>
 struct SeqanLastMatch
 {
-    TSize databaseId;
-    TSize queryId;
-    TRow dbRow;
-    TRow quRow;
+    typedef TAlign Type;
+    TAlign align;
+    TSize  dbId;
+    TSize  quId;
 };
 
 // =============================================================================
@@ -140,6 +140,7 @@ adaptiveSeeds(TTrieIndex &index, TLookupIndex & table,
     typedef typename Size<TTrieIndex>::Type                   TSize;
     typedef typename Iterator<TQuery const, Standard>::Type   TQueryIter;
     typedef typename Fibre<TLookupIndex, QGramShape>::Type    TShape;
+    // TODO: Here Shape is always ungapped, but in the index it can be gapped !!
     typedef typename Value<TShape>::Type                      THash;
     typedef typename Host<TShape>::Type                       TShapeAlph;
 
@@ -151,25 +152,19 @@ adaptiveSeeds(TTrieIndex &index, TLookupIndex & table,
     // 1.
     // Lookup the hash table only for full length Shapes to avoid
     // possible problems with Open Adressing indiex.
-    // TODO: Hash table a.s.o.
-    /*
-     // NOTE: Q-gram Index amd Suffix Array don't suit each other
-     // because qgram index doesn't hash last q-1 positions !!!
+    if(static_cast<TSize>(qryEnd - qry) >= weight(qryHash) )
+    {
+        hash(qryHash, qry);
+        Pair<TSize> initialRange = range(table, qryHash);
 
-     if(static_cast<TSize>(qryEnd - qry) >= weight(qryHash) )
-     {
-     hash(qryHash, qry);
-     Pair<TSize> initialRange = range(table, qryHash);
-
-     if(initialRange.i2 - initialRange.i1 > maxFreq)
-     {
-     treeIter.vDesc.range = initialRange;
-     treeIter.vDesc.repLen = weight(qryHash);
-     qry += weight(qryHash);
-     treeIter.vDesc.lastChar = *qry;
-     }
-     }
-     */
+        if(initialRange.i2 - initialRange.i1 > maxFreq)
+        {
+            treeIter.vDesc.range = initialRange;
+            treeIter.vDesc.repLen = weight(qryHash);
+            qry += weight(qryHash);
+            treeIter.vDesc.lastChar = *qry;
+        }
+    }
 
     // 2.
     // Continue or restart search in the Suffix array.
@@ -256,12 +251,12 @@ myUngapedExtendSeed(Seed<Simple, TConfig> & seed,
 // -----------------------------------------------------------------------------
 
 template <
-typename TAlignObject,
-typename TConfig,
-typename TDatabase,
-typename TQuery,
-typename TScoreValue,
-typename TScoreSpec>
+    typename TAlignObject,
+    typename TConfig,
+    typename TDatabase,
+    typename TQuery,
+    typename TScoreValue,
+    typename TScoreSpec>
 inline TScoreValue myExtendAlignment(
                                      TAlignObject &                  alignObj,
                                      Seed<Simple, TConfig> const &   seed,
@@ -270,31 +265,14 @@ inline TScoreValue myExtendAlignment(
                                      Score<TScoreValue, TScoreSpec> const & scoreMatrix,
                                      TScoreValue                     gappedXDropScore)
 {
-    // NOTE: The Alignment module requires query and database to have the same type
-
     typedef typename Size<TDatabase>::Type                     TSize;
 
     resize(rows(alignObj), 2);
     assignSource(row(alignObj, 0), infix(database, beginPositionH(seed), endPositionH(seed)));
     assignSource(row(alignObj, 1), infix(query, beginPositionV(seed), endPositionV(seed)));
 
-#ifdef SEQAN_LAST_DEBUG_GAPPED_EXTEND
-    std::cout << "  gapped extension: query[" << beginPositionV(seed) << "-" << endPositionV(seed) <<
-    "] vs. database[" << beginPositionH(seed) << "-" << endPositionH(seed)<<  "]" <<
-    " ungapped score: " << score(seed) << std::endl << alignObj;
-#endif
-
     // Run a local alignment first to get the "core" of the alignment
     TScoreValue localScore = localAlignment(alignObj, scoreMatrix);
-
-#ifdef SEQAN_LAST_DEBUG_GAPPED_EXTEND
-    std::cout << "   \\__local aLign: query[" <<
-    beginPositionV(seed) + beginPosition(row(alignObj, 1)) << "-" <<
-    beginPositionV(seed) + endPosition(row(alignObj, 1)) << "] vs. database[" <<
-    beginPositionH(seed) + beginPosition(row(alignObj, 0)) << "-" <<
-    beginPositionH(seed) + endPosition(row(alignObj, 0)) <<  "]" <<
-    " score: " << localScore << std::endl << alignObj;
-#endif
 
     // Now extend both ends
     Tuple<TSize, 4> positions;
@@ -302,13 +280,11 @@ inline TScoreValue myExtendAlignment(
     positions[1] = beginPositionV(seed) + beginPosition(row(alignObj, 1));
     positions[2] = beginPositionH(seed) + endPosition(row(alignObj, 0));
     positions[3] = beginPositionV(seed) + endPosition(row(alignObj, 1));
-    TScoreValue finalScore = 0; //extendAlignment(alignObj, localScore, database, query, positions, EXTEND_BOTH, gappedXDropScore, scoreMatrix);
 
-#ifdef SEQAN_LAST_DEBUG_GAPPED_EXTEND
-    std::cout << "   \\__extended: query[" << beginPosition(row(alignObj, 1)) << "-" << endPosition(row(alignObj, 1)) <<
-    "] vs. database[" << beginPosition(row(alignObj, 0)) << "-" << endPosition(row(alignObj, 0)) <<  "]" <<
-    " score: " << finalScore << std::endl << alignObj;
-#endif
+
+    // TODO: extendAlignment mit AliExtContext damit die Matrizen nicht immer wieder allokiert werden müssen!
+
+    TScoreValue finalScore = extendAlignment(alignObj, localScore, database, query, positions, EXTEND_BOTH, gappedXDropScore, scoreMatrix);
 
     return finalScore;
 }
@@ -318,15 +294,15 @@ inline TScoreValue myExtendAlignment(
 // -----------------------------------------------------------------------------
 
 template <typename TMatches,
-typename TDatabase,
-typename TDatabaseSetSpec,
-typename TIndexSpec,
-typename TShape,
-typename TQueryString,
-typename TQuerySetSpec,
-typename TSize2,
-typename TScoreMatrix,
-typename TScore>
+    typename TDatabase,
+    typename TDatabaseSetSpec,
+    typename TIndexSpec,
+    typename TShape,
+    typename TQueryString,
+    typename TQuerySetSpec,
+    typename TSize2,
+    typename TScoreMatrix,
+    typename TScore>
 void linearLastal(
                   TMatches & finalMatches,
                   Index<StringSet<TDatabase, TDatabaseSetSpec>, IndexSa<TIndexSpec> > &index,
@@ -349,9 +325,14 @@ void linearLastal(
     typedef String<typename SAValue<TIndex>::Type>                  TSA;
     typedef typename Iterator<TSA, Standard>::Type                  TSAIter;
     typedef DiagonalTable<typename Difference<TDatabase>::Type, typename Size<TDatabase>::Type> TDiagTable;
+    typedef typename Value<TMatches>::Type TMatch;
 
-    double timeAdaptiveSeedCalls = 0;
-    unsigned countAdaptiveSeedCalls = 0;
+    // Self-measurements
+    double      _tASCalls = 0;
+    unsigned    _cASCalls = 0;
+    unsigned    _cSeeds = 0;
+    unsigned    _cgpAls = 0;
+    unsigned    _cglAls = 0;
 
     TSize L = length(indexText(index));
     String<TDiagTable> diagTables;
@@ -366,7 +347,7 @@ void linearLastal(
     for(typename Size<TQuerySet>::Type queryId=0; queryId < length(querySet); ++queryId)
     {
         TQueryString const & query = querySet[queryId];
-        typename Size<TQueryString>::Type queryPos;
+        typename Size<TQueryString>::Type queryPos = 0;
         TQueryIter queryBeg = begin(query, Standard());
         TQueryIter queryEnd = end(query, Standard());
 
@@ -377,7 +358,8 @@ void linearLastal(
             // Lookup adaptive Seed
             double xxx = cpuTime();
             Pair<TSize> range = adaptiveSeeds(index, table, suffix(query, queryPos), maxFreq, verbosity);
-            timeAdaptiveSeedCalls += cpuTime() - xxx;
+            _tASCalls += cpuTime() - xxx;
+            ++_cASCalls;
 
             if (verbosity > 2)
                 std::cout << "query [" << queryId << "," << queryPos << "] : \t\"" <<
@@ -393,13 +375,15 @@ void linearLastal(
 
             for(; saFrom != saEnd; ++saFrom)
             {
+                ++_cSeeds;
+
                 // Step 2:
                 // Gapless Alignment in both directions with a XDrop
                 TDatabase const & database = indexText(index)[getSeqNo(*saFrom)];
                 Seed<Simple> seed(getSeqOffset(*saFrom), queryIt - queryBeg, 0);
 
                 // Check whether seed is redundant
-                TDiagTable &diagTable = diagTables[getSeqNo(*saFrom) * L + queryPos];
+                TDiagTable &diagTable = diagTables[getSeqNo(*saFrom) * L + queryId];
                 if (diagTable.redundant(beginPositionH(seed), beginPositionV(seed)))
                     continue;
 
@@ -410,6 +394,7 @@ void linearLastal(
 
                 myUngapedExtendSeed(seed, database, query, scoreMatrix, glXdrop);
                 diagTable.add(endPositionH(seed), endPositionV(seed));
+                ++_cglAls;
 
                 if (verbosity > 2)
                     std::cout << "           extended   database [" << getSeqNo(*saFrom) << "," << beginPositionH(seed) <<
@@ -421,9 +406,10 @@ void linearLastal(
 
                 // Step 3:
                 // Gapped alignment:
-                Align<typename Infix<TDatabase const>::Type> alignObj;
+                typename TMatch::Type alignObj;
 
                 TScore finalScore = myExtendAlignment(alignObj, seed, database, query, scoreMatrix, gpXdrop);
+                ++_cgpAls;
 
                 if (verbosity > 2)
                     std::cout << "      * aligned    database [" << getSeqNo(*saFrom) << "," <<
@@ -433,12 +419,10 @@ void linearLastal(
 
                 if (finalScore > gpThr)
                 {
-                    typename Value<TMatches>::Type matchObj;
-                    matchObj.queryId = queryId;
-                    matchObj.databaseId = getSeqNo(*saFrom);
-                    matchObj.dbRow = row(alignObj,0);
-                    matchObj.quRow = row(alignObj,1);
-                    
+                    TMatch matchObj;
+                    matchObj.quId = queryId;
+                    matchObj.dbId = getSeqNo(*saFrom);
+                    matchObj.align = alignObj;
                     appendValue(finalMatches, matchObj);
                 }
                 
@@ -446,7 +430,15 @@ void linearLastal(
             
         } //for(; queryIt != queryEnd; ++queryIt)
     }
-    std::cout << "Time spend in adaptive seeds: " << timeAdaptiveSeedCalls << "/" << countAdaptiveSeedCalls << " calls" << std::endl;
+    if (verbosity > 1)
+        std::cout << "Time spend in adaptive seeds: " << _tASCalls << "/" << _cASCalls << " calls" << std::endl;
+    if (verbosity > 1)
+    {
+        std::cout << " # adaptive seeds:     " << _cSeeds << std::endl;
+        std::cout << " # gapless alignments: " << _cglAls << std::endl;
+        std::cout << " # gapped alignments:  " << _cgpAls << std::endl;
+        std::cout << " # final matches:      " << length(finalMatches) << std::endl;
+    }
 }
 
 

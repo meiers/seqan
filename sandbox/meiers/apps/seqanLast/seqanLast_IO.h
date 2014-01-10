@@ -64,12 +64,17 @@ struct SeqanLastOptions
 
     CharString databaseFile;
     CharString queryFile;
+    CharString outputFile;
 
     SeqanLastOptions() : verbosity(1)
     {}
 
-    void print() // could make an operator<< out of this
+    void print() // TODO(meiers): could make an operator<< out of this
     {
+        std::cout << "Files:" << std::endl;
+        std::cout << "   database: " << databaseFile << std::endl;
+        std::cout << "   query:    " << databaseFile << std::endl;
+        std::cout << "   output:   " << outputFile << std::endl;
         std::cout << "Options:" << std::endl;
         std::cout << "   frequency:        " << frequency << std::endl;
         std::cout << "   matchScore:       " << matchScore << std::endl;
@@ -119,7 +124,11 @@ void _setParser(ArgumentParser & parser)
     addArgument(parser, ArgParseArgument(ArgParseArgument::INPUTFILE, "FASTA FILE 2"));
     setValidValues(parser, 1, "fa fasta");  // allow only fasta files as input
 
+    addSection(parser, "Output Options");
 
+    addOption(parser, ArgParseOption("o", "output", "File to write results into (gff format)",
+                                     ArgParseArgument::OUTPUTFILE));
+    setDefaultValue(parser, "o", "");
     addOption(parser, ArgParseOption("v", "verbose", "Set verbosity mode."));
     addOption(parser, ArgParseOption("V", "very-verbose", "Set stronger verbosity mode."));
     addOption(parser, ArgParseOption("Q", "quiet", "No output, please."));
@@ -189,6 +198,7 @@ parseCommandLine(SeqanLastOptions & options, int argc, char const ** argv)
     getOptionValue(options.gaplessXDrop, parser, "gaplessXDrop");
     getOptionValue(options.gaplessThreshold, parser, "gaplessThreshold");
     getOptionValue(options.gappedThreshold, parser, "gappedThreshold");
+    getOptionValue(options.outputFile, parser, "output");
 
     // Extract verbosity options.
     if (isSet(parser, "quiet"))
@@ -281,7 +291,7 @@ _importSequences(TSeqSet & seqs, TIdSet & ids, CharString const & fileName, int 
 }
 
 // -----------------------------------------------------------------------------
-// Function _writeMatchGff()
+// Function _writeMatchGff() and many more from Birte Kehrs STELLAR
 // -----------------------------------------------------------------------------
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -376,7 +386,7 @@ void
 _writeMatchGff(TId const & databaseID,
                TId const & patternID,
                bool databaseStrand,
-               TSize lengthAdjustment,
+               TSize, //lenAdjustment
                TRow const & row0,
                TRow const & row1,
                TFile & file)
@@ -422,6 +432,7 @@ _writeMatchGff(TId const & databaseID,
 
 ///////////////////////////////////////////////////////////////////////////////
 // Writes rows of a StellarMatch in human readable format to file.
+/*
 template<typename TId, typename TSize, typename TRow, typename TFile>
 void
 _writeMatch(TId const & databaseID,
@@ -430,8 +441,8 @@ _writeMatch(TId const & databaseID,
 			TSize lengthAdjustment,
             TRow const & row0,
             TRow const & row1,
-            TFile & file) {
-    //IOREV _recordreading_ _stub_
+            TFile & file)
+{
     typedef typename Value<typename Source<TRow>::Type>::Type TAlphabet;
 
 	// write database ID
@@ -474,5 +485,114 @@ _writeMatch(TId const & databaseID,
 	file << align;
 	file << "----------------------------------------------------------------------\n" << std::endl;
 }
+*/
+
+///////////////////////////////////////////////////////////////////////////////
+// Computes the length adjustment for E-value computation
+// Based on the NCBI BLAST code by Tom Madden.
+template<typename TSize>
+TSize
+_computeLengthAdjustment(TSize dbLength, TSize queryLength) {
+    SEQAN_CHECKPOINT
+
+	const double K = 0.34;
+	const double logK = log(K);
+	const double alphaByLambda = 1.8/1.19;
+	const double beta = -3;
+	const TSize maxIterations = 20;
+
+	double n = (double)dbLength;
+	double m = (double)queryLength;
+	double totalLen;
+
+	double val = 0, val_min = 0, val_max;
+	bool converged = false;
+
+    /* Choose val_max to be the largest nonnegative value that satisfies
+     *    K * (m - val) * (n - N * val) > max(m,n)
+     * Use quadratic formula: 2 c /( - b + sqrt( b*b - 4 * a * c )) */
+
+    { // scope of mb, and c, the coefficients in the quadratic formula (the variable mb is -b, a=1 ommited)
+        double mb = m + n;
+        double c  = n * m - _max(m, n) / K;
+
+        if(c < 0) {
+            return 0;
+        } else {
+            val_max = 2 * c / (mb + sqrt(mb * mb - 4 * c));
+        }
+    } // end scope of mb and c
+
+	for(TSize i = 1; i <= maxIterations; i++) {
+        totalLen = (m - val) * (n - val);
+        double val_new  = alphaByLambda * (logK + log(totalLen)) + beta;  // proposed next value of val
+        if(val_new >= val) { // val is no bigger than the true fixed point
+            val_min = val;
+            if(val_new - val_min <= 1.0) {
+                converged = true;
+                break;
+            }
+            if(val_min == val_max) { // There are no more points to check
+                break;
+            }
+        } else { // val is greater than the true fixed point
+            val_max = val;
+        }
+        if(val_min <= val_new && val_new <= val_max) { // ell_new is in range. Accept it.
+            val = val_new;
+        } else { // else val_new is not in range. Reject it.
+            val = (i == 1) ? val_max : (val_min + val_max) / 2;
+        }
+    }
+
+	if(converged) { // the iteration converged
+        // If val_fixed is the (unknown) true fixed point, then we wish to set lengthAdjustment to floor(val_fixed).
+		// We assume that floor(val_min) = floor(val_fixed)
+        return (TSize) val_min;
+
+        // But verify that ceil(val_min) != floor(val_fixed)
+        val = ceil(val_min);
+        if( val <= val_max ) {
+            totalLen = (m - val) * (n - val);
+            if(alphaByLambda * (logK + log(totalLen)) + beta >= val) {
+                // ceil(val_min) == floor(val_fixed)
+                return (TSize) val;
+            }
+        }
+    } else { // the iteration did not converge
+        // Use the best value seen so far.
+        return (TSize) val_min;
+    }
+}
+
+
+
+///////////////////////////////////////////////////////////////////////////////
+// Calls _writeMatchGff for each match in StringSet of String of matches.
+//   = Writes matches in gff format to a file.
+template<typename TMatches, typename TIds, typename TOutStream>
+bool _outputMatches(TMatches const & matches,
+    TIds const & dbIds,
+    TIds const & quIds,
+    TOutStream & stream,
+    int verbosity)
+{
+    typedef typename Value<TMatches>::Type TMatch;
+    typedef typename TMatch::Type TAlign;
+    typedef typename Value<typename Rows<TAlign>::Type>::Type TRow;
+    typedef typename Source<TRow>::Type TSeq;
+    typedef typename Size<TSeq>::Type TSize;
+    for(typename Iterator<TMatches const, Standard>::Type it = begin(matches); it!= end(matches); ++it)
+    {
+        typename Size<TSeq>::Type lenAdj = _computeLengthAdjustment(length(source(row(it->align,0))),
+                                                                    length(source(row(it->align,1))));
+        _writeMatchGff(dbIds[it->dbId], quIds[it->quId], true, lenAdj, row(it->align,0), row(it->align,1), stream);
+    }
+
+    if (!verbosity)
+        std::cout << "# matches = " << length(matches) << std::endl;
+}
+
+
 
 #endif  // #ifndef SANDBOX_MEIERS_APPS_SEQANLAST_SEQANLAST_IO_H_
