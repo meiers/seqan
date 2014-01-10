@@ -57,14 +57,102 @@ using namespace seqan;
 // =============================================================================
 
 // -----------------------------------------------------------------------------
+// Function adaptedCreateQGramIndexDirOnly()
+// -----------------------------------------------------------------------------
+
+template <
+    typename TDir,
+    typename TBucketMap,
+    typename TText,
+    typename TShape>
+void _insertMissingQGrams(TDir &dir, TBucketMap &bucketMap, TText const &text, TShape &shape)
+{
+    typedef typename Size<TText>::Type TPos;
+    typedef typename Iterator<TText const,Standard>::Type TIter;
+
+    if (!length(text)) return;
+
+    std::cout << shape.span << std::endl;
+    TPos start = length(text) < shape.span ? 0 : length(text)-shape.span+1;
+    TIter it = begin(text, Standard()) + start;
+    ++dir[requestBucket(bucketMap, hash(shape, it, length(text)-start))];
+
+    for(++start, ++it; start < length(text); ++start, ++it)
+    {
+        ++dir[requestBucket(bucketMap, hash(shape, it, length(text)-start))];
+    }
+}
+
+template <
+    typename TDir,
+    typename TBucketMap,
+    typename TText,
+    typename TSetSpec,
+    typename TShape>
+void _insertMissingQGrams(TDir &dir, TBucketMap &bucketMap, StringSet<TText, TSetSpec> const &textSet, TShape &shape)
+{
+    typedef typename Size<TText>::Type TPos;
+    typedef typename Iterator<TText const,Standard>::Type TIter;
+    typedef typename Iterator<StringSet<TText, TSetSpec> const,Standard>::Type TSetIter;
+
+    if (!length(textSet)) return;
+
+    for (TSetIter set=begin(textSet,Standard()); set != end(textSet,Standard()); ++set)
+    {
+        TText const & text = *set;
+        if (!length(text)) continue;
+
+        TPos start = length(text) < shape.span ? 0 : length(text)-shape.span+1;
+        TIter it = begin(text, Standard()) + start;
+        ++dir[requestBucket(bucketMap, hash(shape, it, length(text)-start))];
+
+        for(++start, ++it; start < length(text); ++start, ++it)
+        {
+            ++dir[requestBucket(bucketMap, hash(shape, it, length(text)-start))];
+        }
+    }
+}
+
+
+template <
+    typename TDir,
+    typename TBucketMap,
+    typename TText,
+    typename TShape,
+    typename TStepSize >
+void adaptedCreateQGramIndexDirOnly(
+    TDir &dir,
+    TBucketMap &bucketMap,
+    TText const &text,
+    TShape &shape,
+    TStepSize stepSize)
+{
+	SEQAN_CHECKPOINT
+
+    // 1. clear counters
+    _qgramClearDir(dir, bucketMap);
+
+    // 2. count q-grams
+    _qgramCountQGrams(dir, bucketMap, text, shape, 1);
+
+    // New part: Insert missing q-grams.
+    _insertMissingQGrams(dir, bucketMap, text, shape);
+    
+    // 3. cumulative sum (Step 4 is ommited)
+    _qgramCummulativeSumAlt(dir, False());
+}
+
+// -----------------------------------------------------------------------------
 // Function main()
 // -----------------------------------------------------------------------------
 
 int main(int argc, char const ** argv)
 {
     typedef Dna5 TAlphabet;
-    typedef StringSet<String<TAlphabet>, Owner<> > TSeqSet; // TODO: MAke this concat direct ??
-    typedef SeqanLastMatch<Size<TSeqSet>::Type, Gaps<Infix<String<TAlphabet> >::Type, ArrayGaps> > Match;
+    typedef String<TAlphabet>                            TSeq;
+    typedef StringSet<TSeq, Owner<> >                    TSeqSet; // TODO: MAke this concat direct ??
+    typedef Align<typename Infix<TSeq const>::Type>      TAlignment;
+    typedef SeqanLastMatch<Size<TSeq>::Type, TAlignment> TMatch;
 
     // get options
     SeqanLastOptions options;
@@ -74,39 +162,57 @@ int main(int argc, char const ** argv)
 
     // import database sequence
     TSeqSet databases;
-    StringSet<CharString> databaseIDs;
-    if (!_importSequences(databases, databaseIDs, options.databaseFile, options.verbosity))
+    StringSet<CharString> databaseIds;
+    if (!_importSequences(databases, databaseIds, options.databaseFile, options.verbosity))
         return 1;
 
     // import query sequences
     TSeqSet queries;
-    StringSet<CharString> queryIDs;
-    if (!_importSequences(queries, queryIDs, options.queryFile, options.verbosity))
+    StringSet<CharString> queryIds;
+    if (!_importSequences(queries, queryIds, options.queryFile, options.verbosity))
         return 1;
 
 
-    // Get Indices
+    // Output Options:
+    if(options.verbosity > 1)
+        options.print();
+
+    // Create Indices:
+    if (options.verbosity) std::cout << "Building libraries..." << std::endl;
     typedef Index<TSeqSet, IndexSa<> > TIndex;
     TIndex index(databases);
-    typedef Index<TSeqSet, IndexQGram<Shape<AminoAcid, UngappedShape<2> > > > TTable;
+    indexRequire(index, FibreSA());
+    typedef Index<TSeqSet, IndexQGram<Shape<Dna5, UngappedShape<8> > > > TTable;
     TTable table(databases);
-    // TODO: Make hash table suit the SA
+    resize(indexDir(table), _fullDirLength(table), Exact());
+    adaptedCreateQGramIndexDirOnly(indexDir(table), indexBucketMap(table), indexText(table), indexShape(table), getStepSize(table));
 
 
     // Prepare Scores
     Score<int, Simple> scoreMatrix(options.matchScore, options.mismatchScore, options.gapExtendScore,
                                    options.gapExtendScore + options.gapOpenScore);
 
-    // Output Options:
-    if(options.verbosity > 1)
-        options.print();
-
 
     // Do the main work: alignments
-    String<Match> results;
+    if (options.verbosity) std::cout << "Start searching..." << std::endl;
+    String<TMatch> results;
     linearLastal(results, index, table, queries, options.frequency, scoreMatrix, options.gaplessXDrop,
                  options.gappedXDrop, options.gaplessThreshold, options.gappedThreshold, options.verbosity);
-    
+
+
+    // Output
+    std::ofstream file;
+	file.open(toCString(options.outputFile), ::std::ios_base::out | ::std::ios_base::app);
+	if (options.outputFile == "" || !file.is_open()) {
+        if (options.outputFile != "")
+            std::cout << "Could not open \"" << options.outputFile << "\" to write output. Using stdout instead." << std::endl;
+        std::cout << "================================================================================" << std::endl;
+        _outputMatches(results, databaseIds, queryIds, std::cout, options.verbosity);
+	} else {
+        std::cout << "Writing output to " << options.outputFile << "..." << std::endl;
+        _outputMatches(results, databaseIds, queryIds, file, options.verbosity);
+    }
+    file.close();
     
     
     return 0;
