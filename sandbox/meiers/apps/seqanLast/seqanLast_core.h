@@ -102,13 +102,14 @@ struct DiagonalTable
 // Struct SeqanLastMatch
 // -----------------------------------------------------------------------------
 
-template <typename TSize, typename TAlign>
+template <typename TSize, typename TAlign, typename TScore=int>
 struct SeqanLastMatch
 {
     typedef TAlign Type;
     TAlign align;
     TSize  dbId;
     TSize  quId;
+    TScore score;
 };
 
 // =============================================================================
@@ -152,7 +153,7 @@ adaptiveSeeds(TTrieIndex &index, TLookupIndex & table,
     // 1.
     // Lookup the hash table only for full length Shapes to avoid
     // possible problems with Open Adressing indiex.
-    if(static_cast<TSize>(qryEnd - qry) >= weight(qryHash) )
+/*    if(static_cast<TSize>(qryEnd - qry) >= weight(qryHash) )
     {
         hash(qryHash, qry);
         Pair<TSize> initialRange = range(table, qryHash);
@@ -165,7 +166,7 @@ adaptiveSeeds(TTrieIndex &index, TLookupIndex & table,
             treeIter.vDesc.lastChar = *qry;
         }
     }
-
+*/
     // 2.
     // Continue or restart search in the Suffix array.
     while(qry < qryEnd)
@@ -331,8 +332,10 @@ void linearLastal(
     double      _tASCalls = 0;
     unsigned    _cASCalls = 0;
     unsigned    _cSeeds = 0;
-    unsigned    _cgpAls = 0;
+    double      _tglAlsCalls = 0;
     unsigned    _cglAls = 0;
+    double      _tgpAlsCalls = 0;
+    unsigned    _cgpAls = 0;
 
     TSize L = length(indexText(index));
     String<TDiagTable> diagTables;
@@ -353,8 +356,6 @@ void linearLastal(
 
         for(TQueryIter queryIt = queryBeg; queryIt != queryEnd; ++queryIt, ++queryPos)
         {
-
-            // Step 1:
             // Lookup adaptive Seed
             double xxx = cpuTime();
             Pair<TSize> range = adaptiveSeeds(index, table, suffix(query, queryPos), maxFreq, verbosity);
@@ -377,7 +378,6 @@ void linearLastal(
             {
                 ++_cSeeds;
 
-                // Step 2:
                 // Gapless Alignment in both directions with a XDrop
                 TDatabase const & database = indexText(index)[getSeqNo(*saFrom)];
                 Seed<Simple> seed(getSeqOffset(*saFrom), queryIt - queryBeg, 0);
@@ -392,9 +392,15 @@ void linearLastal(
                     "-" << endPositionH(seed) << "]\tquery [" << queryId << "," << beginPositionV(seed)
                     << "-" << endPositionV(seed) << "]"   << std::endl;
 
+                // Gapless Alignment in both directions with a XDrop
+                double xxxx = cpuTime();
                 myUngapedExtendSeed(seed, database, query, scoreMatrix, glXdrop);
-                diagTable.add(endPositionH(seed), endPositionV(seed));
+                _tglAlsCalls += cpuTime() - xxxx;
                 ++_cglAls;
+
+
+                diagTable.add(endPositionH(seed), endPositionV(seed));
+
 
                 if (verbosity > 2)
                     std::cout << "           extended   database [" << getSeqNo(*saFrom) << "," << beginPositionH(seed) <<
@@ -404,11 +410,11 @@ void linearLastal(
                 // gapLess alignment too weak
                 if (score(seed) < glThr) continue;
 
-                // Step 3:
                 // Gapped alignment:
                 typename TMatch::Type alignObj;
-
+                double xxxxx = cpuTime();
                 TScore finalScore = myExtendAlignment(alignObj, seed, database, query, scoreMatrix, gpXdrop);
+                _tgpAlsCalls += cpuTime() - xxxxx;
                 ++_cgpAls;
 
                 if (verbosity > 2)
@@ -423,6 +429,7 @@ void linearLastal(
                     matchObj.quId = queryId;
                     matchObj.dbId = getSeqNo(*saFrom);
                     matchObj.align = alignObj;
+                    matchObj.score = finalScore;
                     appendValue(finalMatches, matchObj);
                 }
                 
@@ -430,15 +437,17 @@ void linearLastal(
             
         } //for(; queryIt != queryEnd; ++queryIt)
     }
-    if (verbosity > 1)
-        std::cout << "Time spend in adaptive seeds: " << _tASCalls << "/" << _cASCalls << " calls" << std::endl;
+
     if (verbosity > 1)
     {
+        std::cout << "Time spend in adaptive seeding:  " << _tASCalls <<    "\t(" << _cASCalls << " calls)" << std::endl;
+        std::cout << "Time spend in gapless alignment: " << _tglAlsCalls << "\t(" << _cglAls <<   " calls)" << std::endl;
+        std::cout << "Time spend in gapped alignment:  " << _tgpAlsCalls << "\t(" << _cgpAls <<   " calls)" << std::endl;
+        std::cout << std::endl;
         std::cout << " # adaptive seeds:     " << _cSeeds << std::endl;
-        std::cout << " # gapless alignments: " << _cglAls << std::endl;
-        std::cout << " # gapped alignments:  " << _cgpAls << std::endl;
-        std::cout << " # final matches:      " << length(finalMatches) << std::endl;
     }
+    if (verbosity)
+        std::cout << " # final matches:      " << length(finalMatches) << std::endl;
 }
 
 

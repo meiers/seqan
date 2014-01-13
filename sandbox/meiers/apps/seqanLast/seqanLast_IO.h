@@ -381,12 +381,12 @@ _getCigarLine(TRow const & row0, TRow const & row1, TString & cigar, TString & m
 	}
 }
 
-template<typename TId, typename TSize, typename TRow, typename TFile>
+template<typename TId, typename TScore, typename TRow, typename TFile>
 void
 _writeMatchGff(TId const & databaseID,
                TId const & patternID,
                bool databaseStrand,
-               TSize, //lenAdjustment
+               TScore score, //lenAdjustment
                TRow const & row0,
                TRow const & row1,
                TFile & file)
@@ -417,6 +417,8 @@ _writeMatchGff(TId const & databaseID,
         file << value(patternID, i);
     }
 
+    file << ";score=" << score;
+
     file << ";seq2Range=" << beginPosition(row1) + beginPosition(source(row1)) + 1;
     file << "," << endPosition(row1) + beginPosition(source(row1));
 
@@ -428,141 +430,6 @@ _writeMatchGff(TId const & databaseID,
     file << ";cigar=" << cigar.str();
     file << ";mutations=" << mutations.str();
     file << "\n";
-}
-
-///////////////////////////////////////////////////////////////////////////////
-// Writes rows of a StellarMatch in human readable format to file.
-/*
-template<typename TId, typename TSize, typename TRow, typename TFile>
-void
-_writeMatch(TId const & databaseID,
-            TId const & patternID,
-            bool const databaseStrand,
-			TSize lengthAdjustment,
-            TRow const & row0,
-            TRow const & row1,
-            TFile & file)
-{
-    typedef typename Value<typename Source<TRow>::Type>::Type TAlphabet;
-
-	// write database ID
-	file << "Database sequence: " << databaseID;
-	if (!databaseStrand) file << " (complement)" << std::endl;
-	else file << std::endl;
-
-	// write database positions
-	file << "Database positions: ";
-	if (databaseStrand) {
-		file << beginPosition(row0) + beginPosition(source(row0));
-		file << ".." << endPosition(row0) + beginPosition(source(row0));
-	} else {
-		file << length(source(row0)) - beginPosition(row0) + beginPosition(source(row0));
-		file << ".." << length(source(row0)) - endPosition(row0) + beginPosition(source(row0));
-	}
-	file << std::endl;
-
-	// write query ID
-	file << "Query sequence: " << patternID << std::endl;
-
-	// write query positions
-	file << "Query positions: ";
-	file << beginPosition(row1) + beginPosition(source(row1));
-	file << ".." << endPosition(row1) + beginPosition(source(row1));
-	file << std::endl;
-
-    if (IsSameType<TAlphabet, Dna5>::VALUE || IsSameType<TAlphabet, Rna5>::VALUE)
-    {
-	    // write e-value
-	    file << "E-value: " << _computeEValue(row0, row1, lengthAdjustment) << std::endl;
-    }
-
-	file << std::endl;
-
-	// write match
-	Align<typename Source<TRow>::Type> align;
-	appendValue(align.data_rows, row0);
-	appendValue(align.data_rows, row1);
-	file << align;
-	file << "----------------------------------------------------------------------\n" << std::endl;
-}
-*/
-
-///////////////////////////////////////////////////////////////////////////////
-// Computes the length adjustment for E-value computation
-// Based on the NCBI BLAST code by Tom Madden.
-template<typename TSize>
-TSize
-_computeLengthAdjustment(TSize dbLength, TSize queryLength) {
-    SEQAN_CHECKPOINT
-
-	const double K = 0.34;
-	const double logK = log(K);
-	const double alphaByLambda = 1.8/1.19;
-	const double beta = -3;
-	const TSize maxIterations = 20;
-
-	double n = (double)dbLength;
-	double m = (double)queryLength;
-	double totalLen;
-
-	double val = 0, val_min = 0, val_max;
-	bool converged = false;
-
-    /* Choose val_max to be the largest nonnegative value that satisfies
-     *    K * (m - val) * (n - N * val) > max(m,n)
-     * Use quadratic formula: 2 c /( - b + sqrt( b*b - 4 * a * c )) */
-
-    { // scope of mb, and c, the coefficients in the quadratic formula (the variable mb is -b, a=1 ommited)
-        double mb = m + n;
-        double c  = n * m - _max(m, n) / K;
-
-        if(c < 0) {
-            return 0;
-        } else {
-            val_max = 2 * c / (mb + sqrt(mb * mb - 4 * c));
-        }
-    } // end scope of mb and c
-
-	for(TSize i = 1; i <= maxIterations; i++) {
-        totalLen = (m - val) * (n - val);
-        double val_new  = alphaByLambda * (logK + log(totalLen)) + beta;  // proposed next value of val
-        if(val_new >= val) { // val is no bigger than the true fixed point
-            val_min = val;
-            if(val_new - val_min <= 1.0) {
-                converged = true;
-                break;
-            }
-            if(val_min == val_max) { // There are no more points to check
-                break;
-            }
-        } else { // val is greater than the true fixed point
-            val_max = val;
-        }
-        if(val_min <= val_new && val_new <= val_max) { // ell_new is in range. Accept it.
-            val = val_new;
-        } else { // else val_new is not in range. Reject it.
-            val = (i == 1) ? val_max : (val_min + val_max) / 2;
-        }
-    }
-
-	if(converged) { // the iteration converged
-        // If val_fixed is the (unknown) true fixed point, then we wish to set lengthAdjustment to floor(val_fixed).
-		// We assume that floor(val_min) = floor(val_fixed)
-        return (TSize) val_min;
-
-        // But verify that ceil(val_min) != floor(val_fixed)
-        val = ceil(val_min);
-        if( val <= val_max ) {
-            totalLen = (m - val) * (n - val);
-            if(alphaByLambda * (logK + log(totalLen)) + beta >= val) {
-                // ceil(val_min) == floor(val_fixed)
-                return (TSize) val;
-            }
-        }
-    } else { // the iteration did not converge
-        // Use the best value seen so far.
-        return (TSize) val_min;
-    }
 }
 
 
@@ -584,9 +451,7 @@ bool _outputMatches(TMatches const & matches,
     typedef typename Size<TSeq>::Type TSize;
     for(typename Iterator<TMatches const, Standard>::Type it = begin(matches); it!= end(matches); ++it)
     {
-        typename Size<TSeq>::Type lenAdj = _computeLengthAdjustment(length(source(row(it->align,0))),
-                                                                    length(source(row(it->align,1))));
-        _writeMatchGff(dbIds[it->dbId], quIds[it->quId], true, lenAdj, row(it->align,0), row(it->align,1), stream);
+        _writeMatchGff(dbIds[it->dbId], quIds[it->quId], true, it->score, row(it->align,0), row(it->align,1), stream);
     }
 
     if (!verbosity)
