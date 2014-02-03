@@ -285,7 +285,11 @@ inline TScoreValue myExtendAlignment(
 
     // TODO: extendAlignment mit AliExtContext damit die Matrizen nicht immer wieder allokiert werden müssen!
 
-    TScoreValue finalScore = extendAlignment(alignObj, localScore, database, query, positions, EXTEND_BOTH, gappedXDropScore, scoreMatrix);
+    TScoreValue finalScore = extendAlignment(alignObj, localScore, database, query, positions,
+                                             EXTEND_BOTH,
+                                             -25,       // lower Diag           // TODO(meiers): Choose band width
+                                             +25,       // upper Diag
+                                             gappedXDropScore, scoreMatrix);
 
     return finalScore;
 }
