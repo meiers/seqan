@@ -30,9 +30,11 @@ add_definitions (${SEQAN_DEFINITIONS})
 
 # Update the list of file names below if you add source files to your application.
 add_executable (seqanLast seqanLast.cpp seqanLast_core.h seqanLast_IO.h)
+add_executable (seqanLastdb seqanLastdb.cpp seqanLast_core.h seqanLast_IO.h)
 
 # Add dependencies found by find_package (SeqAn).
 target_link_libraries (seqanLast ${SEQAN_LIBRARIES})
+target_link_libraries (seqanLastdb ${SEQAN_LIBRARIES})
 
 # Add CXX flags found by find_package (SeqAn).
 set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${SEQAN_CXX_FLAGS}")

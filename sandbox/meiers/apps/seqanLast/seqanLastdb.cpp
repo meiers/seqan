@@ -38,6 +38,7 @@
 #include <seqan/sequence.h>
 #include <seqan/arg_parse.h>
 #include <seqan/index.h>
+#include <seqan/seeds.h>
 
 #include "seqanLast_IO.h"
 #include "seqanLast_core.h"
@@ -52,19 +53,22 @@ using namespace seqan;
 // Class SeqanLastDbOptions
 // -----------------------------------------------------------------------------
 
-template <typename Shape, unsigned Q, typename Size1, typename Size2>
 struct SeqanLastDbOptions
 {
     int verbosity; // 0 -- quiet, 1 -- normal, 2 -- verbose, 3 -- very verbose.
     CharString databaseFile;
+    CharString outputName;
+    int shapeChoice;
+    int q;
 
-    SeqanLastOptions() : verbosity(1)
+    SeqanLastDbOptions() : verbosity(1), shapeChoice(1);
     {}
 
-    void print() // TODO(meiers): could make an operator<< out of this
+    void print()
     {
         std::cout << "Files:" << std::endl;
-        std::cout << "   database: " << databaseFile << std::endl;
+        std::cout << "   database:    " << databaseFile << std::endl;
+        std::cout << "   output name: " << outputName  << std::endl;
     }
 };
 
@@ -158,15 +162,22 @@ void adaptedCreateQGramIndexDirOnly(
     _qgramCummulativeSumAlt(dir, False());
 }
 
+
+
 // -----------------------------------------------------------------------------
 // Function lastdb()
 // -----------------------------------------------------------------------------
 
-template <typename TShape, unsigned Q, typename TStringSet>
-void lastdb(TStringSet const & str, CharString const & outputName)
+template <typename TShape, unsigned Q, typename TSeqSet>
+void lastdb(TSeqSet const & str, CharString const & outputName)
 {
     std::cout << "Building Suffix array... " << std::endl;
+    typedef Index<TSeqSet const, IndexSa<Gapped<TShape> > > TIndex;
 
+    TIndex index(str, TShape());
+    indexCreate(index, FibreSA()); // TODO(meiers): choose algorithm!
+
+    save(index, outputName);
 }
 
 
@@ -179,15 +190,49 @@ int main(int argc, char const ** argv)
 
     // only Dna5 supported
     typedef Dna5 TAlphabet;
-
     typedef String<TAlphabet>                            TSeq;
     typedef StringSet<TSeq, Owner<ConcatDirect<> > >     TSeqSet; // TODO: MAke this concat direct ??
 
-    // get options
+
+    // set option parser
+    ArgumentParser parser;
+    setShortDescription(parser, "seqanLast: build index");
+    setDate(parser, "February 2014");
+    setVersion(parser, "0.1");
+    addUsageLine(parser, "[\\fIOPTIONS\\fP] <\\fIFASTA FILE\\fP> <\\fIOUTPUT NAME\\fP>");
+    addDescription(parser, "Builds the index for the local aligner SeqanLast (see seqanLast -h for more)");
+    addDescription(parser, "bla bla bla TODO TODO TODO");
+    addArgument(parser, ArgParseArgument(ArgParseArgument::INPUTFILE, "FASTA FILE"));
+    setValidValues(parser, 0, "fa fasta");
+    addArgument(parser, ArgParseArgument(ArgParseArgument::OUTPUTFILE, "OUTPUT NAME"));
+    addOption(parser, ArgParseOption("s", "shape", "shape used for the suffix array", ArgParseArgument::INTEGER));
+    setDefaultValue(parser, "s", "1");
+    setMinValue(parser, "s", "0");
+    setMaxValue(parser, "s", "3");
+    addOption(parser, ArgParseOption("q", "q-gram", "size of the q-grams used in the hash table.", ArgParseArgument::INTEGER));
+    setDefaultValue(parser, "q", "6");
+    setMinValue(parser, "q", "2");
+    setMaxValue(parser, "q", "12");
+
+
+    // parse command line
     SeqanLastDbOptions options;
-    ArgumentParser::ParseResult res = parseCommandLine(options, argc, argv);
-    if (res != ArgumentParser::PARSE_OK)
+    ArgumentParser::ParseResult res = parse(parser, argc, argv);
+    if (res != seqan::ArgumentParser::PARSE_OK)
         return res;
+    getArgumentValue(options.databaseFile, parser, 0);
+    getArgumentValue(options.outputName, parser, 1);
+    getOptionValue(options.shapeChoice, parser, "shape");
+    getOptionValue(options.q, parser, "q-gram");
+    if (isSet(parser, "quiet"))
+        options.verbosity = 0;
+    if (isSet(parser, "verbose"))
+        options.verbosity = 2;
+    if (isSet(parser, "very-verbose"))
+        options.verbosity = 3;
+    
+
+    //ArgumentParser::ParseResult res = parseCommandLine(options, argc, argv);
 
     // import database sequence
     TSeqSet databases;

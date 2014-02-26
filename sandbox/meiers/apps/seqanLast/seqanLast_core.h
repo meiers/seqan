@@ -43,8 +43,16 @@
 // Tags, Classes, Enums
 // =============================================================================
 
+// global Definitions
+
 typedef CyclicShape<FixedShape<0, GappedShape<HardwiredShape<1> >, 1> >       Shape1;   // 110
 typedef CyclicShape<FixedShape<0, GappedShape<HardwiredShape<1,1> >, 1> >     Shape2;   // 1110
+
+template<>
+struct SAValue<StringSet<String<Dna5>, Owner<ConcatDirect<> > > >
+{
+    typedef Pair<unsigned char, unsigned int, Pack> Type;
+};
 
 // -----------------------------------------------------------------------------
 // Struct DiagonalTable
