@@ -110,9 +110,10 @@ class TextNodeToHtml(object):
         if text_node.type == '<text>':
             self.res.append(text_node.text)
         elif text_node.type == 'dox:code':
+            target_path = text_node.attrs.get('path')
             if text_node.attrs.get('type') in ['.cpp', '.h']:
-                self.res.append(self.convertCode(text_node.children[0].text))
-                target_path = text_node.attrs.get('path')
+                self.res.append('<div data-src-path="%s">%s' %
+                                (target_path, self.convertCode(text_node.children[0].text)))
                 if self.path_mgr:
                     target_path = self.path_mrg.translateDemoPath(self.path_mgr)
                 if text_node.attrs.get('source') == 'snippet':
@@ -125,10 +126,13 @@ class TextNodeToHtml(object):
                         '<div class="path_label"><span class="label">Demo:'
                         '</span> <a href="%s" target="_top">%s</a></div>' %
                         (target_path, text_node.attrs.get('path')))
+                self.res.append('</div>')
             elif text_node.attrs.get('type') in ['.console', '.stdout', '.stderr']:
-                self.res.append('<pre class="console">' + escapeForXml(text_node.children[0].text) + '</pre>')
+                self.res.append('<pre class="console" data-src-path="%s">%s</pre>' %
+                                (target_path, escapeForXml(text_node.children[0].text)))
             else:
-                self.res.append('<pre class="code">' + escapeForXml(text_node.children[0].text) + '</pre>')
+                self.res.append('<pre class="code" data-src-path="%s">%s</pre>' %
+                                (target_path, escapeForXml(text_node.children[0].text)))
         else:
             self.res += self.openTag(text_node)
             for c in text_node.children:
@@ -362,6 +366,7 @@ class HtmlWriter(object):
         self.generatePages(self.doc, self.config)
         self.generateDemoPages(self.doc)
         self.generateSearchIndex(self.doc)
+        self.generateLinkData(self.doc)
         self.generateLanguageEntities()
 
     def makedirs(self):
@@ -507,6 +512,16 @@ class HtmlWriter(object):
                        repr(entry.kind)))
         js.append('];')
         with open(os.path.join(self.out_dirs['js'], 'search.data.js'), 'wb') as f:
+            f.write('\n'.join(js))
+
+    def generateLinkData(self, doc):
+        """Generate the Data for top level entry links."""
+        js = ['window.lookup = {']
+        for entry in doc.top_level_entries.itervalues():
+            js.append('    \'%(name)s\': \'%(kind)s_%(name)s\',' % { 'name': entry.name,
+                                                                     'kind': entry.kind })
+        js.append('};')
+        with open(os.path.join(self.out_dirs['js'], 'link.data.js'), 'wb') as f:
             f.write('\n'.join(js))
 
     def generateLanguageEntities(self):

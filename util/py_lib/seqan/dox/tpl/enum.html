@@ -7,19 +7,15 @@
   <a href="page_LanguageEntities.html#enum">Enum</a> <span>{{ enum.title|e }}<div>{{ sections.brief(enum) }}</div></span>
 </h1>
 
-<div class="overview">
-	{{ sections.top_box(enum) }}
-
-	{{ sections.signatures(enum) }}
-</div>
+{{ sections.top_box(enum) }}
 
 <!--
  =============================================================================
-  Member and Interface Overview
+  Member and Interface Details
  =============================================================================
 -->
 
-{{ sections.enum_values_ov(enum, doc) }}
+{{ sections.enum_values(enum, doc) }}
 
 <!--
  =============================================================================
@@ -80,14 +76,6 @@
 
 <!-- @see -->
 {{ sections.see_also(enum) }}
-
-<!--
- =============================================================================
-  Member and Interface Details
- =============================================================================
--->
-
-{{ sections.enum_values(enum, doc) }}
 
 <!--
  =============================================================================

@@ -23,31 +23,33 @@
         // specified page in the right frame
         // (e.g. docs.seqan.de/index.html?p=String#Example will open the example section of the class String in the main frame) 
         if(window != window.parent && window.name == 'list') {
-        	try {
-        		var redirectTo = null;
-        		if($.urlParam('p', window.parent.location)) {
-        			// TODO: replace by auto generated map
-        			window.lookup = {
-        				'String': 'class_String',
-        				'SequenceConcept': 'concept_SequenceConcept'
-        			};
-        			var p = $.urlParam('p', window.parent.location).split('/')[0];
-        			if(window.lookup.hasOwnProperty(p)) {
-        				redirectTo = window.lookup[p] + '.html' + window.parent.location.hash;
-        			} else {
-        				$(window.parent['main'].document).find('#content').prepend('<div class="open-in-frame alert alert-danger">Could not find page for <strong>' + p + '</strong></div>'); 
-        				// TODO: start search using search form for p
-        			}
-        		} else {
-        			var hash = window.parent.location.hash;
-        			if(typeof hash === 'string' && hash.length > 1) {
-        				redirectTo = hash.substr(1) + '.html';
-        			}
-        		}
-        		
-        		if(redirectTo) {
-        			window.parent['main'].location = redirectTo;
-        		}
+            try {
+                var redirectTo = null;
+                var hash = $.urlHash(window.parent.location);
+                if($.urlParam('p', window.parent.location)) {
+                    var p = $.urlParam('p', window.parent.location).split('/')[0];
+                    if (p.indexOf('::') != -1)
+                    {
+                        var tmp = p;
+                        p = tmp.split('::')[0];
+                        hash = '::' + tmp.split('::')[1];
+                        console.log('p == ' + p + ' -- hash = ' + hash);
+                    }
+                    if(window.lookup.hasOwnProperty(p)) {
+                        redirectTo = window.lookup[p] + '.html#' + encodeURIComponent(p + hash);
+                    } else {
+                        $(window.parent['main'].document).find('#content').prepend('<div class="open-in-frame alert alert-danger">Could not find page for <strong>' + p + '</strong></div>'); 
+                        // TODO: start search using search form for p
+                    }
+                } else {
+                    if(hash.length > 1) {
+                        redirectTo = hash.substr(1) + '.html';
+                    }
+                }
+
+                if(redirectTo) {
+                    window.parent['main'].location = redirectTo;
+                }
     		} catch(e) {
     		    // some browsers like Chrome don't allow this cross-frame access if using file://
     		}
@@ -89,6 +91,17 @@
 		urlParam: function(name, location) {
 			if(!location) location = window.location;
             return decodeURIComponent((new RegExp('[?|&]' + name + '=' + '([^&;]+?)(&|#|;|$)').exec(location.search) || [, ""])[1].replace(/\+/g, '%20')) || null;
+		},
+		urlHash: function(location) {
+			if(!location) location = window.location + '';
+			else location += '';
+			
+			var index = location.indexOf('#');
+            if(index >= 0) {
+            	return location.substr(index);
+            } else {
+            	return '';
+            }
 		}
 	});
 })(jQuery);
@@ -412,9 +425,10 @@
 				});
 				console.log('developer mode: ' + (active ? 'on' : 'off'));
 				if(active && $('#devModeWindow').length == 0) {
-					$('<div id="devModeWindow"><strong>Developer Mode is active</strong><br>Press <code>Ctrl + Shift</code> to deactivate</div>')
-						.appendTo('body')
-						.click(function() { $.devMode(false); });
+					$('<div id="devModeWindow"><strong>Developer Mode is active</strong>\
+					   <br>Press <code>Ctrl + Shift</code> to deactivate<br></div>')
+					   	.append($('<a href="#">Show dox sources</a>').click(function() { $('#doxSources').modal({}).find('.modal-dialog').css('width', '90%'); }))
+						.appendTo('body');
 				} else {
 					$('#devModeWindow').remove();
 				}
@@ -429,8 +443,12 @@
 		$.devMode($.devMode());
 	});
 	
+	var lastKeys = 0; // last time ctrl + shift was fired - used to detect double fired events (experienced on linux)
+	var lastKeysWindow = 500; // time frame within no further key combination is considered
 	$(document).bind('keyup keydown', function(e) {
-		if(e.ctrlKey && e.shiftKey) {
+		if(e.ctrlKey && e.shiftKey && lastKeys + lastKeysWindow < new Date().getTime()) {
+			lastKeys = new Date().getTime();
+			
 			if($.devMode()) $.devMode(false);
 			else $.devMode(true);
 		}
@@ -452,7 +470,8 @@
 			var settings = $.extend({
 				maxHeight: 200,
 				moreLink: '<a class="more">More ...</a>',
-				lessLink: '<a class="less">Less ...</a>'
+				lessLink: '<a class="less">Less ...</a>',
+				tolerance: 50 // number of pixels a container's height may exceed before it becomes collapsed
 			}, options);
 			
 			function createMoreLink(box) {
@@ -460,7 +479,10 @@
 				
 				$box.height('auto');
 				var expandedHeight = $box.outerHeight();
-				if(expandedHeight <= settings.maxHeight) return;
+				if(expandedHeight <= settings.maxHeight + settings.tolerance) return;
+				
+				//var srcPath = $box.parents('[data-src-path]').data('src-path');
+				//console.log(srcPath, $('[data-src-path="' + srcPath + '.stdout"]').length);
 				
 				$box.height(settings.maxHeight).css({ overflow: 'hidden' });
 				return $(settings.moreLink).click(function() {
@@ -487,7 +509,7 @@
 	});
 
     $(document).ready(function () {
-        $('.highlight pre').codeCollapse({
+        $('[data-src-path] pre, pre[data-src-path]').codeCollapse({
         	maxHeight: 77,
         	moreLink: '<a class="more">...</a>',
         	lessLink: '<a class="less">&nbsp;</a>'
