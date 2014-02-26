@@ -31,16 +31,6 @@ and based on the Tipue Search, http://www.tipue.com
             queryInput: $form.find('input[type=text],input[type=search]'),
             langEntitiesInput: $form.find('select'),
             langEntities: window.langEntities,
-            langEntityDefaultOrder: [
-            	'concept', 'class', 'specialization', 'enum',
-				'typedef', 'grouped_typedef', 'global_typedef', 'member_typedef',
-				'metafunction', 'global_metafunction', 'interface_metafunction',
-				'tag', 'grouped_tag', 'template_parameter',
-				'function', 'global_function', 'interface_function', 'member_function',
-				'variable', 'global_variable', 'member_variable',
-				'adaption', 'macro',
-				'group', 'page',
-				'unknown'],
 			maxResultsPerGroup: 5,
             button: $form.find('input[type=submit],input[type=button]'),
             output: $form.find('.results'),
@@ -392,7 +382,7 @@ and based on the Tipue Search, http://www.tipue.com
                     	
                     	if($.inArray(this.langEntity, langEntitiesKeys) < 0) this.langEntity = 'unknown';
                     	
-                        var akas = this.akas.split("");
+                        var akas = this.akas.split(",");
                         var subentriesTmp = this.subentries.split(",");
                         var subentries = [];
                         for (var i = 0; i < subentriesTmp.length; ++i)
