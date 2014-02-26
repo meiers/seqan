@@ -43,6 +43,9 @@
 // Tags, Classes, Enums
 // =============================================================================
 
+typedef CyclicShape<FixedShape<0, GappedShape<HardwiredShape<1> >, 1> >       Shape1;   // 110
+typedef CyclicShape<FixedShape<0, GappedShape<HardwiredShape<1,1> >, 1> >     Shape2;   // 1110
+
 // -----------------------------------------------------------------------------
 // Struct DiagonalTable
 // -----------------------------------------------------------------------------
