@@ -59,9 +59,9 @@ struct SeqanLastDbOptions
     CharString databaseFile;
     CharString outputName;
     int shapeChoice;
-    int q;
+    int k;
 
-    SeqanLastDbOptions() : verbosity(1), shapeChoice(1);
+    SeqanLastDbOptions() : verbosity(1), shapeChoice(1)
     {}
 
     void print()
@@ -69,6 +69,9 @@ struct SeqanLastDbOptions
         std::cout << "Files:" << std::endl;
         std::cout << "   database:    " << databaseFile << std::endl;
         std::cout << "   output name: " << outputName  << std::endl;
+        std::cout << "Other:" << std::endl;
+        std::cout << "   shape:       " << shapeChoice << std::endl;
+        std::cout << "   k:           " << k  << std::endl;
     }
 };
 
@@ -165,19 +168,83 @@ void adaptedCreateQGramIndexDirOnly(
 
 
 // -----------------------------------------------------------------------------
-// Function lastdb()
+// struct Lastdb()
 // -----------------------------------------------------------------------------
 
-template <typename TShape, unsigned Q, typename TSeqSet>
-void lastdb(TSeqSet const & str, CharString const & outputName)
+template <typename TShape, unsigned K, typename TSeqSet, typename TIdSet>
+struct Lastdb
 {
-    std::cout << "Building Suffix array... " << std::endl;
-    typedef Index<TSeqSet const, IndexSa<Gapped<TShape> > > TIndex;
 
-    TIndex index(str, TShape());
-    indexCreate(index, FibreSA()); // TODO(meiers): choose algorithm!
+    Lastdb() {}
 
-    save(index, outputName);
+    int build(TSeqSet const &databases, TIdSet const &databaseIds, CharString const & outputName)
+    {
+        std::cout << "Building Suffix array... " << std::endl;
+        typedef Index<TSeqSet const, IndexSa<Gapped<TShape> > > TIndex;
+
+        TIndex index(databases);
+        indexCreate(index, FibreSA()); // TODO(meiers): choose algorithm!
+
+        save(index, toCString(outputName));
+
+        // TODO: Make option to compress text files
+        // TODO: Build q-gram table
+        // TODO: alter q-gram table to suit the whole SA
+        // TODO: write property file with q, shape, compression, etc.
+        
+        return 0;
+    }
+};
+
+
+
+// -----------------------------------------------------------------------------
+// Function paramaterChoice
+// -----------------------------------------------------------------------------
+
+// 3: Run build
+template <unsigned K, typename TSeqSet, typename TIdSet, typename TShape>
+int paramaterChoice3(TSeqSet const &databases, TIdSet const &databaseIds, SeqanLastDbOptions &options, TShape const &)
+{
+    Lastdb<TShape, K, TSeqSet, TIdSet> lastdb;
+    return lastdb.build(databases, databaseIds, options.outputName);
+}
+
+// 2: Choose k
+template <typename TSeqSet, typename TIdSet, typename TShape>
+int paramaterChoice2(TSeqSet const &databases, TIdSet const &databaseIds, SeqanLastDbOptions &options, TShape const &)
+{
+    switch (options.k)
+    {
+//        case 2:  return paramaterChoice3 <2> (databases, databaseIds, options, TShape());
+        case 3:  return paramaterChoice3 <3> (databases, databaseIds, options, TShape());
+//        case 4:  return paramaterChoice3 <4> (databases, databaseIds, options, TShape());
+//        case 5:  return paramaterChoice3 <5> (databases, databaseIds, options, TShape());
+//        case 6:  return paramaterChoice3 <6> (databases, databaseIds, options, TShape());
+//        case 7:  return paramaterChoice3 <7> (databases, databaseIds, options, TShape());
+//        case 8:  return paramaterChoice3 <8> (databases, databaseIds, options, TShape());
+//        case 9:  return paramaterChoice3 <9> (databases, databaseIds, options, TShape());
+//        case 10: return paramaterChoice3 <10>(databases, databaseIds, options, TShape());
+//        case 11: return paramaterChoice3 <11>(databases, databaseIds, options, TShape());
+//        case 12: return paramaterChoice3 <12>(databases, databaseIds, options, TShape());
+        default:
+            std::cerr << "No valid k-mer size chosen. Exit" << std::endl;
+            return 2;
+    }
+}
+
+// 1: Choose Shape
+template <typename TSeqSet, typename TIdSet>
+int paramaterChoice1(TSeqSet const &databases, TIdSet const &databaseIds, SeqanLastDbOptions &options)
+{
+    switch (options.shapeChoice)
+    {
+        case 1: return paramaterChoice2(databases, databaseIds, options, Shape1());
+        case 2: return paramaterChoice2(databases, databaseIds, options, Shape2());
+        default:
+            std::cerr << "No valid shape chosen. Exit" << std::endl;
+            return 1;
+    }
 }
 
 
@@ -188,10 +255,10 @@ void lastdb(TSeqSet const & str, CharString const & outputName)
 int main(int argc, char const ** argv)
 {
 
-    // only Dna5 supported
+    // only Dna5 supported so far
     typedef Dna5 TAlphabet;
     typedef String<TAlphabet>                            TSeq;
-    typedef StringSet<TSeq, Owner<ConcatDirect<> > >     TSeqSet; // TODO: MAke this concat direct ??
+    typedef StringSet<TSeq, Owner<> >                    TSeqSet; // TODO: MAke this concat direct ??
 
 
     // set option parser
@@ -200,19 +267,24 @@ int main(int argc, char const ** argv)
     setDate(parser, "February 2014");
     setVersion(parser, "0.1");
     addUsageLine(parser, "[\\fIOPTIONS\\fP] <\\fIFASTA FILE\\fP> <\\fIOUTPUT NAME\\fP>");
-    addDescription(parser, "Builds the index for the local aligner SeqanLast (see seqanLast -h for more)");
-    addDescription(parser, "bla bla bla TODO TODO TODO");
+    addDescription(parser, "Builds the index for the local aligner SeqanLast (see seqanLast -h for more). "
+                           "Choose OUTPUT NAME carefully: many files calls <OUTPUT NAME>.txt can be generated. "
+                           "We recommend to use a special subfolder for them.");
+    addDescription(parser, "Note: Only Dna5 supported! Only up to 255 sequences (e.g. chromosomes) in database file allowed");
     addArgument(parser, ArgParseArgument(ArgParseArgument::INPUTFILE, "FASTA FILE"));
     setValidValues(parser, 0, "fa fasta");
     addArgument(parser, ArgParseArgument(ArgParseArgument::OUTPUTFILE, "OUTPUT NAME"));
+    addOption(parser, ArgParseOption("v", "verbose", "Set verbosity mode."));
+    addOption(parser, ArgParseOption("V", "very-verbose", "Set stronger verbosity mode."));
+    addOption(parser, ArgParseOption("Q", "quiet", "No output, please."));
     addOption(parser, ArgParseOption("s", "shape", "shape used for the suffix array", ArgParseArgument::INTEGER));
     setDefaultValue(parser, "s", "1");
     setMinValue(parser, "s", "0");
-    setMaxValue(parser, "s", "3");
-    addOption(parser, ArgParseOption("q", "q-gram", "size of the q-grams used in the hash table.", ArgParseArgument::INTEGER));
-    setDefaultValue(parser, "q", "6");
-    setMinValue(parser, "q", "2");
-    setMaxValue(parser, "q", "12");
+    setMaxValue(parser, "s", "2");
+    addOption(parser, ArgParseOption("k", "k-mer", "k-mer size used in the hash table.", ArgParseArgument::INTEGER));
+    setDefaultValue(parser, "k", "6");
+    setMinValue(parser, "k", "2");
+    setMaxValue(parser, "k", "12");
 
 
     // parse command line
@@ -223,16 +295,13 @@ int main(int argc, char const ** argv)
     getArgumentValue(options.databaseFile, parser, 0);
     getArgumentValue(options.outputName, parser, 1);
     getOptionValue(options.shapeChoice, parser, "shape");
-    getOptionValue(options.q, parser, "q-gram");
+    getOptionValue(options.k, parser, "k-mer");
     if (isSet(parser, "quiet"))
         options.verbosity = 0;
     if (isSet(parser, "verbose"))
         options.verbosity = 2;
     if (isSet(parser, "very-verbose"))
         options.verbosity = 3;
-    
-
-    //ArgumentParser::ParseResult res = parseCommandLine(options, argc, argv);
 
     // import database sequence
     TSeqSet databases;
@@ -240,54 +309,13 @@ int main(int argc, char const ** argv)
     if (!_importSequences(databases, databaseIds, options.databaseFile, options.verbosity))
         return 1;
 
-    // import query sequences
-    TSeqSet queries;
-    StringSet<CharString> queryIds;
-    if (!_importSequences(queries, queryIds, options.queryFile, options.verbosity))
-        return 1;
-
-
     // Output Options:
     if(options.verbosity > 1)
         options.print();
 
-    // Create Indices:
-    if (options.verbosity) std::cout << "Building libraries..." << std::endl;
-    typedef Index<TSeqSet, IndexSa<> > TIndex;
-    TIndex index(databases);
-    indexRequire(index, FibreSA());
-    typedef Index<TSeqSet, IndexQGram<Shape<Dna5, UngappedShape<8> > > > TTable;
-    TTable table(databases);
-    resize(indexDir(table), _fullDirLength(table), Exact());
-    adaptedCreateQGramIndexDirOnly(indexDir(table), indexBucketMap(table), indexText(table), indexShape(table), getStepSize(table));
 
-
-    // Prepare Scores
-    Score<int, Simple> scoreMatrix(options.matchScore, options.mismatchScore, options.gapExtendScore,
-                                   options.gapExtendScore + options.gapOpenScore);
-
-
-    // Do the main work: alignments
-    if (options.verbosity) std::cout << "Start searching..." << std::endl;
-    String<TMatch> results;
-    linearLastal(results, index, table, queries, options.frequency, scoreMatrix, options.gaplessXDrop,
-                 options.gappedXDrop, options.gaplessThreshold, options.gappedThreshold, options.verbosity);
-
-
-    // Output
-    std::ofstream file;
-	file.open(toCString(options.outputFile), ::std::ios_base::out | ::std::ios_base::app);
-	if (options.outputFile == "" || !file.is_open()) {
-        if (options.outputFile != "")
-            std::cout << "Could not open \"" << options.outputFile << "\" to write output. Using stdout instead." << std::endl;
-        std::cout << "================================================================================" << std::endl;
-        _outputMatches(results, databaseIds, queryIds, std::cout, options.verbosity);
-	} else {
-        std::cout << "Writing output to " << options.outputFile << "..." << std::endl;
-        _outputMatches(results, databaseIds, queryIds, file, options.verbosity);
-    }
-    file.close();
-    
+    // convert runtime parameters to compileTime parameter
+    paramaterChoice1(databases, databaseIds, options);
     
     return 0;
 }
