@@ -56,11 +56,16 @@ void printTables(TSA const & sa, TDir const & dir, TSeqSet const & seqs)
 
     while(dirPos < length(dir)-1)
     {
-        std::cout << dirPos << ":\t" << dir[dirPos] << "\t" << saPos << "\t" << sa[saPos] << "\t" << infixWithLength(seqs, sa[saPos], 10) << std::endl;
+        std::cout << dirPos << ":\t" << dir[dirPos] << "\t" << saPos <<;
+
+        if (saPos < dir[dirPos+1]) {
+            std::cout << "\t" << sa[saPos] << "\t" << suffix(seqs, sa[saPos]) << std::endl;
+            ++saPos;
+        }
         while (saPos < dir[dirPos+1])
         {
+            std::cout << "\t\t" << saPos << "\t" << sa[saPos]  << "\t" << suffix(seqs, sa[saPos])  << std::endl;
             ++saPos;
-            std::cout << "\t\t" << saPos << "\t" << sa[saPos++]  << "\t" << suffix(seqs, sa[saPos])  << std::endl;
         }
         ++dirPos;
     }
@@ -183,7 +188,7 @@ void adaptedCreateQGramIndexDirOnly(
     // 2. count q-grams
     _qgramCountQGrams(dir, bucketMap, text, shape, 1);
 
-    // New part: Insert missing q-grams.
+    // New part: Insert missing q-grams when counting
     _insertMissingQGrams(dir, bucketMap, text, shape);
     
     // 3. cumulative sum (Step 4 is ommited)
@@ -212,7 +217,12 @@ struct Lastdb
         TIndex index(databases, TShape());
         indexCreate(index, FibreSA(), SAQSort() ); // TODO(meiers): choose algorithm!
 
-        std::cout << prefix(indexSA(index), 5) << std::endl;
+        CharString sss;
+        cyclicShapeToString(sss, index.modifierCargo);
+        std::cout << sss << std::endl;
+
+        for(unsigned i=0; i<10; ++i)
+            std::cout << indexSA(index)[i] << suffix(databases, indexSA(index)[i]) << std::endl;
         save(index, toCString(outputName));
         // TODO: Make option to compress text files
 
