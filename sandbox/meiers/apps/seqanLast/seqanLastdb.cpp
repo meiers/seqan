@@ -207,11 +207,12 @@ struct Lastdb
     int build(TSeqSet const &databases, TIdSet const &databaseIds, CharString const & outputName)
     {
         std::cout << "Building Suffix array... " << std::endl;
-        typedef Index<TSeqSet const, IndexSa<Gapped<TShape> > > TIndex;
+        typedef Index<TSeqSet const, IndexSa<Gapped<ModCyclicShape<TShape> > > > TIndex;
 
-        TIndex index(databases);
-        indexCreate(index, FibreSA(), Dislex<Skew7>() ); // TODO(meiers): choose algorithm!
+        TIndex index(databases, TShape());
+        indexCreate(index, FibreSA(), SAQSort() ); // TODO(meiers): choose algorithm!
 
+        std::cout << prefix(indexSA(index), 5) << std::endl;
         save(index, toCString(outputName));
         // TODO: Make option to compress text files
 
