@@ -45,6 +45,33 @@
 
 using namespace seqan;
 
+// debug output
+
+template<typename TSA, typename TDir, typename TSeqSet>
+void printTables(TSA const & sa, TDir const & dir, TSeqSet const & seqs)
+{
+    typedef typename Size<TDir>::Type TSize;
+    TSize dirPos = 0;
+    TSize saPos = 0;
+
+    while(dirPos < length(dir)-1)
+    {
+        std::cout << dirPos << ":\t" << dir[dirPos] << "\t" << saPos << "\t" << sa[saPos] << "\t" << infixWithLength(seqs, sa[saPos], 10) << std::endl;
+        while (saPos < dir[dirPos+1])
+        {
+            ++saPos;
+            std::cout << "\t\t" << saPos << "\t" << sa[saPos++]  << "\t" << suffix(seqs, sa[saPos])  << std::endl;
+        }
+        ++dirPos;
+    }
+
+}
+
+
+
+
+
+
 // =============================================================================
 // Classes
 // =============================================================================
@@ -150,8 +177,6 @@ void adaptedCreateQGramIndexDirOnly(
     TShape &shape,
     TStepSize stepSize)
 {
-	SEQAN_CHECKPOINT
-
     // 1. clear counters
     _qgramClearDir(dir, bucketMap);
 
@@ -174,6 +199,8 @@ void adaptedCreateQGramIndexDirOnly(
 template <typename TShape, unsigned K, typename TSeqSet, typename TIdSet>
 struct Lastdb
 {
+    typedef typename Value<TSeqSet>::Type   TSeq;
+    typedef typename Value<TSeq>::Type      TAlph;
 
     Lastdb() {}
 
@@ -183,11 +210,37 @@ struct Lastdb
         typedef Index<TSeqSet const, IndexSa<Gapped<TShape> > > TIndex;
 
         TIndex index(databases);
-        indexCreate(index, FibreSA()); // TODO(meiers): choose algorithm!
+        indexCreate(index, FibreSA(), Dislex<Skew7>() ); // TODO(meiers): choose algorithm!
 
         save(index, toCString(outputName));
-
         // TODO: Make option to compress text files
+
+
+        // Generate Q-Gram Shape: THis ONLY works for shapes that start with 1 !!!
+        CharString shapeStr;
+        cyclicShapeToString(shapeStr, TShape());
+        for(unsigned i=static_cast<unsigned>(WEIGHT<TShape>::VALUE); i<static_cast<unsigned>(K); i+= static_cast<unsigned>(WEIGHT<TShape>::VALUE))
+            append(shapeStr, shapeStr);
+        unsigned i = 0;
+        for (unsigned w=0; i <length(shapeStr) && w < static_cast<unsigned>(K); ++i)
+            if (shapeStr[i] == '1') ++w;
+        resize(shapeStr, i);
+        Shape<TAlph, GenericShape> shape;
+        stringToShape(shape, shapeStr);
+        std::cout << "Shape: " << shapeStr << std::endl;
+
+
+        typedef Index<TSeqSet const, IndexQGram<Shape<TAlph, GenericShape> > > THashTable;
+
+        THashTable hashTab(databases);
+        indexShape(hashTab) = shape;
+        resize(indexDir(hashTab), _fullDirLength(hashTab));
+        adaptedCreateQGramIndexDirOnly(indexDir(hashTab), indexBucketMap(hashTab), databases, indexShape(hashTab), 1);
+
+
+        printTables(indexSA(index), indexDir(hashTab), databases);
+
+
         // TODO: Build q-gram table
         // TODO: alter q-gram table to suit the whole SA
         // TODO: write property file with q, shape, compression, etc.
@@ -219,7 +272,7 @@ int paramaterChoice2(TSeqSet const &databases, TIdSet const &databaseIds, SeqanL
 //        case 2:  return paramaterChoice3 <2> (databases, databaseIds, options, TShape());
         case 3:  return paramaterChoice3 <3> (databases, databaseIds, options, TShape());
 //        case 4:  return paramaterChoice3 <4> (databases, databaseIds, options, TShape());
-//        case 5:  return paramaterChoice3 <5> (databases, databaseIds, options, TShape());
+        case 5:  return paramaterChoice3 <5> (databases, databaseIds, options, TShape());
 //        case 6:  return paramaterChoice3 <6> (databases, databaseIds, options, TShape());
 //        case 7:  return paramaterChoice3 <7> (databases, databaseIds, options, TShape());
 //        case 8:  return paramaterChoice3 <8> (databases, databaseIds, options, TShape());
