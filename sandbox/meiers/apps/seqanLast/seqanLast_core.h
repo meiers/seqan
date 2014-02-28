@@ -36,23 +36,26 @@
 #define SANDBOX_MEIERS_APPS_SEQANLAST_SEQANLAST_CORE_H_
 
 // =============================================================================
-// Forwards
+// Global Definitions
 // =============================================================================
-
-// =============================================================================
-// Tags, Classes, Enums
-// =============================================================================
-
-// global Definitions
 
 typedef CyclicShape<FixedShape<0, GappedShape<HardwiredShape<1> >, 1> >       Shape1;   // 110
 typedef CyclicShape<FixedShape<0, GappedShape<HardwiredShape<1,1> >, 1> >     Shape2;   // 1110
 
 template<>
-struct SAValue<StringSet<String<Dna5>, Owner<ConcatDirect<> > > >
+struct SAValue<StringSet<String<Dna5>, Owner<> > >
 {
     typedef Pair<unsigned char, unsigned int, Pack> Type;
 };
+template<>
+struct SAValue<StringSet<String<Dna5>, Owner<> > const>
+{
+    typedef Pair<unsigned char, unsigned int, Pack> Type;
+};
+
+// =============================================================================
+// Tags, Classes, Enums
+// =============================================================================
 
 // -----------------------------------------------------------------------------
 // Struct DiagonalTable
@@ -130,6 +133,79 @@ struct SeqanLastMatch
 // =============================================================================
 // Functions
 // =============================================================================
+
+// -----------------------------------------------------------------------------
+// Function adaptedCreateQGramIndexDirOnly()
+// -----------------------------------------------------------------------------
+
+template <typename TDir, typename TBucketMap, typename TText, typename TShape>
+void _insertMissingQGrams(TDir &dir,
+                          TBucketMap &bucketMap,
+                          TText const &text,
+                          TShape &shape)
+{
+    typedef typename Size<TText>::Type TPos;
+    typedef typename Iterator<TText const,Standard>::Type TIter;
+
+    if (!length(text)) return;
+
+    std::cout << shape.span << std::endl;
+    TPos start = length(text) < shape.span ? 0 : length(text)-shape.span+1;
+    TIter it = begin(text, Standard()) + start;
+    ++dir[requestBucket(bucketMap, hash(shape, it, length(text)-start))];
+
+    for(++start, ++it; start < length(text); ++start, ++it)
+    {
+        ++dir[requestBucket(bucketMap, hash(shape, it, length(text)-start))];
+    }
+}
+
+template <typename TDir, typename TBucketMap, typename TText, typename TSetSpec, typename TShape>
+void _insertMissingQGrams(TDir &dir,
+                          TBucketMap &bucketMap,
+                          StringSet<TText, TSetSpec> const &textSet,
+                          TShape &shape)
+{
+    typedef typename Size<TText>::Type TPos;
+    typedef typename Iterator<TText const,Standard>::Type TIter;
+    typedef typename Iterator<StringSet<TText, TSetSpec> const,Standard>::Type TSetIter;
+
+    if (!length(textSet)) return;
+
+    for (TSetIter set=begin(textSet,Standard()); set != end(textSet,Standard()); ++set)
+    {
+        TText const & text = *set;
+        if (!length(text)) continue;
+
+        TPos start = length(text) < shape.span ? 0 : length(text)-shape.span+1;
+        TIter it = begin(text, Standard()) + start;
+        ++dir[requestBucket(bucketMap, hash(shape, it, length(text)-start))];
+
+        for(++start, ++it; start < length(text); ++start, ++it)
+        {
+            ++dir[requestBucket(bucketMap, hash(shape, it, length(text)-start))];
+        }
+    }
+}
+
+template <typename TDir, typename TBucketMap, typename TText, typename TShape>
+void adaptedCreateQGramIndexDirOnly(TDir &dir,
+                                    TBucketMap &bucketMap,
+                                    TText const &text,
+                                    TShape &shape)
+{
+    // 1. clear counters
+    _qgramClearDir(dir, bucketMap);
+
+    // 2. count q-grams
+    _qgramCountQGrams(dir, bucketMap, text, shape, 1);
+
+    // New part: Insert missing q-grams when counting
+    _insertMissingQGrams(dir, bucketMap, text, shape);
+    
+    // 3. cumulative sum (Step 4 is ommited)
+    _qgramCummulativeSumAlt(dir, False());
+}
 
 // -----------------------------------------------------------------------------
 // Function adaptiveSeeds()
