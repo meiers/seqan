@@ -45,12 +45,12 @@ typedef CyclicShape<FixedShape<0, GappedShape<HardwiredShape<1,1> >, 1> >     Sh
 namespace SEQAN_NAMESPACE_MAIN
 {
 template<typename TSpec>
-struct SAValue<StringSet<String<Dna5, TSpec>, Owner<ConcatDirect<> > > >
+struct SAValue<StringSet<String<Dna5, TSpec>, Owner<> > >
 {
     typedef Pair<unsigned char, unsigned int, Pack> Type;
 };
 template<typename TSpec>
-struct SAValue<StringSet<String<Dna5, TSpec>, Owner<ConcatDirect<> > > const>
+struct SAValue<StringSet<String<Dna5, TSpec>, Owner<> > const>
 {
     typedef Pair<unsigned char, unsigned int, Pack> Type;
 };

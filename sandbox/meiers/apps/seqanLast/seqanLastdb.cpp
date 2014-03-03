@@ -274,7 +274,7 @@ int main(int argc, char const ** argv)
     // only Dna5 supported so far
     typedef Dna5 TAlphabet;
     typedef String<TAlphabet>                            TSeq;
-    typedef StringSet<TSeq, Owner<ConcatDirect<> > >                    TSeqSet; // TODO: MAke this concat direct ??
+    typedef StringSet<TSeq, Owner<> >                    TSeqSet; // TODO: MAke this concat direct ??
 
 
     // set option parser
@@ -330,7 +330,10 @@ int main(int argc, char const ** argv)
         return 1;
 
 
-    std::cout << concat(databases) << std::endl;
+    // DEBUG
+    CharString sss = concat(databases);
+    std::cout << "SEQ:" <<std::endl;
+    std::cout << sss << std::endl;
     for (unsigned i=0; i < length(databases); ++i)
         std::cout << databases[i];
     std::cout << std::endl;
