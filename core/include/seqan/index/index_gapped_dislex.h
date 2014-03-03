@@ -297,7 +297,7 @@ public std::unary_function<TInput, TResult>
             }
 
             if (!(saIt < saEnd)) return -1;
-            if (!(saIt < sbEnd)) return 1;
+            if (!(sbIt < sbEnd)) return 1;
 
             return 0;
         }
@@ -365,7 +365,7 @@ public std::unary_function<TInput, TResult>
 
             // only one suffix is empty
             if (!(saIt < saEnd)) return -1;
-            if (!(saIt < sbEnd)) return 1;
+            if (!(sbIt < sbEnd)) return 1;
 
             // Does not occur
             SEQAN_ASSERT_EQ(true, false);
