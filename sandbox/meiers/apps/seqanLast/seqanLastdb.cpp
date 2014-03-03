@@ -93,6 +93,7 @@ struct SeqanLastDbOptions
     CharString outputName;
     int shapeChoice;
     int k;
+    CharString algorithm;
 
     SeqanLastDbOptions() : verbosity(1), shapeChoice(1)
     {}
@@ -105,6 +106,7 @@ struct SeqanLastDbOptions
         std::cout << "Other:" << std::endl;
         std::cout << "   shape:       " << shapeChoice << std::endl;
         std::cout << "   k:           " << k  << std::endl;
+        std::cout << "algorithm:      " << algorithm << std::endl;
     }
 };
 
@@ -130,7 +132,7 @@ void _getKmerShape(TRealShape & shape, TCyclicShape const & cycShape, TSize k)
 }
 
 template <typename TSize, typename TType>
-int _writePropertyFile(CharString const & fileName, TSize k, TType shapeChoice)
+int _writePropertyFile(CharString const & fileName, TSize k, TType shapeChoice, TSize strSetSize)
 {
     std::fstream file(toCString(fileName), std::ios::binary | std::ios::out);
     if (!file.good()) {
@@ -139,6 +141,7 @@ int _writePropertyFile(CharString const & fileName, TSize k, TType shapeChoice)
     }
     file << "k=" << k << std::endl;
     file << "shape=" << shapeChoice << std::endl;
+    file << "strSetSize=" << strSetSize << std::endl;
     return 0;
 }
 
@@ -161,7 +164,12 @@ struct Lastdb
 
         typedef Index<TSeqSet const, IndexSa<Gapped<ModCyclicShape<TShape> > > > TIndex;
         TIndex index(databases, TShape());
-        indexCreate(index, FibreSA(), SAQSort() ); // TODO(meiers): choose algorithm!
+        if (options.algorithm == "radix")
+            indexCreate(index, FibreSA(), InplaceRadixSort() );
+        if (options.algorithm == "dislex")
+            indexCreate(index, FibreSA(), Dislex<Skew7>() );
+        if (options.algorithm == "external")
+            indexCreate(index, FibreSA(), DislexExternal<TShape>() );
         save(index, toCString(options.outputName));
 
 
@@ -178,6 +186,8 @@ struct Lastdb
         append(fileName, ".dir");
         save(indexDir(hashTab), toCString(fileName));
         //printTables(indexSA(index), indexDir(hashTab), databases);
+
+        std::cout << "DEBUG: sizeof = " << sizeof(indexSA(index)[2]) << std::endl;
 
         // write the sequence Ids into file
         fileName = options.outputName;
@@ -198,7 +208,7 @@ struct Lastdb
 
         fileName = options.outputName;
         append(fileName, ".prt");
-        return _writePropertyFile(fileName, K, options.shapeChoice);
+        return _writePropertyFile(fileName, static_cast<unsigned>(K), options.shapeChoice, static_cast<unsigned>(length(databases)));
     }
 };
 
@@ -264,7 +274,7 @@ int main(int argc, char const ** argv)
     // only Dna5 supported so far
     typedef Dna5 TAlphabet;
     typedef String<TAlphabet>                            TSeq;
-    typedef StringSet<TSeq, Owner<> >                    TSeqSet; // TODO: MAke this concat direct ??
+    typedef StringSet<TSeq, Owner<ConcatDirect<> > >                    TSeqSet; // TODO: MAke this concat direct ??
 
 
     // set option parser
@@ -291,6 +301,9 @@ int main(int argc, char const ** argv)
     setDefaultValue(parser, "k", "8");
     setMinValue(parser, "k", "2");
     setMaxValue(parser, "k", "12");
+    addOption(parser, ArgParseOption("a", "algorithm", "Algorithm to build suffix array.", ArgParseArgument::STRING));
+    setDefaultValue(parser, "a", "dislex");
+    setValidValues(parser, "a", "radix dislex external");
 
 
     // parse command line
@@ -302,6 +315,7 @@ int main(int argc, char const ** argv)
     getArgumentValue(options.outputName, parser, 1);
     getOptionValue(options.shapeChoice, parser, "shape");
     getOptionValue(options.k, parser, "k-mer");
+    getOptionValue(options.algorithm, parser, "algorithm");
     if (isSet(parser, "quiet"))
         options.verbosity = 0;
     if (isSet(parser, "verbose"))
@@ -315,9 +329,24 @@ int main(int argc, char const ** argv)
     if (!_importSequences(databases, ids, options.databaseFile, options.verbosity))
         return 1;
 
+
+    std::cout << concat(databases) << std::endl;
+    for (unsigned i=0; i < length(databases); ++i)
+        std::cout << databases[i];
+    std::cout << std::endl;
+
+    
+
     // Output Options:
     if(options.verbosity > 1)
         options.print();
+
+    if(length(databases) > 255)
+    {
+        std::cerr << "Attention: currently only up to 256 sequences (usually chromosomes) can be indexed!"
+        " STOP HERE." << std::endl;
+        return 99;
+    }
 
     // convert runtime parameters to compileTime parameter
     paramaterChoice1(databases, ids, options);

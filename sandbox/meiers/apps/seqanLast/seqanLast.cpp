@@ -35,6 +35,7 @@
 // by Birte Kehr, others might be taken from Martin Friths LAST code
 // (last.cbrc.jp).
 
+#include <cstdlib>
 #include <seqan/sequence.h>
 #include <seqan/arg_parse.h>
 #include <seqan/index.h>
@@ -57,92 +58,6 @@ using namespace seqan;
 // =============================================================================
 
 // -----------------------------------------------------------------------------
-// Function adaptedCreateQGramIndexDirOnly()
-// -----------------------------------------------------------------------------
-
-template <
-    typename TDir,
-    typename TBucketMap,
-    typename TText,
-    typename TShape>
-void _insertMissingQGrams(TDir &dir, TBucketMap &bucketMap, TText const &text, TShape &shape)
-{
-    typedef typename Size<TText>::Type TPos;
-    typedef typename Iterator<TText const,Standard>::Type TIter;
-
-    if (!length(text)) return;
-
-    std::cout << shape.span << std::endl;
-    TPos start = length(text) < shape.span ? 0 : length(text)-shape.span+1;
-    TIter it = begin(text, Standard()) + start;
-    ++dir[requestBucket(bucketMap, hash(shape, it, length(text)-start))];
-
-    for(++start, ++it; start < length(text); ++start, ++it)
-    {
-        ++dir[requestBucket(bucketMap, hash(shape, it, length(text)-start))];
-    }
-}
-
-template <
-    typename TDir,
-    typename TBucketMap,
-    typename TText,
-    typename TSetSpec,
-    typename TShape>
-void _insertMissingQGrams(TDir &dir, TBucketMap &bucketMap, StringSet<TText, TSetSpec> const &textSet, TShape &shape)
-{
-    typedef typename Size<TText>::Type TPos;
-    typedef typename Iterator<TText const,Standard>::Type TIter;
-    typedef typename Iterator<StringSet<TText, TSetSpec> const,Standard>::Type TSetIter;
-
-    if (!length(textSet)) return;
-
-    for (TSetIter set=begin(textSet,Standard()); set != end(textSet,Standard()); ++set)
-    {
-        TText const & text = *set;
-        if (!length(text)) continue;
-
-        TPos start = length(text) < shape.span ? 0 : length(text)-shape.span+1;
-        TIter it = begin(text, Standard()) + start;
-        ++dir[requestBucket(bucketMap, hash(shape, it, length(text)-start))];
-
-        for(++start, ++it; start < length(text); ++start, ++it)
-        {
-            ++dir[requestBucket(bucketMap, hash(shape, it, length(text)-start))];
-        }
-    }
-}
-
-
-template <
-    typename TDir,
-    typename TBucketMap,
-    typename TText,
-    typename TShape,
-    typename TStepSize >
-void adaptedCreateQGramIndexDirOnly(
-    TDir &dir,
-    TBucketMap &bucketMap,
-    TText const &text,
-    TShape &shape,
-    TStepSize stepSize)
-{
-	SEQAN_CHECKPOINT
-
-    // 1. clear counters
-    _qgramClearDir(dir, bucketMap);
-
-    // 2. count q-grams
-    _qgramCountQGrams(dir, bucketMap, text, shape, 1);
-
-    // New part: Insert missing q-grams.
-    _insertMissingQGrams(dir, bucketMap, text, shape);
-    
-    // 3. cumulative sum (Step 4 is ommited)
-    _qgramCummulativeSumAlt(dir, False());
-}
-
-// -----------------------------------------------------------------------------
 // Function main()
 // -----------------------------------------------------------------------------
 
@@ -160,12 +75,31 @@ int main(int argc, char const ** argv)
     if (res != ArgumentParser::PARSE_OK)
         return res;
 
-    // import database sequence
-    TSeqSet databases;
-    StringSet<CharString> databaseIds;
-    if (!_importSequences(databases, databaseIds, options.databaseFile, options.verbosity))
+    if (!_readPropertyFile(options))
         return 1;
 
+
+    // Import Index
+    typedef StringSet<String<Dna5, External<> >, Owner<ConcatDirect<> > > TStringSet;
+    Index<TStringSet, IndexSa<> > suffixArray;
+    CharString f = options.databaseName;    append(f, ".txt");
+    if (!open(indexText(suffixArray), toCString(f)))
+        return 2;
+    if (options.verbosity>1)
+        std::cout << "Loaded database with " << length(indexText(suffixArray)) << " sequences and a total length of "
+        << lengthSum(indexText(suffixArray)) << std::endl;
+    if (!open(suffixArray, toCString(options.databaseName)))
+        return 2;
+    if (options.verbosity>1)
+        std::cout << "Loaded suffix array with " << length(indexSA(suffixArray)) << " entries" << std::endl;
+
+
+
+
+
+
+    return 0;
+/*
     // import query sequences
     TSeqSet queries;
     StringSet<CharString> queryIds;
@@ -181,12 +115,9 @@ int main(int argc, char const ** argv)
     if (options.verbosity) std::cout << "Building libraries..." << std::endl;
     typedef Index<TSeqSet, IndexSa<> > TIndex;
     TIndex index(databases);
-    indexRequire(index, FibreSA());
+
     typedef Index<TSeqSet, IndexQGram<Shape<Dna5, UngappedShape<8> > > > TTable;
     TTable table(databases);
-    resize(indexDir(table), _fullDirLength(table), Exact());
-    adaptedCreateQGramIndexDirOnly(indexDir(table), indexBucketMap(table), indexText(table), indexShape(table), getStepSize(table));
-
 
     // Prepare Scores
     Score<int, Simple> scoreMatrix(options.matchScore, options.mismatchScore, options.gapExtendScore,
@@ -216,4 +147,6 @@ int main(int argc, char const ** argv)
     
     
     return 0;
+ 
+ */
 }

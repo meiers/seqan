@@ -62,9 +62,13 @@ struct SeqanLastOptions
     int gaplessThreshold;
     int gappedThreshold;
 
-    CharString databaseFile;
+    CharString databaseName;
     CharString queryFile;
     CharString outputFile;
+
+    // options from lastdb
+    int shapeChoice;
+    int k;
 
     SeqanLastOptions() : verbosity(1)
     {}
@@ -72,8 +76,8 @@ struct SeqanLastOptions
     void print() // TODO(meiers): could make an operator<< out of this
     {
         std::cout << "Files:" << std::endl;
-        std::cout << "   database: " << databaseFile << std::endl;
-        std::cout << "   query:    " << databaseFile << std::endl;
+        std::cout << "   database: " << databaseName << std::endl;
+        std::cout << "   query:    " << queryFile << std::endl;
         std::cout << "   output:   " << outputFile << std::endl;
         std::cout << "Options:" << std::endl;
         std::cout << "   frequency:        " << frequency << std::endl;
@@ -84,6 +88,9 @@ struct SeqanLastOptions
         std::cout << "   gappedXDrop:      " << gappedXDrop << std::endl;
         std::cout << "   gaplessThreshold: " << gaplessThreshold << std::endl;
         std::cout << "   gappedThreshold:  " << gappedThreshold << std::endl;
+        std::cout << "LastDB options:" << std::endl;
+        std::cout << "   k:                " << k << std::endl;
+        std::cout << "   shapeChoice:      " << shapeChoice << std::endl;
     }
 };
 
@@ -119,9 +126,8 @@ void _setParser(ArgumentParser & parser)
                    "thought. (3) Reading Database instead of 2 fasta files. (4) Output options");
     addDescription(parser, "(c) 2013-2014 by Sascha Meiers");
 
-    addArgument(parser, ArgParseArgument(ArgParseArgument::INPUTFILE, "FASTA FILE 1"));
-    setValidValues(parser, 0, "fa fasta");  // allow only fasta files as input
-    addArgument(parser, ArgParseArgument(ArgParseArgument::INPUTFILE, "FASTA FILE 2"));
+    addArgument(parser, ArgParseArgument(ArgParseArgument::INPUTFILE, "DATABASE"));
+    addArgument(parser, ArgParseArgument(ArgParseArgument::INPUTFILE, "QUERY FASTA FILE"));
     setValidValues(parser, 1, "fa fasta");  // allow only fasta files as input
 
     addSection(parser, "Output Options");
@@ -185,7 +191,7 @@ parseCommandLine(SeqanLastOptions & options, int argc, char const ** argv)
         return res;
 
     // Extract mandatory values.
-    getArgumentValue(options.databaseFile, parser, 0);
+    getArgumentValue(options.databaseName, parser, 0);
     getArgumentValue(options.queryFile, parser, 1);
 
     // Extract optional values.
@@ -247,7 +253,8 @@ template <typename TSeqSet, typename TIdSet>
 inline bool
 _importSequences(TSeqSet & seqs, TIdSet & ids, CharString const & fileName, int verbosity)
 {
-    typedef typename Value<TSeqSet>::Type TSequence;
+    typedef typename Value<typename Value<TSeqSet>::Type>::Type  TAlph;
+    typedef String<TAlph> TSequence;
     typedef typename Value<TIdSet>::Type  TId;
 
     MultiSeqFile multiSeqFile;
@@ -459,5 +466,70 @@ bool _outputMatches(TMatches const & matches,
 }
 
 
+
+
+bool _readPropertyFile(SeqanLastOptions & options)
+{
+    CharString fileName = options.databaseName; append(fileName, ".prt");
+    std::ifstream file(toCString(fileName));
+    if (!file.good())
+    {
+        std::cerr << "Cannot read property file \"" << fileName << "\" of the database." << std::endl;
+        return false;
+    }
+
+    bool b_shape=false,b_k=false,b_dbsize=false;
+
+    std::string line;
+    if (file.is_open())
+    {
+        while ( getline(file,line) )
+        {
+            std::stringstream l(line);
+            std::string key;
+            getline(l, key, '=');
+            std::string value;
+            getline(l, value, '=');
+
+            if (key == "shape")
+            {
+                if (b_shape) {
+                    std::cerr << "Double definition of shape in property file. Use the first one." << std::endl;
+                    continue;
+                }
+                b_shape = true;
+                int v = std::atoi(value.c_str());
+                if (v <=0 || v >2)
+                {
+
+                } else {
+                    options.shapeChoice = v;
+                }
+            }
+            else if (key == "k")
+            {
+                if (b_k) {
+                    std::cerr << "Double definition of k-mer size in property file. Use the first one." << std::endl;
+                    continue;
+                }
+                b_k = true;
+                int v = std::atoi(value.c_str());
+                if (v <=0 || v >12)
+                {
+                    std::cerr << "Strange k-mer size in property file: " << line << std::endl;
+                    return false;
+                } else {
+                    options.k = v;
+                }
+            }
+            else {
+                std::cerr << "Unknown key \"" << key << "\" in property file. Ignore it." << std::endl;
+                continue;
+            }
+        }
+        file.close();
+    }
+    return true;
+}
 
 #endif  // #ifndef SANDBOX_MEIERS_APPS_SEQANLAST_SEQANLAST_IO_H_

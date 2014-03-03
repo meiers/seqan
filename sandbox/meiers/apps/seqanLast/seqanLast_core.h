@@ -42,16 +42,19 @@
 typedef CyclicShape<FixedShape<0, GappedShape<HardwiredShape<1> >, 1> >       Shape1;   // 110
 typedef CyclicShape<FixedShape<0, GappedShape<HardwiredShape<1,1> >, 1> >     Shape2;   // 1110
 
-template<>
-struct SAValue<StringSet<String<Dna5>, Owner<> > >
+namespace SEQAN_NAMESPACE_MAIN
+{
+template<typename TSpec>
+struct SAValue<StringSet<String<Dna5, TSpec>, Owner<ConcatDirect<> > > >
 {
     typedef Pair<unsigned char, unsigned int, Pack> Type;
 };
-template<>
-struct SAValue<StringSet<String<Dna5>, Owner<> > const>
+template<typename TSpec>
+struct SAValue<StringSet<String<Dna5, TSpec>, Owner<ConcatDirect<> > > const>
 {
     typedef Pair<unsigned char, unsigned int, Pack> Type;
 };
+}
 
 // =============================================================================
 // Tags, Classes, Enums
