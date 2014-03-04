@@ -75,26 +75,36 @@ int main(int argc, char const ** argv)
     if (res != ArgumentParser::PARSE_OK)
         return res;
 
+    // Load property file
     if (!_readPropertyFile(options))
         return 1;
 
+    // TODO: parameter Choice and the following code goes into a templated function
 
-    // Import Index
+    // Import Suffix Array
     typedef StringSet<String<Dna5, External<> >, Owner<ConcatDirect<> > > TStringSet;
     Index<TStringSet, IndexSa<> > suffixArray;
-    CharString f = options.databaseName;    append(f, ".txt");
-    if (!open(indexText(suffixArray), toCString(f)))
-        return 2;
-    if (options.verbosity>1)
-        std::cout << "Loaded database with " << length(indexText(suffixArray)) << " sequences and a total length of "
-        << lengthSum(indexText(suffixArray)) << std::endl;
     if (!open(suffixArray, toCString(options.databaseName)))
-        return 2;
+        return 1;
     if (options.verbosity>1)
         std::cout << "Loaded suffix array with " << length(indexSA(suffixArray)) << " entries" << std::endl;
 
+    // Import Database sequences
+    CharString f = options.databaseName;    append(f, ".txt");
+    if (!open(indexText(suffixArray), toCString(f)))
+        return 1;
+    if (options.verbosity>1)
+        std::cout << "Loaded database with " << length(indexText(suffixArray)) << " sequences and a total length of "
+        << lengthSum(indexText(suffixArray)) << std::endl;
 
+    // Import Database ids
+    StringSet<CharString> ids;
+    if (!_readIdFile(ids, options) || length(ids) != length(indexText(suffixArray)))
+        return 2;
+    if (options.verbosity>1)
+        std::cout << "Loaded database ids." << std::endl;
 
+    // Load Q-Gram table
 
 
 

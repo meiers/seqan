@@ -109,11 +109,11 @@ struct SeqanLastOptions
 void _setParser(ArgumentParser & parser)
 {
     setShortDescription(parser, "Seqan version of the LAST aligner");
-    setDate(parser, "February 2014");
+    setDate(parser, "March 2014");
     setVersion(parser, "0.1");
     setCategory(parser, "Local Alignment");
 
-    addUsageLine(parser, "[\\fIOPTIONS\\fP] <\\fIFASTA FILE 1\\fP> <\\fIFASTA FILE 2\\fP>");
+    addUsageLine(parser, "[\\fIOPTIONS\\fP] <\\fIDATABASE\\fP> <\\fIFASTA FILE 2\\fP>");
 
     addDescription(parser,
                    "SeqanLast is a reimplemtation of the core functionality of the LAST aligner "
@@ -126,7 +126,7 @@ void _setParser(ArgumentParser & parser)
                    "thought. (3) Reading Database instead of 2 fasta files. (4) Output options");
     addDescription(parser, "(c) 2013-2014 by Sascha Meiers");
 
-    addArgument(parser, ArgParseArgument(ArgParseArgument::INPUTFILE, "DATABASE"));
+    addArgument(parser, ArgParseArgument(ArgParseArgument::STRING, "DATABASE"));
     addArgument(parser, ArgParseArgument(ArgParseArgument::INPUTFILE, "QUERY FASTA FILE"));
     setValidValues(parser, 1, "fa fasta");  // allow only fasta files as input
 
@@ -472,13 +472,8 @@ bool _readPropertyFile(SeqanLastOptions & options)
 {
     CharString fileName = options.databaseName; append(fileName, ".prt");
     std::ifstream file(toCString(fileName));
-    if (!file.good())
-    {
-        std::cerr << "Cannot read property file \"" << fileName << "\" of the database." << std::endl;
-        return false;
-    }
 
-    bool b_shape=false,b_k=false,b_dbsize=false;
+    bool b_shape=false,b_k=false;
 
     std::string line;
     if (file.is_open())
@@ -494,7 +489,7 @@ bool _readPropertyFile(SeqanLastOptions & options)
             if (key == "shape")
             {
                 if (b_shape) {
-                    std::cerr << "Double definition of shape in property file. Use the first one." << std::endl;
+                    if(options.verbosity>0) std::cerr << "Double definition of shape in property file. Use the first one." << std::endl;
                     continue;
                 }
                 b_shape = true;
@@ -509,27 +504,53 @@ bool _readPropertyFile(SeqanLastOptions & options)
             else if (key == "k")
             {
                 if (b_k) {
-                    std::cerr << "Double definition of k-mer size in property file. Use the first one." << std::endl;
+                    if(options.verbosity>0) std::cerr << "Double definition of k-mer size in property file. Use the first one." << std::endl;
                     continue;
                 }
                 b_k = true;
                 int v = std::atoi(value.c_str());
                 if (v <=0 || v >12)
                 {
-                    std::cerr << "Strange k-mer size in property file: " << line << std::endl;
+                    if(options.verbosity>0) std::cerr << "Strange k-mer size in property file: " << line << std::endl;
                     return false;
                 } else {
                     options.k = v;
                 }
             }
             else {
-                std::cerr << "Unknown key \"" << key << "\" in property file. Ignore it." << std::endl;
+                if(options.verbosity>0) std::cerr << "Unknown key \"" << key << "\" in property file. Ignore it." << std::endl;
                 continue;
             }
         }
         file.close();
+        return true;
     }
-    return true;
+    else
+    {
+        if(options.verbosity>0) std::cerr << "Cannot read property file \"" << fileName << "\" of the database." << std::endl;
+        return false;
+    }
+}
+
+template <typename TIdSet>
+bool _readIdFile(TIdSet & set, SeqanLastOptions & options)
+{
+    CharString f = options.databaseName;    append(f, ".ids");
+    std::ifstream file(toCString(f));
+    std::string line;
+    if (file.is_open())
+    {
+        while ( getline(file,line) )
+        {
+            appendValue(set, line, Generous());
+        }
+        return true;
+    }
+    else
+    {
+        if(options.verbosity>0) std::cerr << "Cannot read ID file \"" << f << "\" of the database." << std::endl;
+        return false;
+    }
 }
 
 #endif  // #ifndef SANDBOX_MEIERS_APPS_SEQANLAST_SEQANLAST_IO_H_
