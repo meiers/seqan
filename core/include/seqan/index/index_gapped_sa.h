@@ -147,10 +147,21 @@ public:
 
 // TODO(meiers): Update to a better method like RadixSort
 // TODO(meiers): Specialise this for CyclicShape to be Dislex
-template < typename TText, typename TSuffixMod, typename TSpec>
-struct DefaultIndexCreator<Index<TText, IndexSa<Gapped<TSuffixMod, TSpec> > >, FibreSA> {
-    typedef SAQSort Type;
+template < typename TText, typename TShape, typename TSpec>
+struct DefaultIndexCreator<Index<TText, IndexSa<Gapped<ModCyclicShape<TShape>,TSpec> > >, FibreSA>
+{
+    typedef Index<TText, IndexSa<Gapped<ModCyclicShape<TShape>,TSpec> > >   TIndex;
+    typedef typename Fibre<TIndex, FibreSA>::Type                           TSA;
+
+    typedef typename AllowsFastRandomAccess<TSA>::Type                      TRandomSA;
+    typedef typename AllowsFastRandomAccess<TText>::Type                    TRandomText;
+    typedef typename If<And<TRandomText,TRandomSA>,
+                        SAQSort,
+                        DislexExternal<TShape> >::Type                      Type;
 };
+
+
+
 
 // ----------------------------------------------------------------------------
 // Metafunction Suffix                                                  general
@@ -299,6 +310,7 @@ infix(Index<StringSet<TText, TTextSpec>, IndexSa<Gapped<TSuffixMod, TSpec> > > c
 // Function indexCreate (FibreSA)                                       general
 // ----------------------------------------------------------------------------
 
+// TODO(meiers): more parameters, see createSuffixArray(... K, ...)
 template <typename TText, typename TSuffixMod, typename TSpec, typename TSpecAlg>
 inline bool indexCreate(Index<TText, IndexSa<Gapped<TSuffixMod, TSpec> > > &t, FibreSA, TSpecAlg const alg)
 {
