@@ -45,8 +45,9 @@
 
 using namespace seqan;
 
-// debug output
 
+/*
+// debug output (delete later)
 template<typename TSA, typename TDir, typename TSeqSet>
 void printTables(TSA const & sa, TDir const & dir, TSeqSet const & seqs)
 {
@@ -72,43 +73,8 @@ void printTables(TSA const & sa, TDir const & dir, TSeqSet const & seqs)
         }
         ++dirPos;
     }
-
 }
-
-
-
-
-// =============================================================================
-// Classes
-// =============================================================================
-
-// -----------------------------------------------------------------------------
-// Class SeqanLastDbOptions
-// -----------------------------------------------------------------------------
-
-struct SeqanLastDbOptions
-{
-    int verbosity; // 0 -- quiet, 1 -- normal, 2 -- verbose, 3 -- very verbose.
-    CharString databaseFile;
-    CharString outputName;
-    int shapeChoice;
-    int k;
-    CharString algorithm;
-
-    SeqanLastDbOptions() : verbosity(1), shapeChoice(1)
-    {}
-
-    void print()
-    {
-        std::cout << "Files:" << std::endl;
-        std::cout << "   database:    " << databaseFile << std::endl;
-        std::cout << "   output name: " << outputName  << std::endl;
-        std::cout << "Other:" << std::endl;
-        std::cout << "   shape:       " << shapeChoice << std::endl;
-        std::cout << "   k:           " << k  << std::endl;
-        std::cout << "algorithm:      " << algorithm << std::endl;
-    }
-};
+ */
 
 // =============================================================================
 // Functions
@@ -131,20 +97,6 @@ void _getKmerShape(TRealShape & shape, TCyclicShape const & cycShape, TSize k)
     stringToShape(shape, shapeStr);
 }
 
-template <typename TSize, typename TType>
-int _writePropertyFile(CharString const & fileName, TSize k, TType shapeChoice, TSize strSetSize)
-{
-    std::fstream file(toCString(fileName), std::ios::binary | std::ios::out);
-    if (!file.good()) {
-        std::cerr << "Could not open " << fileName << " to write the propoerty file" << std::endl;
-        return 3;
-    }
-    file << "k=" << k << std::endl;
-    file << "shape=" << shapeChoice << std::endl;
-    file << "strSetSize=" << strSetSize << std::endl;
-    return 0;
-}
-
 
 // -----------------------------------------------------------------------------
 // struct Lastdb()
@@ -160,37 +112,41 @@ struct Lastdb
 
     int build(TSeqSet const &databases, TIdSet const & ids, SeqanLastDbOptions &options)
     {
-        if (options.verbosity > 1) std::cout << "Building Suffix array... " << std::endl;
+        if (options.verbosity > 1)
+            std::cout << "Building Suffix array... " << std::endl;
 
-        typedef Index<TSeqSet const, IndexSa<Gapped<ModCyclicShape<TShape> > > > TIndex;
-        TIndex index(databases, TShape());
-        if (options.algorithm == "radix")
-            indexCreate(index, FibreSA(), InplaceRadixSort() );
-        if (options.algorithm == "dislex")
-            indexCreate(index, FibreSA(), Dislex<Skew7>() );
-        if (options.algorithm == "external")
-            indexCreate(index, FibreSA(), DislexExternal<TShape>() );
-        save(index, toCString(options.outputName));
+        {
+            typedef Index<TSeqSet const, IndexSa<Gapped<ModCyclicShape<TShape> > > > TIndex;
+            TIndex index(databases, TShape());
+            if (options.algorithm == "radix")
+                indexCreate(index, FibreSA(), InplaceRadixSort() );
+            if (options.algorithm == "dislex")
+                indexCreate(index, FibreSA(), Dislex<Skew7>() );
+            if (options.algorithm == "external")
+                indexCreate(index, FibreSA(), DislexExternal<TShape>() );
+            save(index, toCString(options.outputName));
+        }
 
+        if (options.verbosity > 1)
+            std::cout << "Building Look up table for K=" << K << "... " << std::endl;
 
-        if (options.verbosity > 1) std::cout << "Building Look up table for K=" << K << "... " << std::endl;
+        {
+            typedef Index<TSeqSet const, IndexQGram<Shape<TAlph, GenericShape> > > THashTable;
+            THashTable hashTab(databases);
+            Shape<TAlph, GenericShape> shape;
+            _getKmerShape(shape, TShape(), K);
+            indexShape(hashTab) = shape;
+            resize(indexDir(hashTab), _fullDirLength(hashTab));
+            adaptedCreateQGramIndexDirOnly(indexDir(hashTab), indexBucketMap(hashTab), databases, indexShape(hashTab));
+            CharString fileName=options.outputName;
+            append(fileName, ".dir");
+            save(indexDir(hashTab), toCString(fileName));
+            //printTables(indexSA(index), indexDir(hashTab), databases);
+        }
 
-        typedef Index<TSeqSet const, IndexQGram<Shape<TAlph, GenericShape> > > THashTable;
-        THashTable hashTab(databases);
-        Shape<TAlph, GenericShape> shape;
-        _getKmerShape(shape, TShape(), K);
-        indexShape(hashTab) = shape;
-        resize(indexDir(hashTab), _fullDirLength(hashTab));
-        adaptedCreateQGramIndexDirOnly(indexDir(hashTab), indexBucketMap(hashTab), databases, indexShape(hashTab));
-        CharString fileName=options.outputName;
-        append(fileName, ".dir");
-        save(indexDir(hashTab), toCString(fileName));
-        //printTables(indexSA(index), indexDir(hashTab), databases);
-
-        std::cout << "DEBUG: sizeof = " << sizeof(indexSA(index)[2]) << std::endl;
 
         // write the sequence Ids into file
-        fileName = options.outputName;
+        CharString fileName = options.outputName;
         append(fileName, ".ids");
         std::ofstream file(toCString(fileName), std::ios::out);
         if (file.good())
@@ -204,8 +160,8 @@ struct Lastdb
             return 4;
         }
 
-        if (options.verbosity > 1) std::cout << "Writing property file... " << std::endl;
 
+        if (options.verbosity > 1) std::cout << "Writing property file... " << std::endl;
         fileName = options.outputName;
         append(fileName, ".prt");
         return _writePropertyFile(fileName, static_cast<unsigned>(K), options.shapeChoice, static_cast<unsigned>(length(databases)));
@@ -215,12 +171,12 @@ struct Lastdb
 
 
 // -----------------------------------------------------------------------------
-// Function paramaterChoice
+// Function _lastDbChoice
 // -----------------------------------------------------------------------------
 
 // 3: Run build
 template <unsigned K, typename TSeqSet, typename TIdSet, typename TShape>
-int paramaterChoice3(TSeqSet const &databases, TIdSet const &ids, SeqanLastDbOptions &options, TShape const &)
+int _lastDbChoice3(TSeqSet const &databases, TIdSet const &ids, SeqanLastDbOptions &options, TShape const &)
 {
     Lastdb<TShape, K, TSeqSet, TIdSet> lastdb;
     return lastdb.build(databases, ids, options);
@@ -228,21 +184,21 @@ int paramaterChoice3(TSeqSet const &databases, TIdSet const &ids, SeqanLastDbOpt
 
 // 2: Choose k
 template <typename TSeqSet, typename TIdSet, typename TShape>
-int paramaterChoice2(TSeqSet const &databases, TIdSet const &ids, SeqanLastDbOptions &options, TShape const &)
+int _lastDbChoice2(TSeqSet const &databases, TIdSet const &ids, SeqanLastDbOptions &options, TShape const &)
 {
     switch (options.k)
     {
-        case 2:  return paramaterChoice3 <2> (databases, ids, options, TShape());
-        case 3:  return paramaterChoice3 <3> (databases, ids, options, TShape());
-        case 4:  return paramaterChoice3 <4> (databases, ids, options, TShape());
-        case 5:  return paramaterChoice3 <5> (databases, ids, options, TShape());
-        case 6:  return paramaterChoice3 <6> (databases, ids, options, TShape());
-        case 7:  return paramaterChoice3 <7> (databases, ids, options, TShape());
-        case 8:  return paramaterChoice3 <8> (databases, ids, options, TShape());
-        case 9:  return paramaterChoice3 <9> (databases, ids, options, TShape());
-        case 10: return paramaterChoice3 <10>(databases, ids, options, TShape());
-        case 11: return paramaterChoice3 <11>(databases, ids, options, TShape());
-        case 12: return paramaterChoice3 <12>(databases, ids, options, TShape());
+        case 2:  return _lastDbChoice3 <2> (databases, ids, options, TShape());
+        case 3:  return _lastDbChoice3 <3> (databases, ids, options, TShape());
+        case 4:  return _lastDbChoice3 <4> (databases, ids, options, TShape());
+        case 5:  return _lastDbChoice3 <5> (databases, ids, options, TShape());
+        case 6:  return _lastDbChoice3 <6> (databases, ids, options, TShape());
+        case 7:  return _lastDbChoice3 <7> (databases, ids, options, TShape());
+        case 8:  return _lastDbChoice3 <8> (databases, ids, options, TShape());
+        case 9:  return _lastDbChoice3 <9> (databases, ids, options, TShape());
+        case 10: return _lastDbChoice3 <10>(databases, ids, options, TShape());
+        case 11: return _lastDbChoice3 <11>(databases, ids, options, TShape());
+        case 12: return _lastDbChoice3 <12>(databases, ids, options, TShape());
         default:
             std::cerr << "No valid k-mer size chosen. Exit" << std::endl;
             return 2;
@@ -251,17 +207,57 @@ int paramaterChoice2(TSeqSet const &databases, TIdSet const &ids, SeqanLastDbOpt
 
 // 1: Choose Shape
 template <typename TSeqSet, typename TIdSet>
-int paramaterChoice1(TSeqSet const &databases, TIdSet const &ids, SeqanLastDbOptions &options)
+int _lastDbChoice1(TSeqSet const &databases, TIdSet const &ids, SeqanLastDbOptions &options)
 {
     switch (options.shapeChoice)
     {
-        case 1: return paramaterChoice2(databases, ids, options, Shape1());
-        case 2: return paramaterChoice2(databases, ids, options, Shape2());
+        case 1: return _lastDbChoice2(databases, ids, options, Shape1());
+        case 2: return _lastDbChoice2(databases, ids, options, Shape2());
         default:
             std::cerr << "No valid shape chosen. Exit" << std::endl;
             return 1;
     }
 }
+
+
+
+
+
+
+
+
+
+void _test()
+{
+    typedef StringSet<CharString, Owner<> >                     TSet1;
+    typedef StringSet<CharString, Owner<ConcatDirect<> > >      TSet2;
+    typedef Suffix<TSet1>::Type                                 TSuf1;
+    typedef Suffix<TSet2>::Type                                 TSuf2;
+    typedef CyclicShape<FixedShape<0,ShapePatternHunter,1> >    TShape;
+
+    TSet1 s1;
+    appendValue(s1, "Hallo ");
+    appendValue(s1, "Otto");
+    TSet2 s2;
+    appendValue(s2, "Hallo ");
+    appendValue(s2, "Otto");
+
+//    std::cout << concat(s1) << std::endl;     // does not compile
+    std::cout << concat(s2) << std::endl;
+
+    Pair<unsigned> pos(0,1);
+    std::cout << "Suffixe:" << std::endl;
+    std::cout << suffix(s1, pos) << std::endl;
+    std::cout << suffix(s2, pos) << std::endl;
+
+    std::cout << "Mod Reverse on the Suffixes:" << std::endl;
+    std::cout << ModifiedString<TSuf1, ModCyclicShape<TShape> >(suffix(s1,pos)) << std::endl;
+    std::cout << ModifiedString<TSuf2, ModCyclicShape<TShape> >(suffix(s2,pos)) << std::endl;
+    // TODO: problem with ModString of suffix of concatdirect ...
+
+}
+
+
 
 
 // -----------------------------------------------------------------------------
@@ -274,7 +270,7 @@ int main(int argc, char const ** argv)
     // only Dna5 supported so far
     typedef Dna5 TAlphabet;
     typedef String<TAlphabet>                            TSeq;
-    typedef StringSet<TSeq, Owner<> >                    TSeqSet; // TODO: MAke this concat direct ??
+    typedef StringSet<TSeq, Owner<ConcatDirect<> > >                    TSeqSet; // TODO: MAke this concat direct ??
 
 
     // set option parser
@@ -328,16 +324,6 @@ int main(int argc, char const ** argv)
     StringSet<CharString> ids;
     if (!_importSequences(databases, ids, options.databaseFile, options.verbosity))
         return 1;
-
-
-    // DEBUG
-    CharString sss = concat(databases);
-    std::cout << "SEQ:" <<std::endl;
-    std::cout << sss << std::endl;
-    for (unsigned i=0; i < length(databases); ++i)
-        std::cout << databases[i];
-    std::cout << std::endl;
-
     
 
     // Output Options:
@@ -352,7 +338,7 @@ int main(int argc, char const ** argv)
     }
 
     // convert runtime parameters to compileTime parameter
-    paramaterChoice1(databases, ids, options);
-    
+    _lastDbChoice1(databases, ids, options);
+
     return 0;
 }

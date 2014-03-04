@@ -44,16 +44,17 @@ typedef CyclicShape<FixedShape<0, GappedShape<HardwiredShape<1,1> >, 1> >     Sh
 
 namespace SEQAN_NAMESPACE_MAIN
 {
-template<typename TSpec>
-struct SAValue<StringSet<String<Dna5, TSpec>, Owner<> > >
-{
-    typedef Pair<unsigned char, unsigned int, Pack> Type;
-};
-template<typename TSpec>
-struct SAValue<StringSet<String<Dna5, TSpec>, Owner<> > const>
-{
-    typedef Pair<unsigned char, unsigned int, Pack> Type;
-};
+    // Define size type of Index<StringSet>
+    template<typename TSpec>
+    struct SAValue<StringSet<String<Dna5, TSpec>, Owner<ConcatDirect<> > > >
+    {
+        typedef Pair<unsigned char, unsigned int, Pack> Type;
+    };
+    template<typename TSpec>
+    struct SAValue<StringSet<String<Dna5, TSpec>, Owner<ConcatDirect<> > > const>
+    {
+        typedef Pair<unsigned char, unsigned int, Pack> Type;
+    };
 }
 
 // =============================================================================
@@ -203,7 +204,7 @@ void adaptedCreateQGramIndexDirOnly(TDir &dir,
     // 2. count q-grams
     _qgramCountQGrams(dir, bucketMap, text, shape, 1);
 
-    // New part: Insert missing q-grams when counting
+    // New part: Add Q-1 last q-grams (that are usually missed) to the count vector
     _insertMissingQGrams(dir, bucketMap, text, shape);
     
     // 3. cumulative sum (Step 4 is ommited)
@@ -417,7 +418,7 @@ void linearLastal(
     typedef StringSet<TQueryString, TQuerySetSpec> const            TQuerySet;
     typedef typename Iterator<TQuerySet, Standard>::Type            TQuerySetIter;
     typedef typename Iterator<TQueryString const, Standard>::Type   TQueryIter;
-    typedef String<typename SAValue<TIndex>::Type>                  TSA;
+    typedef typename Fibre<TIndex, FibreSA>::Type                   TSA;
     typedef typename Iterator<TSA, Standard>::Type                  TSAIter;
     typedef DiagonalTable<typename Difference<TDatabase>::Type, typename Size<TDatabase>::Type> TDiagTable;
     typedef typename Value<TMatches>::Type TMatch;
@@ -434,11 +435,6 @@ void linearLastal(
     TSize L = length(indexText(index));
     String<TDiagTable> diagTables;
     resize(diagTables, L * length(querySet));
-
-    // Step 0:
-    // Check that SA exists
-    indexRequire(index, FibreSA());
-    indexRequire(table, FibreDir());
 
     // Linear search on query
     for(typename Size<TQuerySet>::Type queryId=0; queryId < length(querySet); ++queryId)

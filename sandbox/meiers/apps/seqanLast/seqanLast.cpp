@@ -58,76 +58,60 @@ using namespace seqan;
 // =============================================================================
 
 // -----------------------------------------------------------------------------
-// Function main()
+// Function importAndRun()
 // -----------------------------------------------------------------------------
 
-int main(int argc, char const ** argv)
+template <unsigned K, typename TShape>
+int importAndRun(SeqanLastOptions &options,
+                 TShape const &)
 {
-    typedef Dna5 TAlphabet;
-    typedef String<TAlphabet>                            TSeq;
-    typedef StringSet<TSeq, Owner<> >                    TSeqSet; // TODO: MAke this concat direct ??
-    typedef Align<typename Infix<TSeq const>::Type>      TAlignment;
-    typedef SeqanLastMatch<Size<TSeq>::Type, TAlignment> TMatch;
+    // typedefs happen here (generic functions follow)
+    typedef StringSet<String<Dna5, External<> >, Owner<ConcatDirect<> > >   TStringSet;
+    typedef Align<typename Infix<TStringSet const>::Type>                   TAlignment;
+    typedef SeqanLastMatch<Size<TStringSet>::Type, TAlignment>              TMatch;
 
-    // get options
-    SeqanLastOptions options;
-    ArgumentParser::ParseResult res = parseCommandLine(options, argc, argv);
-    if (res != ArgumentParser::PARSE_OK)
-        return res;
-
-    // Load property file
-    if (!_readPropertyFile(options))
-        return 1;
-
-    // TODO: parameter Choice and the following code goes into a templated function
 
     // Import Suffix Array
-    typedef StringSet<String<Dna5, External<> >, Owner<ConcatDirect<> > > TStringSet;
-    Index<TStringSet, IndexSa<> > suffixArray;
+    Index<TStringSet, IndexSa<ModCyclicShape<TShape> > > suffixArray;
     if (!open(suffixArray, toCString(options.databaseName)))
         return 1;
     if (options.verbosity>1)
-        std::cout << "Loaded suffix array with " << length(indexSA(suffixArray)) << " entries" << std::endl;
+        std::cout << "Loaded suffix array with " << length(indexSA(suffixArray)) <<
+        " entries" << std::endl;
+
 
     // Import Database sequences
     CharString f = options.databaseName;    append(f, ".txt");
     if (!open(indexText(suffixArray), toCString(f)))
         return 1;
     if (options.verbosity>1)
-        std::cout << "Loaded database with " << length(indexText(suffixArray)) << " sequences and a total length of "
-        << lengthSum(indexText(suffixArray)) << std::endl;
+        std::cout << "Loaded database with " << length(indexText(suffixArray)) <<
+        " sequences and a total length of " << lengthSum(indexText(suffixArray)) << std::endl;
+
 
     // Import Database ids
-    StringSet<CharString> ids;
-    if (!_readIdFile(ids, options) || length(ids) != length(indexText(suffixArray)))
-        return 2;
+    StringSet<CharString> dbIds;
+    if (!_readIdFile(dbIds, options) || length(dbIds) != length(indexText(suffixArray)))
+        return 1;
     if (options.verbosity>1)
         std::cout << "Loaded database ids." << std::endl;
 
+
     // Load Q-Gram table
+    Index<TStringSet, IndexQGram<UngappedShape<K> > > hashTab;
+    f = options.databaseName;    append(f, ".dir");
+    if (!open(indexDir(hashTab), toCString(f)))
+        return 1;
+    if (options.verbosity>1)
+        std::cout << "Loaded hashTable with " << length(indexDir(hashTab)) << " entries" << std::endl;
 
 
-
-    return 0;
-/*
-    // import query sequences
-    TSeqSet queries;
+    // Import Query
+    TStringSet querySet;
     StringSet<CharString> queryIds;
-    if (!_importSequences(queries, queryIds, options.queryFile, options.verbosity))
+    if (!_importSequences(querySet, queryIds, options.queryFile, options.verbosity))
         return 1;
 
-
-    // Output Options:
-    if(options.verbosity > 1)
-        options.print();
-
-    // Create Indices:
-    if (options.verbosity) std::cout << "Building libraries..." << std::endl;
-    typedef Index<TSeqSet, IndexSa<> > TIndex;
-    TIndex index(databases);
-
-    typedef Index<TSeqSet, IndexQGram<Shape<Dna5, UngappedShape<8> > > > TTable;
-    TTable table(databases);
 
     // Prepare Scores
     Score<int, Simple> scoreMatrix(options.matchScore, options.mismatchScore, options.gapExtendScore,
@@ -136,9 +120,18 @@ int main(int argc, char const ** argv)
 
     // Do the main work: alignments
     if (options.verbosity) std::cout << "Start searching..." << std::endl;
-    String<TMatch> results;
-    linearLastal(results, index, table, queries, options.frequency, scoreMatrix, options.gaplessXDrop,
-                 options.gappedXDrop, options.gaplessThreshold, options.gappedThreshold, options.verbosity);
+    String<TMatch> matchContainer;
+    linearLastal(matchContainer,
+                 suffixArray,
+                 hashTab,
+                 querySet,
+                 options.frequency,
+                 scoreMatrix,
+                 options.gaplessXDrop,
+                 options.gappedXDrop,
+                 options.gaplessThreshold,
+                 options.gappedThreshold,
+                 options.verbosity);
 
 
     // Output
@@ -148,15 +141,77 @@ int main(int argc, char const ** argv)
         if (options.outputFile != "")
             std::cout << "Could not open \"" << options.outputFile << "\" to write output. Using stdout instead." << std::endl;
         std::cout << "================================================================================" << std::endl;
-        _outputMatches(results, databaseIds, queryIds, std::cout, options.verbosity);
+        _outputMatches(matchContainer, dbIds, queryIds, std::cout, options.verbosity);
 	} else {
         std::cout << "Writing output to " << options.outputFile << "..." << std::endl;
-        _outputMatches(results, databaseIds, queryIds, file, options.verbosity);
+        _outputMatches(matchContainer, dbIds, queryIds, file, options.verbosity);
     }
     file.close();
-    
-    
-    return 0;
- 
- */
+
+
+}
+
+// -----------------------------------------------------------------------------
+// Function _lastChoice()
+// -----------------------------------------------------------------------------
+
+// 2: Choose k
+template <typename TShape>
+int _lastChoice2(SeqanLastOptions &options,
+                 TShape const &)
+{
+    switch (options.k)
+    {
+        case 2:  return importAndRun <2> (options, TShape());
+        case 3:  return importAndRun <3> (options, TShape());
+        case 4:  return importAndRun <4> (options, TShape());
+        case 5:  return importAndRun <5> (options, TShape());
+        case 6:  return importAndRun <6> (options, TShape());
+        case 7:  return importAndRun <7> (options, TShape());
+        case 8:  return importAndRun <8> (options, TShape());
+        case 9:  return importAndRun <9> (options, TShape());
+        case 10: return importAndRun <10>(options, TShape());
+        case 11: return importAndRun <11>(options, TShape());
+        case 12: return importAndRun <12>(options, TShape());
+        default:
+            std::cerr << "No valid k-mer size chosen. Exit" << std::endl;
+            return 2;
+    }
+}
+
+// 1: Choose Shape
+int _lastChoice1(SeqanLastOptions &options)
+{
+    switch (options.shapeChoice)
+    {
+        case 1: return _lastChoice2(options, Shape1() );
+        case 2: return _lastChoice2(options, Shape2() );
+        default:
+            std::cerr << "No valid shape chosen. Exit" << std::endl;
+            return 1;
+    }
+}
+
+
+// -----------------------------------------------------------------------------
+// Function main()
+// -----------------------------------------------------------------------------
+
+int main(int argc, char const ** argv)
+{
+    // get options
+    SeqanLastOptions options;
+    ArgumentParser::ParseResult res = parseCommandLine(options, argc, argv);
+    if (res != ArgumentParser::PARSE_OK)
+        return res;
+
+    // Output Options:
+    if(options.verbosity > 1)
+        options.print();
+
+    // Load property file
+    if (!_readPropertyFile(options))
+        return 1;
+
+    return _lastChoice1(options);
 }

@@ -37,10 +37,6 @@
 using namespace seqan;
 
 // =============================================================================
-// Forwards
-// =============================================================================
-
-// =============================================================================
 // Tags, Classes, Enums
 // =============================================================================
 
@@ -94,19 +90,57 @@ struct SeqanLastOptions
     }
 };
 
-// =============================================================================
-// Metafunctions
-// =============================================================================
+// -----------------------------------------------------------------------------
+// Class SeqanLastDbOptions
+// -----------------------------------------------------------------------------
+
+struct SeqanLastDbOptions
+{
+    int verbosity; // 0 -- quiet, 1 -- normal, 2 -- verbose, 3 -- very verbose.
+    CharString databaseFile;
+    CharString outputName;
+    int shapeChoice;
+    int k;
+    CharString algorithm;
+
+    SeqanLastDbOptions() : verbosity(1), shapeChoice(1)
+    {}
+
+    void print()
+    {
+        std::cout << "Files:" << std::endl;
+        std::cout << "   database:    " << databaseFile << std::endl;
+        std::cout << "   output name: " << outputName  << std::endl;
+        std::cout << "Other:" << std::endl;
+        std::cout << "   shape:       " << shapeChoice << std::endl;
+        std::cout << "   k:           " << k  << std::endl;
+        std::cout << "algorithm:      " << algorithm << std::endl;
+    }
+};
 
 // =============================================================================
 // Functions
 // =============================================================================
 
+template <typename TSize, typename TType>
+int _writePropertyFile(CharString const & fileName, TSize k, TType shapeChoice, TSize strSetSize)
+{
+    std::fstream file(toCString(fileName), std::ios::binary | std::ios::out);
+    if (!file.good()) {
+        std::cerr << "Could not open " << fileName << " to write the propoerty file" << std::endl;
+        return 3;
+    }
+    file << "k=" << k << std::endl;
+    file << "shape=" << shapeChoice << std::endl;
+    file << "strSetSize=" << strSetSize << std::endl;
+    return 0;
+}
+
 // -----------------------------------------------------------------------------
-// Function _setParser()
+// Function _setLastParser()
 // -----------------------------------------------------------------------------
 
-void _setParser(ArgumentParser & parser)
+void _setLastParser(ArgumentParser & parser)
 {
     setShortDescription(parser, "Seqan version of the LAST aligner");
     setDate(parser, "March 2014");
@@ -183,7 +217,7 @@ parseCommandLine(SeqanLastOptions & options, int argc, char const ** argv)
 {
     // initialise a parser for seqanLast and read in the command line
     ArgumentParser parser;
-    _setParser(parser);
+    _setLastParser(parser);
     ArgumentParser::ParseResult res = parse(parser, argc, argv);
 
     // Only extract  options if the program will continue after parseCommandLine()
@@ -290,7 +324,8 @@ _importSequences(TSeqSet & seqs, TIdSet & ids, CharString const & fileName, int 
     }
 
     if(verbosity) std::cout << "Loaded " << seqCount << " sequence" <<
-        ((seqCount > 1) ? "s" : "") << " from " << fileName << std::endl;
+        ((seqCount > 1) ? "s" : "") << " with total length " <<
+        lengthSum(seqs) << " from " << fileName << std::endl;
     if (!idsUnique)
         if(verbosity) std::cerr << "WARNING: Non-unique IDs in " <<
             fileName << " ids. Output can be ambigous.\n";
@@ -523,6 +558,7 @@ bool _readPropertyFile(SeqanLastOptions & options)
             }
         }
         file.close();
+        if(options.verbosity>1) std::cout << "Read database properties from " << fileName << std::endl;
         return true;
     }
     else
