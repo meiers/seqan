@@ -528,7 +528,7 @@ inline bool _goDownChar(Iter<Index<TText, IndexSa<TIndexSpec> >, VSTree<TopDown<
 
     Pair<TSAIterator> range = _equalRangeSA(dereferer, node, c, value(it).repLen);
 
-    if (range.i1 >= range.i2)
+    if (!(range.i1 < range.i2))
         return false;
 
     // Save vertex descriptor.
