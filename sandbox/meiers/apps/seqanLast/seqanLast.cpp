@@ -72,7 +72,7 @@ int importAndRun(SeqanLastOptions &options,
 
 
     // Import Suffix Array
-    Index<TStringSet, IndexSa<ModCyclicShape<TShape> > > suffixArray;
+    Index<TStringSet, IndexSa<Gapped<ModCyclicShape<TShape> > > > suffixArray; // TODO: gapped
     if (!open(suffixArray, toCString(options.databaseName)))
         return 1;
     if (options.verbosity>1)
