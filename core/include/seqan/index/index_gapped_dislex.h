@@ -438,12 +438,12 @@ inline void _dislex(
     StringSet<TText, TTextSpec> const & origText,   // random access
     TCyclicShape const & cyclic)
 {
-    typedef typename Size<TSA>::Type                        TSize;
-    typedef typename Value<TSA>::Type                       TSAValue;
+    typedef typename Size<TSA>::Type                                    TSize;
+    typedef typename Value<TSA>::Type                                   TSAValue;
     typedef typename Value<typename Concatenator<TLexText>::Type>::Type TRank;
-    typedef ModifiedString<typename Suffix<TText const
-    >::Type, ModCyclicShape<TCyclicShape> >              TModText;
-    typedef typename Iterator<TSA const, Standard>::Type    TSAIter;
+    typedef typename Suffix<StringSet<TText, TTextSpec> const>::Type    TSuffix; // NOTE: This is != Suffix<TText>
+    typedef ModifiedString<TSuffix, ModCyclicShape<TCyclicShape> >      TModText;
+    typedef typename Iterator<TSA const, Standard>::Type                TSAIter;
 
     // position calculator
     typedef StringSet<TText, TTextSpec> const               TStringSet;
@@ -458,7 +458,7 @@ inline void _dislex(
 
 
     // q-gram comparator to determine rank
-    GappedSuffixQgramLess_<TSAValue, TCyclicShape, StringSet<TText, TTextSpec> > comp(origText, cyclic, static_cast<TSize>(weight(cyclic)));
+    GappedSuffixQgramLess_<TSAValue, TCyclicShape, StringSet<TText, TTextSpec> const> comp(origText, cyclic, static_cast<TSize>(weight(cyclic)));
 
     resize(lexText, lengthSum(origText));
 
