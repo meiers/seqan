@@ -147,7 +147,7 @@ void _setLastParser(ArgumentParser & parser)
     setVersion(parser, "0.1");
     setCategory(parser, "Local Alignment");
 
-    addUsageLine(parser, "[\\fIOPTIONS\\fP] <\\fIDATABASE\\fP> <\\fIFASTA FILE 2\\fP>");
+    addUsageLine(parser, "[\\fIOPTIONS\\fP] <\\fIDATABASE\\fP> <\\fIQUERY FILE\\fP>");
 
     addDescription(parser,
                    "SeqanLast is a reimplemtation of the core functionality of the LAST aligner "
@@ -155,20 +155,19 @@ void _setLastParser(ArgumentParser & parser)
                    "seeds tame genomic sequence comparison\"). It uses adaptive gapped seeds "
                    "to find local similarities, which are then verified using certain heuristics.");
     addDescription(parser,
-                   "Right now: Input two FASTA files. Later: Input a database and one (query) FASTA."
                    "TODO: (1) supports ONLY DNA right now. (2) Default values are not chosen with any "
-                   "thought. (3) Reading Database instead of 2 fasta files. (4) Output options");
+                   "thought.");
     addDescription(parser, "(c) 2013-2014 by Sascha Meiers");
 
     addArgument(parser, ArgParseArgument(ArgParseArgument::STRING, "DATABASE"));
-    addArgument(parser, ArgParseArgument(ArgParseArgument::INPUTFILE, "QUERY FASTA FILE"));
+    addArgument(parser, ArgParseArgument(ArgParseArgument::INPUTFILE, "QUERY FILE"));
     setValidValues(parser, 1, "fa fasta");  // allow only fasta files as input
 
     addSection(parser, "Output Options");
 
     addOption(parser, ArgParseOption("o", "output", "File to write results into (gff format)",
                                      ArgParseArgument::OUTPUTFILE));
-    setDefaultValue(parser, "o", "");
+    setDefaultValue(parser, "o", "stdout");
     addOption(parser, ArgParseOption("v", "verbose", "Set verbosity mode."));
     addOption(parser, ArgParseOption("V", "very-verbose", "Set stronger verbosity mode."));
     addOption(parser, ArgParseOption("Q", "quiet", "No output, please."));
@@ -491,13 +490,16 @@ bool _outputMatches(TMatches const & matches,
     typedef typename Value<typename Rows<TAlign>::Type>::Type TRow;
     typedef typename Source<TRow>::Type TSeq;
     typedef typename Size<TSeq>::Type TSize;
+
     for(typename Iterator<TMatches const, Standard>::Type it = begin(matches); it!= end(matches); ++it)
     {
         _writeMatchGff(dbIds[it->dbId], quIds[it->quId], true, it->score, row(it->align,0), row(it->align,1), stream);
     }
-
-    if (!verbosity)
+    if(empty(matches))
+        std::cout << "No results" << std::endl;
+    else if (!verbosity)
         std::cout << "# matches = " << length(matches) << std::endl;
+    return true;
 }
 
 

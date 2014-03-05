@@ -39,19 +39,23 @@
 // Global Definitions
 // =============================================================================
 
+// StringSet
+typedef StringSet<String<Dna5, MMap<> >, Owner<ConcatDirect<> > >         TStringSet;
+
+// Shapes
 typedef CyclicShape<FixedShape<0, GappedShape<HardwiredShape<1> >, 1> >       Shape1;   // 110
 typedef CyclicShape<FixedShape<0, GappedShape<HardwiredShape<1,1> >, 1> >     Shape2;   // 1110
 
 namespace SEQAN_NAMESPACE_MAIN
 {
     // Define size type of Index<StringSet>
-    template<typename TSpec>
-    struct SAValue<StringSet<String<Dna5, TSpec>, Owner<ConcatDirect<> > > >
+    template<>
+    struct SAValue<TStringSet>
     {
         typedef Pair<unsigned char, unsigned int, Pack> Type;
     };
-    template<typename TSpec>
-    struct SAValue<StringSet<String<Dna5, TSpec>, Owner<ConcatDirect<> > > const>
+    template<>
+    struct SAValue<TStringSet const>
     {
         typedef Pair<unsigned char, unsigned int, Pack> Type;
     };
@@ -215,14 +219,17 @@ void adaptedCreateQGramIndexDirOnly(TDir &dir,
 // Function adaptiveSeeds()
 // -----------------------------------------------------------------------------
 
-template <typename TTrieIndex,
-typename TLookupIndex,
-typename TQuery,
-typename TSize2 >
+template <
+    typename TTrieIndex,
+    typename TLookupIndex,
+    typename TQuery,
+    typename TSize2 >
 inline Pair<typename Size<TTrieIndex>::Type>
-adaptiveSeeds(TTrieIndex &index, TLookupIndex & table,
-              TQuery const &query, TSize2 maxFreq, int verbosity,
-              TSize2 goDownAtOnce = 0)
+adaptiveSeeds(TTrieIndex &index,
+              TLookupIndex & table,
+              TQuery const &query,
+              TSize2 maxFreq,
+              int verbosity)
 {
     // NOTE: query and database modifiers are expected to match
     //       (i.e. be of the same subset/shape type)
@@ -305,7 +312,7 @@ myUngapedExtendSeed(Seed<Simple, TConfig> & seed,
 
     for (; posH >= 1 && posV >= 1 && tmpScore > maxScore - scoreDropOff; --posH, --posV)
     {
-        tmpScore += score(scoringScheme, database[posH -1], query[posV -1]);
+        tmpScore += score(scoringScheme, value(database,posH -1), value(query,posV -1));
         if (tmpScore > maxScore)
         {
             maxScore = tmpScore;
@@ -313,6 +320,7 @@ myUngapedExtendSeed(Seed<Simple, TConfig> & seed,
             setBeginPositionV(seed, posV -1);
         }
     }
+
     setScore(seed, maxScore);
 
     // Extension to the right
@@ -358,7 +366,7 @@ inline TScoreValue myExtendAlignment(
                                      TScoreValue                     gappedXDropScore)
 {
     typedef typename Size<TDatabase>::Type                     TSize;
-
+    
     resize(rows(alignObj), 2);
     assignSource(row(alignObj, 0), infix(database, beginPositionH(seed), endPositionH(seed)));
     assignSource(row(alignObj, 1), infix(query, beginPositionV(seed), endPositionV(seed)));
@@ -390,20 +398,18 @@ inline TScoreValue myExtendAlignment(
 // -----------------------------------------------------------------------------
 
 template <typename TMatches,
-    typename TDatabase,
-    typename TDatabaseSetSpec,
+    typename TDbSet,
     typename TIndexSpec,
     typename TShape,
-    typename TQueryString,
-    typename TQuerySetSpec,
+    typename TQuerySet,
     typename TSize2,
     typename TScoreMatrix,
     typename TScore>
 void linearLastal(
                   TMatches & finalMatches,
-                  Index<StringSet<TDatabase, TDatabaseSetSpec>, IndexSa<TIndexSpec> > &index,
-                  Index<StringSet<TDatabase, TDatabaseSetSpec>, IndexQGram<TShape> > &table,
-                  StringSet<TQueryString, TQuerySetSpec> const &querySet,
+                  Index<TDbSet, IndexSa<TIndexSpec> > & index,
+                  Index<TDbSet, IndexQGram<TShape> > & table,
+                  TQuerySet const & querySet,
                   TSize2 maxFreq,
                   TScoreMatrix const & scoreMatrix,
                   TScore glXdrop,
@@ -412,16 +418,22 @@ void linearLastal(
                   TScore gpThr,
                   int verbosity)
 {
-    typedef StringSet<TDatabase, TDatabaseSetSpec>                  TDatabaseSet;
-    typedef Index<TDatabaseSet, IndexSa<TIndexSpec> >               TIndex;
-    typedef typename Size<TIndex>::Type                             TSize;
-    typedef StringSet<TQueryString, TQuerySetSpec> const            TQuerySet;
-    typedef typename Iterator<TQuerySet, Standard>::Type            TQuerySetIter;
-    typedef typename Iterator<TQueryString const, Standard>::Type   TQueryIter;
+    typedef Index<TDbSet, IndexSa<TIndexSpec> >                     TIndex;
+    typedef typename Size<TIndex>::Type                             TDbSize;
     typedef typename Fibre<TIndex, FibreSA>::Type                   TSA;
     typedef typename Iterator<TSA, Standard>::Type                  TSAIter;
-    typedef DiagonalTable<typename Difference<TDatabase>::Type, typename Size<TDatabase>::Type> TDiagTable;
-    typedef typename Value<TMatches>::Type TMatch;
+
+    typedef typename Value<TDbSet const>::Type                      TDbString;
+
+    typedef typename Value<TQuerySet const>::Type                   TQueryString;
+    typedef typename Size<TQuerySet>::Type                          TQuSize;
+    typedef typename Iterator<TQuerySet const, Standard>::Type      TQuerySetIter;
+    typedef typename Iterator<TQueryString const, Standard>::Type   TQueryIter;
+
+    typedef DiagonalTable<typename Difference<TDbString>::Type,
+                          typename Size<TDbString>::Type>           TDiagTable;
+    typedef typename Value<TMatches>::Type                          TMatch;
+
 
     // Self-measurements
     double      _tASCalls = 0;
@@ -432,51 +444,53 @@ void linearLastal(
     double      _tgpAlsCalls = 0;
     unsigned    _cgpAls = 0;
 
-    TSize L = length(indexText(index));
+
+    TDbSize L = length(indexText(index));
     String<TDiagTable> diagTables;
     resize(diagTables, L * length(querySet));
 
     // Linear search on query
-    for(typename Size<TQuerySet>::Type queryId=0; queryId < length(querySet); ++queryId)
+    for(TQuSize queryId=0; queryId < length(querySet); ++queryId)
     {
-        TQueryString const & query = querySet[queryId];
-        typename Size<TQueryString>::Type queryPos = 0;
-        TQueryIter queryBeg = begin(query, Standard());
-        TQueryIter queryEnd = end(query, Standard());
+        TQueryString const &    query = querySet[queryId];
+        TQuSize                 queryPos = 0;
+        TQueryIter              queryBeg = begin(query, Standard());
+        TQueryIter              queryEnd = end(query, Standard());
 
         for(TQueryIter queryIt = queryBeg; queryIt != queryEnd; ++queryIt, ++queryPos)
         {
             // Lookup adaptive Seed
             double xxx = cpuTime();
-            Pair<TSize> range = adaptiveSeeds(index, table, suffix(query, queryPos), maxFreq, verbosity);
+            Pair<TDbSize> range = adaptiveSeeds(index, table, suffix(query, queryPos), maxFreq, verbosity);
             _tASCalls += cpuTime() - xxx;
             ++_cASCalls;
 
+            // DEBUG
             if (verbosity > 2)
                 std::cout << "query [" << queryId << "," << queryPos << "] : \t\"" <<
-                infix(query, queryPos, std::min(static_cast<TSize>(queryPos + 30),
-                                                static_cast<TSize>(queryEnd-queryBeg))) << "...\", SA range: " << range <<
+                infix(query, queryPos, std::min(static_cast<TDbSize>(queryPos + 30),
+                                                static_cast<TDbSize>(queryEnd-queryBeg))) << "...\", SA range: " << range <<
                 (range.i2 > range.i1 && range.i2 <= range.i1 + maxFreq ? " good" : " BAD") << std::endl;
 
             if(range.i2 <= range.i1) continue; // seed doesn't hit at all
             if(range.i2 - range.i1 > maxFreq) continue; // seed hits too often
 
+            // Enumerate adaptive seeds
             TSAIter saFrom = begin(indexSA(index), Standard()) + range.i1;
             TSAIter saEnd  = begin(indexSA(index), Standard()) + range.i2;
 
             for(; saFrom != saEnd; ++saFrom)
             {
                 ++_cSeeds;
-
-                // Gapless Alignment in both directions with a XDrop
-                TDatabase const & database = indexText(index)[getSeqNo(*saFrom)];
-                Seed<Simple> seed(getSeqOffset(*saFrom), queryIt - queryBeg, 0);
+                TDiagTable          &diagTable = diagTables[getSeqNo(*saFrom) + L*queryId];
+                TDbString const     &database  = indexText(index)[getSeqNo(*saFrom)];
+                Seed<Simple>        seed( getSeqOffset(*saFrom), queryIt - queryBeg, 0 );
 
                 // Check whether seed is redundant
-                TDiagTable &diagTable = diagTables[getSeqNo(*saFrom) * L + queryId];
                 if (diagTable.redundant(beginPositionH(seed), beginPositionV(seed)))
                     continue;
 
+                // DEBUG
                 if (verbosity > 2)
                     std::cout << "      seed adaptive   database [" << getSeqNo(*saFrom) << "," << beginPositionH(seed) <<
                     "-" << endPositionH(seed) << "]\tquery [" << queryId << "," << beginPositionV(seed)
@@ -488,14 +502,15 @@ void linearLastal(
                 _tglAlsCalls += cpuTime() - xxxx;
                 ++_cglAls;
 
-
+                // Mark diagonal as already
                 diagTable.add(endPositionH(seed), endPositionV(seed));
 
-
+                // DEBUG
                 if (verbosity > 2)
-                    std::cout << "           extended   database [" << getSeqNo(*saFrom) << "," << beginPositionH(seed) <<
-                    "-" << endPositionH(seed) << "]\tquery [" << queryPos << "," << beginPositionV(seed)
-                    << "-" << endPositionV(seed) << "]\tscore: " << score(seed) << std::endl;
+                    std::cout << "           extended   database [" << getSeqNo(*saFrom) << "," <<
+                    beginPositionH(seed) << "-" << endPositionH(seed) << "]\tquery [" << queryPos <<
+                    "," << beginPositionV(seed) << "-" << endPositionV(seed) << "]\tscore: " <<
+                    score(seed) << std::endl;
 
                 // gapLess alignment too weak
                 if (score(seed) < glThr) continue;
@@ -513,6 +528,7 @@ void linearLastal(
                     queryPos << "," << beginPosition(row(alignObj,1)) << "-" <<
                     endPosition(row(alignObj,1)) << "]\tscore: " << finalScore << std::endl;
 
+
                 if (finalScore > gpThr)
                 {
                     TMatch matchObj;
@@ -525,6 +541,7 @@ void linearLastal(
                 
             } // for(; saFrom != saEnd; ++saFrom)
             
+
         } //for(; queryIt != queryEnd; ++queryIt)
     }
 

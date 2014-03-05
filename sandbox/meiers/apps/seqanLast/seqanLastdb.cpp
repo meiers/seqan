@@ -125,6 +125,8 @@ struct Lastdb
             if (options.algorithm == "external")
                 indexCreate(index, FibreSA(), DislexExternal<TShape>() );
             save(index, toCString(options.outputName));
+
+            std::cout << sizeof(indexSA(index)[0]) << std::endl;
         }
 
         if (options.verbosity > 1)
@@ -223,56 +225,12 @@ int _lastDbChoice1(TSeqSet const &databases, TIdSet const &ids, SeqanLastDbOptio
 
 
 
-
-
-
-
-void _test()
-{
-    typedef StringSet<CharString, Owner<> >                     TSet1;
-    typedef StringSet<CharString, Owner<ConcatDirect<> > >      TSet2;
-    typedef Suffix<TSet1>::Type                                 TSuf1;
-    typedef Suffix<TSet2>::Type                                 TSuf2;
-    typedef CyclicShape<FixedShape<0,ShapePatternHunter,1> >    TShape;
-
-    TSet1 s1;
-    appendValue(s1, "Hallo ");
-    appendValue(s1, "Otto");
-    TSet2 s2;
-    appendValue(s2, "Hallo ");
-    appendValue(s2, "Otto");
-
-//    std::cout << concat(s1) << std::endl;     // does not compile
-    std::cout << concat(s2) << std::endl;
-
-    Pair<unsigned> pos(0,1);
-    std::cout << "Suffixe:" << std::endl;
-    std::cout << suffix(s1, pos) << std::endl;
-    std::cout << suffix(s2, pos) << std::endl;
-
-    std::cout << "Mod Reverse on the Suffixes:" << std::endl;
-    std::cout << ModifiedString<TSuf1, ModCyclicShape<TShape> >(suffix(s1,pos)) << std::endl;
-    std::cout << ModifiedString<TSuf2, ModCyclicShape<TShape> >(suffix(s2,pos)) << std::endl;
-    // TODO: problem with ModString of suffix of concatdirect ...
-
-}
-
-
-
-
 // -----------------------------------------------------------------------------
 // Function main()
 // -----------------------------------------------------------------------------
 
 int main(int argc, char const ** argv)
 {
-
-    // only Dna5 supported so far
-    typedef Dna5 TAlphabet;
-    typedef String<TAlphabet>                            TSeq;
-    typedef StringSet<TSeq, Owner<ConcatDirect<> > >                    TSeqSet; // TODO: MAke this concat direct ??
-
-
     // set option parser
     ArgumentParser parser;
     setShortDescription(parser, "seqanLast: build index");
@@ -320,7 +278,7 @@ int main(int argc, char const ** argv)
         options.verbosity = 3;
 
     // import database sequence
-    TSeqSet databases;
+    TStringSet databases;
     StringSet<CharString> ids;
     if (!_importSequences(databases, ids, options.databaseFile, options.verbosity))
         return 1;

@@ -66,13 +66,12 @@ int importAndRun(SeqanLastOptions &options,
                  TShape const &)
 {
     // typedefs happen here (generic functions follow)
-    typedef StringSet<String<Dna5, External<> >, Owner<ConcatDirect<> > >   TStringSet;
-    typedef Align<typename Infix<TStringSet const>::Type>                   TAlignment;
-    typedef SeqanLastMatch<Size<TStringSet>::Type, TAlignment>              TMatch;
+    typedef Align<typename Infix<TStringSet const>::Type>       TAlignment;
+    typedef SeqanLastMatch<Size<TStringSet>::Type, TAlignment>  TMatch;
 
 
     // Import Suffix Array
-    Index<TStringSet, IndexSa<Gapped<ModCyclicShape<TShape> > > > suffixArray; // TODO: gapped
+    Index<TStringSet, IndexSa<> > suffixArray; // TODO: Gapped<ModCyclicShape<TShape> > 
     if (!open(suffixArray, toCString(options.databaseName)))
         return 1;
     if (options.verbosity>1)
@@ -117,6 +116,8 @@ int importAndRun(SeqanLastOptions &options,
     Score<int, Simple> scoreMatrix(options.matchScore, options.mismatchScore, options.gapExtendScore,
                                    options.gapExtendScore + options.gapOpenScore);
 
+    
+    
 
     // Do the main work: alignments
     if (options.verbosity) std::cout << "Start searching..." << std::endl;
@@ -137,8 +138,8 @@ int importAndRun(SeqanLastOptions &options,
     // Output
     std::ofstream file;
 	file.open(toCString(options.outputFile), ::std::ios_base::out | ::std::ios_base::app);
-	if (options.outputFile == "" || !file.is_open()) {
-        if (options.outputFile != "")
+	if (options.outputFile == "stdout" || !file.is_open()) {
+        if (options.outputFile != "stdout")
             std::cout << "Could not open \"" << options.outputFile << "\" to write output. Using stdout instead." << std::endl;
         std::cout << "================================================================================" << std::endl;
         _outputMatches(matchContainer, dbIds, queryIds, std::cout, options.verbosity);
@@ -148,7 +149,8 @@ int importAndRun(SeqanLastOptions &options,
     }
     file.close();
 
-
+    std::cout << "ENDE" << std::endl;
+    return 0;
 }
 
 // -----------------------------------------------------------------------------
