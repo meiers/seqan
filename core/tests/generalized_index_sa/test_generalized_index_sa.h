@@ -40,6 +40,10 @@
 #include <seqan/index.h>
 #include "../index/test_index_helpers.h"
 
+
+// TODO(meiers): Completely renew this!
+
+
 SEQAN_DEFINE_TEST(test_generalized_index_sa_Demo)
 {
     using namespace seqan;
