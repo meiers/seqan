@@ -83,7 +83,7 @@ std::unary_function<TSAValue, typename Suffix<TText>::Type>
     TModString
     operator() (TSAValue const &pos) const
     {
-        return TModString(suffix(text, pos));
+        return TModString(suffix(text, pos), modifierCargo);
     }
 };
 
