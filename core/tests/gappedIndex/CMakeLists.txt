@@ -31,7 +31,7 @@ add_definitions (${SEQAN_DEFINITIONS})
 # Update the list of file names below if you add source files to your test.
 add_executable (test_gappedIndex
                 test_gappedIndex.cpp
-                test_gappedIndex.h)
+                test_gappedIndex_find.h)
 
 # Add dependencies found by find_package (SeqAn).
 target_link_libraries (test_gappedIndex ${SEQAN_LIBRARIES})

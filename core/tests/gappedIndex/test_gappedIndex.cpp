@@ -35,11 +35,40 @@
 #include <seqan/basic.h>
 #include <seqan/file.h>
 
-#include "test_gappedIndex.h"
+#include "test_gappedIndex_find.h"
 
 
 SEQAN_BEGIN_TESTSUITE(test_gappedIndex)
 {
-	SEQAN_CALL_TEST(test_gappedIndex_strings_example1);
+	SEQAN_CALL_TEST(test_gappedIndex_find_10_DnaString);
+	SEQAN_CALL_TEST(test_gappedIndex_find_10_Dna5String);
+	SEQAN_CALL_TEST(test_gappedIndex_find_10_Peptide);
+	SEQAN_CALL_TEST(test_gappedIndex_find_10_CharString);
+
+	SEQAN_CALL_TEST(test_gappedIndex_find_11010_DnaString);
+	SEQAN_CALL_TEST(test_gappedIndex_find_11010_Dna5String);
+	SEQAN_CALL_TEST(test_gappedIndex_find_11010_Peptide);
+	SEQAN_CALL_TEST(test_gappedIndex_find_11010_CharString);
+
+	SEQAN_CALL_TEST(test_gappedIndex_find_111100_DnaString);
+	SEQAN_CALL_TEST(test_gappedIndex_find_111100_Dna5String);
+	SEQAN_CALL_TEST(test_gappedIndex_find_111100_Peptide);
+	SEQAN_CALL_TEST(test_gappedIndex_find_111100_CharString);
+
+    SEQAN_CALL_TEST(test_gappedIndex_find_10001_DnaString);
+	SEQAN_CALL_TEST(test_gappedIndex_find_10001_Dna5String);
+	SEQAN_CALL_TEST(test_gappedIndex_find_10001_Peptide);
+	SEQAN_CALL_TEST(test_gappedIndex_find_10001_CharString);
+
+    SEQAN_CALL_TEST(test_gappedIndex_find_01_DnaString);
+	SEQAN_CALL_TEST(test_gappedIndex_find_01_Dna5String);
+	SEQAN_CALL_TEST(test_gappedIndex_find_01_Peptide);
+	SEQAN_CALL_TEST(test_gappedIndex_find_01_CharString);
+
+    SEQAN_CALL_TEST(test_gappedIndex_find_0011_DnaString);
+	SEQAN_CALL_TEST(test_gappedIndex_find_0011_Dna5String);
+	SEQAN_CALL_TEST(test_gappedIndex_find_0011_Peptide);
+	SEQAN_CALL_TEST(test_gappedIndex_find_0011_CharString);
+
 }
 SEQAN_END_TESTSUITE

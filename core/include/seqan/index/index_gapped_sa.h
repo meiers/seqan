@@ -68,6 +68,8 @@ std::unary_function<TSAValue, typename Suffix<TText>::Type>
 {
     typedef ModifiedString<typename Suffix<TText>::Type, TModifier> TModString;
     typedef typename Cargo<TModString>::Type                        TModifierCargo;
+    
+    typedef TModString              result_type;
 
     TText                   &text;
     TModifierCargo const    &modifierCargo;
@@ -334,10 +336,8 @@ _findFirstIndex(Finder< Index<TText, IndexSa<Gapped<TSuffixMod, TSpec> > >, TSpe
     TIndex &index = haystack(finder);
     indexRequire(index, EsaSA());
 
-    // TODO(meiers): Do not access the index member directly
     GappedSuffixFunctor<TText, typename Value<TSA>::Type, TSuffixMod> dereferer(indexText(index), index.modifierCargo);
-
-    finder.range = _equalRangeSA(indexText(index), SearchTreeIterator<TSA const, SortedList>(indexSA(index)), pattern);
+    finder.range = _equalRangeSA(dereferer, SearchTreeIterator<TSA const, SortedList>(indexSA(index)), pattern);
 
 }
 
