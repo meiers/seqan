@@ -36,10 +36,15 @@
 #include <seqan/file.h>
 
 #include "test_gappedIndex_find.h"
-
+#include "test_gappedIndex_stree.h"
 
 SEQAN_BEGIN_TESTSUITE(test_gappedIndex)
 {
+
+    testManualExample();
+    return;
+
+
 	SEQAN_CALL_TEST(test_gappedIndex_find_10_DnaString);
     SEQAN_CALL_TEST(test_gappedIndex_find_10_DnaString_Set);
 	SEQAN_CALL_TEST(test_gappedIndex_find_10_Dna5String);
