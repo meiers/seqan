@@ -47,6 +47,8 @@ namespace SEQAN_NAMESPACE_MAIN
 // ============================================================================
 
 template <typename T> struct IndexSa;
+
+template <typename T, typename TSAValue> struct SuffixFunctor;
     
 // ============================================================================
 // Tags, Classes, Enums
@@ -62,28 +64,32 @@ template <typename TSuffixMod, typename TSpec = void>
 struct Gapped {};
 
 
+
+// ----------------------------------------------------------------------------
+// SuffixFunctor
+// ----------------------------------------------------------------------------
+
 template <typename TText, typename TSAValue, typename TModifier>
-struct GappedSuffixFunctor :
-std::unary_function<TSAValue, typename Suffix<TText>::Type>
+struct SuffixFunctor < Index<TText, IndexSa<Gapped<TModifier> > >, TSAValue> :
+    std::unary_function<TSAValue, typename Suffix<Index<TText, IndexSa<Gapped<TModifier> > > const>::Type>
 {
-    typedef ModifiedString<typename Suffix<TText>::Type, TModifier> TModString;
-    typedef typename Cargo<TModString>::Type                        TModifierCargo;
-    
-    typedef TModString              result_type;
+    typedef Index<TText, IndexSa<Gapped<TModifier> > >  TIndex;
+    typedef typename Fibre<TIndex, FibreText>::Type     TText2;
+    typedef typename Suffix<TIndex const>::Type         result_type;
+    typedef typename Cargo<result_type>::Type           TModCargo;
 
-    TText                   &text;
-    TModifierCargo const    &modifierCargo;
+    TText2 const    &text;
+    TModCargo const &modCargo;
 
-    GappedSuffixFunctor(TText &text, TModifierCargo const &modifierCargo) :
-        text(text),
-        modifierCargo(modifierCargo)
+    SuffixFunctor(TIndex const &index) :
+        text(indexText(index)),
+        modCargo(index.modifierCargo)
     {}
 
-    // TODO(meiers): Reference Type ?
-    TModString
+    result_type
     operator() (TSAValue const &pos) const
     {
-        return TModString(suffix(text, pos), modifierCargo);
+        return result_type(suffix(text, pos), modCargo);
     }
 };
 
@@ -229,7 +235,7 @@ suffixModifier(Index<TText, IndexSa<Gapped<TSuffixMod, TSpec> > > const & t)
 */
 
 // ----------------------------------------------------------------------------
-// Function suffix()                                                    general
+// Function suffix()
 // ----------------------------------------------------------------------------
 
 template <typename TText, typename TSuffixMod, typename TSpec, typename TPosBegin>
@@ -247,6 +253,25 @@ suffix(Index<TText, IndexSa<Gapped<TSuffixMod, TSpec> > > const &t, TPosBegin po
 {
     typedef typename Suffix<Index<TText, IndexSa<Gapped<TSuffixMod, TSpec> > > const>::Type TModifiedSuffix;
     return TModifiedSuffix(suffix(indexText(t), pos_begin), t.modifierCargo);
+}
+
+// ----------------------------------------------------------------------------
+// Function suffixLength()
+// ----------------------------------------------------------------------------
+
+    // TODO(meiers): Is there a faster way than suffix creation to get the length??
+template <typename TText, typename TSuffixMod, typename TSpec, typename TPosBegin>
+SEQAN_HOST_DEVICE inline typename Size<Index<TText, IndexSa<Gapped<TSuffixMod, TSpec> > > >::Type
+suffixLength(TPosBegin pos, Index<TText, IndexSa<Gapped<TSuffixMod, TSpec> > > &index)
+{
+    return length(suffix(index, pos) );
+}
+
+template <typename TText, typename TSuffixMod, typename TSpec, typename TPosBegin>
+SEQAN_HOST_DEVICE inline typename Size<Index<TText, IndexSa<Gapped<TSuffixMod, TSpec> > > const>::Type
+suffixLength(TPosBegin pos, Index<TText, IndexSa<Gapped<TSuffixMod, TSpec> > > const &index)
+{
+    return length(suffix(index, pos) );
 }
 
 // ----------------------------------------------------------------------------
@@ -321,25 +346,12 @@ inline bool indexCreate(Index<TText, IndexSa<Gapped<TSuffixMod, TSpec> > > &t, F
     return true;
 }
 
-// ----------------------------------------------------------------------------
-// Function _findFirstIndex()                                    used in find()
-// ----------------------------------------------------------------------------
 
-template < typename TText, typename TSuffixMod, typename TSpec, typename TSpecFinder, typename TPattern >
-inline void
-_findFirstIndex(Finder< Index<TText, IndexSa<Gapped<TSuffixMod, TSpec> > >, TSpecFinder > &finder,
-                TPattern const &pattern,
-                EsaFindMlr const)
-{
-    typedef Index<TText, IndexSa<Gapped<TSuffixMod, TSpec> > > TIndex;
-    typedef typename Fibre<TIndex, FibreSA>::Type TSA;
-    TIndex &index = haystack(finder);
-    indexRequire(index, EsaSA());
 
-    GappedSuffixFunctor<TText, typename Value<TSA>::Type, TSuffixMod> dereferer(indexText(index), index.modifierCargo);
-    finder.range = _equalRangeSA(dereferer, SearchTreeIterator<TSA const, SortedList>(indexSA(index)), pattern);
 
-}
+
+
+
 
 
 

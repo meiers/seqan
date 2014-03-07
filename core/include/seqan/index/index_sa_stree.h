@@ -393,7 +393,8 @@ inline bool _goDown(Iter<Index<TText, IndexSa<TIndexSpec> >, VSTree<TopDown<TSpe
         TSASize saLen = saRange.i2 - saRange.i1;
         TSearchTreeIterator node(saBegin, saLen);
 
-        TSAIterator upperBound = _upperBoundSA(text, node, cLeft, value(it).repLen);
+        SuffixFunctor<TIndex, typename Value<TSA>::Type> dereferer(index);
+        TSAIterator upperBound = _upperBoundSA(dereferer, node, cLeft, value(it).repLen);
 
         value(it).range.i2 = upperBound - begin(sa, Standard());
     }
@@ -456,9 +457,14 @@ inline bool _goRight(Iter<Index<TText, IndexSa<TIndexSpec> >, VSTree<TopDown<TSp
             return false;
     }
 
+    typedef typename SuffixFunctor<TIndex, typename Value<TSA>::Type>::result_type TSuffix;
+    SuffixFunctor<TIndex, typename Value<TSA>::Type>dereferer(index);
+    TSuffix leftSuff = dereferer(saRange.i1);
+    TSuffix rightSuff =dereferer(saRange.i2);
+
     // Get first and last characters in interval.
-    TAlphabet cLeft = textAt(posAdd(saAt(saRange.i1, index), value(it).repLen), index);
-    TAlphabet cRight = textAt(posAdd(saAt(saRange.i2 - 1, index), value(it).repLen), index);
+    TAlphabet cLeft = value(leftSuff,  posAdd(saAt(saRange.i1, index), value(it).repLen)); //textAt(posAdd(saAt(saRange.i1, index), value(it).repLen), index);
+    TAlphabet cRight =value(rightSuff, posAdd(saAt(saRange.i2 - 1, index), value(it).repLen)); // textAt(posAdd(saAt(saRange.i2 - 1, index), value(it).repLen), index);
 
     SEQAN_ASSERT_NEQ(ordValue(cLeft), ordValue(value(it).lastChar));
 
@@ -478,8 +484,7 @@ inline bool _goRight(Iter<Index<TText, IndexSa<TIndexSpec> >, VSTree<TopDown<TSp
         TSASize saLen = saRange.i2 - saRange.i1;
         TSearchTreeIterator node(saBegin, saLen);
 
-        TText const & text = indexText(index);
-        TSAIterator upperBound = _upperBoundSA(text, node, cLeft, value(it).repLen);
+        TSAIterator upperBound = _upperBoundSA(dereferer, node, cLeft, value(it).repLen);
 
         value(it).range.i2 = upperBound - begin(sa, Standard());
     }
@@ -514,7 +519,6 @@ inline bool _goDownChar(Iter<Index<TText, IndexSa<TIndexSpec> >, VSTree<TopDown<
 
     TIndex const & index = container(it);
     TSA const & sa = indexSA(index);
-    TText const & text = indexText(index);
 
 #ifdef SEQAN_DEBUG
     //std::cout << "parent: " << value(it).range.i1 << " " << value(it).range.i2 << std::endl;
@@ -523,9 +527,9 @@ inline bool _goDownChar(Iter<Index<TText, IndexSa<TIndexSpec> >, VSTree<TopDown<
     TSAIterator saBegin = begin(sa, Standard()) + value(it).range.i1;
     TSASize saLen = isRoot(it) ? length(sa) : value(it).range.i2 - value(it).range.i1;
 
-    SuffixFunctor<TText const, typename Value<TSA>::Type> dereferer(text);
     TSearchTreeIterator node(saBegin, saLen);
 
+    SuffixFunctor<TIndex, typename Value<TSA>::Type> dereferer(index);
     Pair<TSAIterator> range = _equalRangeSA(dereferer, node, c, value(it).repLen);
 
     if (!(range.i1 < range.i2))
@@ -562,7 +566,6 @@ inline bool _goDownString(Iter<Index<TText, IndexSa<TIndexSpec> >, VSTree<TopDow
 
     TIndex const & index = container(it);
     TSA const & sa = indexSA(index);
-    TText const & text = indexText(index);
 
 #ifdef SEQAN_DEBUG
     //std::cout << "parent: " << value(it).range.i1 << " " << value(it).range.i2 << std::endl;
@@ -571,7 +574,8 @@ inline bool _goDownString(Iter<Index<TText, IndexSa<TIndexSpec> >, VSTree<TopDow
     TSAIterator saBegin = begin(sa, Standard()) + value(it).range.i1;
     TSASize saLen = isRoot(it) ? length(sa) : value(it).range.i2 - value(it).range.i1;
     TSearchTreeIterator node(saBegin, saLen);
-    Pair<TSAIterator> range = _equalRangeSA(index, node, pattern, value(it).repLen);
+    SuffixFunctor<TIndex, typename Value<TSA>::Type> dereferer(index);
+    Pair<TSAIterator> range = _equalRangeSA(dereferer, node, pattern, value(it).repLen);
 
     if (range.i1 >= range.i2)
         return false;

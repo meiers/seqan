@@ -133,7 +133,14 @@ void testManualExample()
     goRight(treeIter);
     SEQAN_ASSERT_EQ(range(treeIter), Pair<unsigned>(21,26));
 
+    goRoot(treeIter);
+    goDown(treeIter, "EEIR");
+    SEQAN_ASSERT_EQ(range(treeIter), Pair<unsigned>(21,24));
+    SEQAN_ASSERT_EQ(representative(treeIter), "EEIR");
+    SEQAN_ASSERT_EQ(repLength(treeIter), 4u);
 
+    // TODO: test isFirstChild _isLeaf and other functions from index_sa_stree.h
+    // what about goUp, nodUp
 }
 
 
