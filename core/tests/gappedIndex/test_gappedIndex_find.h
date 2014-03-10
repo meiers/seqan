@@ -39,8 +39,6 @@
 #include <seqan/index.h>
 #include <seqan/sequence.h>
 
-#include "../index/test_index_helpers.h"
-
 using namespace seqan;
 
 
