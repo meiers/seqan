@@ -47,7 +47,6 @@ namespace SEQAN_NAMESPACE_MAIN
 // ============================================================================
 
 template <typename T> struct IndexSa;
-
 template <typename T, typename TSAValue> struct SuffixFunctor;
     
 // ============================================================================
@@ -63,20 +62,18 @@ struct DefaultFinder< Index<TText, IndexSa<TSpec> > > {
 template <typename TSuffixMod, typename TSpec = void>
 struct Gapped {};
 
-
-
 // ----------------------------------------------------------------------------
 // SuffixFunctor
 // ----------------------------------------------------------------------------
 
-template <typename TText, typename TSAValue, typename TModifier>
-struct SuffixFunctor < Index<TText, IndexSa<Gapped<TModifier> > >, TSAValue> :
-    std::unary_function<TSAValue, typename Suffix<Index<TText, IndexSa<Gapped<TModifier> > > const>::Type>
+template <typename TText, typename TSAValue, typename TModifier, typename TSpec>
+struct SuffixFunctor < Index<TText, IndexSa<Gapped<TModifier, TSpec> > >, TSAValue> :
+    std::unary_function<TSAValue, typename Suffix<Index<TText, IndexSa<Gapped<TModifier, TSpec> > > const>::Type>
 {
-    typedef Index<TText, IndexSa<Gapped<TModifier> > >  TIndex;
-    typedef typename Fibre<TIndex, FibreText>::Type     TText2;
-    typedef typename Suffix<TIndex const>::Type         result_type;
-    typedef typename Cargo<result_type>::Type           TModCargo;
+    typedef Index<TText, IndexSa<Gapped<TModifier, TSpec> > >   TIndex;
+    typedef typename Fibre<TIndex, FibreText>::Type             TText2;
+    typedef typename Suffix<TIndex const>::Type                 result_type;
+    typedef typename Cargo<result_type>::Type                   TModCargo;
 
     TText2 const    &text;
     TModCargo const &modCargo;
@@ -97,7 +94,7 @@ struct SuffixFunctor < Index<TText, IndexSa<Gapped<TModifier> > >, TSAValue> :
 // Carries a modifierCargo
 // of type TModifierCargo a.k.a. Cargo<Suffix<Index> >
 template <typename TText, typename TSuffixMod, typename TSpec>
-class Index<TText, IndexSa< Gapped<TSuffixMod, TSpec > > > :
+class Index<TText, IndexSa< Gapped<TSuffixMod, TSpec> > > :
     public Index<TText, IndexSa<TSpec> >
 {
 public:
@@ -143,8 +140,6 @@ public:
     {}
 };
 
-
-
 // ============================================================================
 // Metafunctions
 // ============================================================================
@@ -167,9 +162,6 @@ struct DefaultIndexCreator<Index<TText, IndexSa<Gapped<ModCyclicShape<TShape>,TS
                         SAQSort,
                         DislexExternal<TShape> >::Type                      Type;
 };
-
-
-
 
 // ----------------------------------------------------------------------------
 // Metafunction Suffix                                                  general
@@ -207,32 +199,9 @@ struct Infix<Index<TText, IndexSa<Gapped<TSuffixMod, TSpec> > > const>
     typedef typename Prefix<typename Suffix<Index<TText, IndexSa<Gapped<TSuffixMod, TSpec> > > const>::Type>::Type Type;
 };
 
-
 // ============================================================================
 // Functions
 // ============================================================================
-
-    /*
-// ----------------------------------------------------------------------------
-// Function suffixModifier
-// ----------------------------------------------------------------------------
-    
-template <typename TText, typename TSuffixMod, typename TSpec>
-    inline typename Cargo<Suffix<>::Type>::Type &
-suffixModifier(Index<TText, IndexSa<Gapped<TSuffixMod, TSpec> > > & t)
-{
-    return t.suffMod;
-}
-
-// TODO(meiers): Replace & by seqan Reference type
-
-template <typename TText, typename TSuffixMod, typename TSpec>
-inline typename Cargo<Index<TText, IndexSa<Gapped<TSuffixMod, TSpec> > > >::Type const &
-suffixModifier(Index<TText, IndexSa<Gapped<TSuffixMod, TSpec> > > const & t)
-{
-    return t.suffMod;
-}
-*/
 
 // ----------------------------------------------------------------------------
 // Function suffix()
@@ -259,7 +228,8 @@ suffix(Index<TText, IndexSa<Gapped<TSuffixMod, TSpec> > > const &t, TPosBegin po
 // Function suffixLength()
 // ----------------------------------------------------------------------------
 
-    // TODO(meiers): Is there a faster way than suffix creation to get the length??
+// TODO(meiers): Is there a faster way than suffix creation to get the length??
+
 template <typename TText, typename TSuffixMod, typename TSpec, typename TPosBegin>
 SEQAN_HOST_DEVICE inline typename Size<Index<TText, IndexSa<Gapped<TSuffixMod, TSpec> > > >::Type
 suffixLength(TPosBegin pos, Index<TText, IndexSa<Gapped<TSuffixMod, TSpec> > > &index)
@@ -275,7 +245,7 @@ suffixLength(TPosBegin pos, Index<TText, IndexSa<Gapped<TSuffixMod, TSpec> > > c
 }
 
 // ----------------------------------------------------------------------------
-// Function infixWithLength()                           for Gapped IndexSa
+// Function infixWithLength()
 // ----------------------------------------------------------------------------
 
 template <typename TText, typename TSuffixMod, typename TSpec, typename TPosBegin, typename TSize>
@@ -292,7 +262,6 @@ infixWithLength(Index<TText, IndexSa<Gapped<TSuffixMod, TSpec> > > const &index,
     return prefix(suffix(index, pos_begin), length);
 }
 
-/*
 // ----------------------------------------------------------------------------
 // Function infix()                                                     general
 // ----------------------------------------------------------------------------
@@ -331,7 +300,6 @@ infix(Index<StringSet<TText, TTextSpec>, IndexSa<Gapped<TSuffixMod, TSpec> > > c
 {
     return prefix(suffix(t, pos_begin), pos_end.i2 - pos_begin.i2);
 }
-*/
 
 // ----------------------------------------------------------------------------
 // Function indexCreate (FibreSA)                                       general
@@ -346,282 +314,27 @@ inline bool indexCreate(Index<TText, IndexSa<Gapped<TSuffixMod, TSpec> > > &t, F
     return true;
 }
 
-
-
-
-
-
-
-
-
-
-
-
 /*
+ // ----------------------------------------------------------------------------
+ // Function suffixModifier
+ // ----------------------------------------------------------------------------
 
-    
+ template <typename TText, typename TSuffixMod, typename TSpec>
+ inline typename Cargo<Suffix<>::Type>::Type &
+ suffixModifier(Index<TText, IndexSa<Gapped<TSuffixMod, TSpec> > > & t)
+ {
+ return t.suffMod;
+ }
 
+ // TODO(meiers): Replace & by seqan Reference type
 
-
-
-
-
-
-
-///////////////////////////////////////////////////////////////////////////////
-//                                                                           //
-//                             experimental stuff                            //
-//                                                                           //
-///////////////////////////////////////////////////////////////////////////////
-
-    // TODO(sascha): Whole BottomUp iterator!
-    // TODO(sascha): Missing functions for Iterator, e.g. repLength
-    
-
-// copy 'n paste from index_sa_stree.h
-template <typename TText, typename TShapeSpec, typename TIndexSpec, typename TSpec, typename TString, typename TSize>
-inline bool _goDownString(Iter<Index<TText, IndexSa<Gapped<TShapeSpec, TIndexSpec> > >, VSTree<TopDown<TSpec> > > & it,
-                          TString const & pattern, TSize & lcp)
-{
-    typedef Index<TText, IndexSa<Gapped<TShapeSpec, TIndexSpec> > >   TIndex;
-    typedef typename Fibre<TIndex, FibreSA>::Type                       TSA;
-    typedef typename Size<TSA const>::Type                              TSASize;
-    typedef typename Iterator<TSA const, Standard>::Type                TSAIterator;
-    typedef SearchTreeIterator<TSA const, SortedList>                   TSearchTreeIterator;
-    
-    if (_isLeaf(it, HideEmptyEdges()))
-        return false;
-    
-    TIndex const & index = container(it);
-    TSA const & sa = indexSA(index);
-    // TText const & text = indexText(index);                                        // CHANGE(sascha): handle index instead of text
-        
-    TSAIterator saBegin = begin(sa, Standard()) + value(it).range.i1;
-    TSASize saLen = isRoot(it) ? length(sa) : value(it).range.i2 - value(it).range.i1;
-    TSearchTreeIterator node(saBegin, saLen);
-    Pair<TSAIterator> range = _equalRangeSA(index, node, pattern, value(it).repLen); // CHANGE(sascha): handle index instead of text
-    
-    if (range.i1 >= range.i2)
-        return false;
-    
-    // Save vertex descriptor.
-    _historyPush(it);
-    
-    // Update range, lastChar and repLen.
-    value(it).range.i1 = range.i1 - begin(sa, Standard());
-    value(it).range.i2 = range.i2 - begin(sa, Standard());
-    value(it).lastChar = back(pattern);
-    value(it).repLen += length(pattern);
-        
-    lcp = length(pattern);
-    
-    return true;
-}
-
-
-template < typename TText, typename TShapeSpec, typename TIndexSpec, typename TSpec >
-inline typename Prefix<typename Suffix<Index<TText, IndexSa<Gapped<TShapeSpec, TIndexSpec> > > >::Type>::Type
-representative(Iter<Index<TText, IndexSa<Gapped<TShapeSpec, TIndexSpec> > >, VSTree<TSpec> > &it)
-{
-    return prefix(suffix(container(it), getOccurrence(it)), repLength(it));
-}
-
-template < typename TText, typename TShapeSpec, typename TIndexSpec, typename TSpec >
-inline typename Prefix<typename Suffix<Index<TText, IndexSa<Gapped<TShapeSpec, TIndexSpec> > > const>::Type>::Type
-representative(Iter<Index<TText, IndexSa<Gapped<TShapeSpec, TIndexSpec> > > const, VSTree<TSpec> > const &it)
-{
-    return prefix(suffix(container(it), getOccurrence(it)), repLength(it));
-}
-
-
-// seperate specializations for String and StringSet needed to avoid ambiguities
-template <typename TPos, typename TText, typename TShapeSpec, typename TIndexSpec>
-inline typename Size<Index<TText, IndexSa<Gapped<TShapeSpec, TIndexSpec> > > const>::Type
-suffixLength(TPos pos, Index<TText, IndexSa<Gapped<TShapeSpec, TIndexSpec> > > const &index)
-{
-    return length(suffix(index, pos));
-}
-    
-template <typename TPos, typename TString, typename TSSetSpec, typename TShapeSpec, typename TIndexSpec>
-inline typename Size<Index<StringSet<TString, TSSetSpec>, IndexSa<Gapped<TShapeSpec, TIndexSpec> > > const>::Type
-suffixLength(TPos pos, Index<StringSet<TString, TSSetSpec>, IndexSa<Gapped<TShapeSpec, TIndexSpec> > > const &index)
-{
-    return length(suffix(index, pos));
-}
-
-template <typename TPos, typename TText, typename TShapeSpec, typename TIndexSpec>
-inline typename Size<Index<TText, IndexSa<Gapped<TShapeSpec, TIndexSpec> > > >::Type
-suffixLength(TPos pos, Index<TText, IndexSa<Gapped<TShapeSpec, TIndexSpec> > > &index)
-{
-    return length(suffix(index, pos));
-}
-template <typename TPos, typename TString, typename TSSetSpec, typename TShapeSpec, typename TIndexSpec>
-inline typename Size<Index<StringSet<TString, TSSetSpec>, IndexSa<Gapped<TShapeSpec, TIndexSpec> > > >::Type
-suffixLength(TPos pos, Index<StringSet<TString, TSSetSpec>, IndexSa<Gapped<TShapeSpec, TIndexSpec> > > &index)
-{
-    return length(suffix(index, pos));
-}
-
-
-template <typename TText, typename TShapeSpec, typename TIndexSpec, typename TSpec, typename TDfsOrder>
-inline bool _goDown(Iter<Index<TText, IndexSa<Gapped<TShapeSpec, TIndexSpec> > >, VSTree<TopDown<TSpec> > > & it,
-                    VSTreeIteratorTraits<TDfsOrder, True> const)
-{
-    typedef Index<TText, IndexSa<Gapped<TShapeSpec, TIndexSpec> > >              TIndex;
-    typedef typename Fibre<TIndex, FibreSA>::Type           TSA;
-    typedef typename Size<TIndex>::Type                     TSASize;
-    typedef typename Iterator<TSA const, Standard>::Type    TSAIterator;
-    typedef SearchTreeIterator<TSA const, SortedList>       TSearchTreeIterator;
-    typedef typename Value<TIndex>::Type                    TAlphabet;
-    
-    // TODO(esiragusa): use HideEmptyEdges()
-    if (_isLeaf(it, HideEmptyEdges()))
-        return false;
-    
-    TIndex const & index = container(it);
-    TSA const & sa = indexSA(index);
-    
-    // TODO(esiragusa): check nodeHullPredicate
-    
-    Pair<typename Size<TIndex>::Type> saRange = range(it);
-    
-    // TODO(esiragusa): remove this check.
-    if (saRange.i1 >= saRange.i2) return false;
-    
-    // Skip $-edges.
-    while (suffixLength(saAt(saRange.i1, index), index) <= value(it).repLen)
-    {
-        // TODO(esiragusa): remove this check and ++saRange.i1 in loop.
-        // Interval contains only $-edges.
-        if (++saRange.i1 >= saRange.i2)
-            return false;
-    }
-    
-    // Get first and last characters in interval.
-    // CHANGED(sascha): get char via the suffix instead of textAt
-    TAlphabet cLeft  = value(suffix(index, saAt(saRange.i1,     index)), value(it).repLen);
-    TAlphabet cRight = value(suffix(index, saAt(saRange.i2 - 1, index)), value(it).repLen);
-    
-    // Save vertex descriptor.
-    _historyPush(it);
-    
-    // Update left range.
-    value(it).range.i1 = saRange.i1;
-    
-    // Update right range.
-    // NOTE(esiragusa): I should use ordLess(cLeft, cRight) but masai redefines it for Ns.
-    if (ordValue(cLeft) != ordValue(cRight))
-    {
-        TSAIterator saBegin = begin(sa, Standard()) + saRange.i1;
-        TSASize saLen = saRange.i2 - saRange.i1;
-        TSearchTreeIterator node(saBegin, saLen);
-        
-        // CHANGED(sascha): handle index instead of text
-        TSAIterator upperBound = _upperBoundSA(index, node, cLeft, value(it).repLen);
-        
-        value(it).range.i2 = upperBound - begin(sa, Standard());
-    }
-    else
-    {
-        value(it).range.i2 = saRange.i2;
-    }
-    
-    // Update child repLen, lastChar.
-    value(it).repLen++;
-    value(it).lastChar = cLeft;
-        
-    return true;
-}
-    
-  
-    
-    
-template <typename TText, typename TShapeSpec, typename TIndexSpec, typename TSpec, typename TDfsOrder>
-inline bool _goRight(Iter<Index<TText, IndexSa<Gapped<TShapeSpec, TIndexSpec> > >, VSTree<TopDown<TSpec> > > & it,
-                    VSTreeIteratorTraits<TDfsOrder, True> const)
-{
-    typedef Index<TText, IndexSa<Gapped<TShapeSpec, TIndexSpec> > >              TIndex;
-    typedef typename Fibre<TIndex, FibreSA>::Type           TSA;
-    typedef typename Size<TIndex>::Type                     TSASize;
-    typedef typename Iterator<TSA const, Standard>::Type    TSAIterator;
-    typedef SearchTreeIterator<TSA const, SortedList>       TSearchTreeIterator;
-    typedef typename Value<TIndex>::Type                    TAlphabet;
-            
-    if (isRoot(it))
-        return false;
-
-    TIndex const & index = container(it);
-    TSA const & sa = indexSA(index);
-            
-    Pair<typename Size<TIndex>::Type> saRange;
-    saRange.i1 = value(it).range.i2;
-    saRange.i2 = (_isSizeInval(value(it).parentRight)) ? length(sa) : value(it).parentRight;
-
-    if (saRange.i1 >= saRange.i2) return false;
-
-    // Change repLen to parent repLen.
-    value(it).repLen--;
-
-    // TODO(esiragusa): don't check for empty edges (do it in goDown)
-    // Skip $-edges.
-    while (suffixLength(saAt(saRange.i1, index), index) <= value(it).repLen)
-    {
-        // Interval contains only $-edges.
-        if (++saRange.i1 >= saRange.i2)
-            return false;
-    }
-
-    // Get first and last characters in interval.
-    // CHANGED(sascha): get char via the suffix instead of textAt
-    TAlphabet cLeft  = value(suffix(index, saAt(saRange.i1,     index)), value(it).repLen);
-    TAlphabet cRight = value(suffix(index, saAt(saRange.i2 - 1, index)), value(it).repLen);
-
-    SEQAN_ASSERT_NEQ(ordValue(cLeft), ordValue(value(it).lastChar));
-
-    // Update left range.
-    value(it).range.i1 = saRange.i1;
-
-    // Update right range.
-    // NOTE(esiragusa): I should use ordLess(cLeft, cRight) but masai redefines it for Ns.
-    if (ordValue(cLeft) != ordValue(cRight))
-    {
-        TSAIterator saBegin = begin(sa, Standard()) + saRange.i1;
-        TSASize saLen = saRange.i2 - saRange.i1;
-        TSearchTreeIterator node(saBegin, saLen);
-        
-        // CHANGED(sascha): handle index instead of text
-        TSAIterator upperBound = _upperBoundSA(index, node, cLeft, value(it).repLen);
-        
-        value(it).range.i2 = upperBound - begin(sa, Standard());
-    }
-    else
-    {
-        value(it).range.i2 = saRange.i2;
-    }
-
-    // Update repLen, lastChar.
-    value(it).repLen++;
-    value(it).lastChar = cLeft;
-
-    return true;
-}
-    
-    
-    
-    
-    
-    
-    */
-    
-    
-    
-    
-    
-    
-    
-    
-    
-
+ template <typename TText, typename TSuffixMod, typename TSpec>
+ inline typename Cargo<Index<TText, IndexSa<Gapped<TSuffixMod, TSpec> > > >::Type const &
+ suffixModifier(Index<TText, IndexSa<Gapped<TSuffixMod, TSpec> > > const & t)
+ {
+ return t.suffMod;
+ }
+ */
 }
 
 #endif // SEQAN_HEADER_INDEX_GAPPED_SA_H

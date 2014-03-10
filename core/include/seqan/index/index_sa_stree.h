@@ -285,7 +285,9 @@ _isLeaf(Iter<Index<TText, IndexSa<TIndexSpec> >, VSTree<TSpec> > const & it,
     // if the last suffix in the interval is larger than the lcp,
     // not all outgoing edges are empty (uses lex. sorting)
     TOcc oc = _lastOccurrence(it);
-    return getSeqOffset(oc, stringSetLimits(index)) + lcp == sequenceLength(getSeqNo(oc, stringSetLimits(index)), index);
+
+    return suffixLength(oc, index) == lcp;
+//  return getSeqOffset(oc, stringSetLimits(index)) + lcp == sequenceLength(getSeqNo(oc, stringSetLimits(index)), index);
 }
 
 template <typename TIndex, typename TSize, typename TAlphabet>
@@ -369,9 +371,25 @@ inline bool _goDown(Iter<Index<TText, IndexSa<TIndexSpec> >, VSTree<TopDown<TSpe
             return false;
     }
 
-    // Get first and last characters in interval.
-    TAlphabet cLeft = textAt(posAdd(saAt(saRange.i1, index), value(it).repLen), index);
-    TAlphabet cRight = textAt(posAdd(saAt(saRange.i2 - 1, index), value(it).repLen), index);
+    typedef typename SuffixFunctor<TIndex, typename Value<TSA>::Type>::result_type TSuffix;
+    SuffixFunctor<TIndex, typename Value<TSA>::Type> dereferer(index);
+
+    TAlphabet cLeft, cRight;
+
+    // switch for gapped suffixes; note that both should result in the same characters,
+    // the former one might just have less overhead.
+    if (IsSameType<TIndexSpec, void>::VALUE)
+    {
+        cLeft = textAt(posAdd(saAt(saRange.i1, index), value(it).repLen), index);
+        cRight= textAt(posAdd(saAt(saRange.i2 - 1, index), value(it).repLen), index);
+    }
+    else
+    {
+        // generate suffixes and the take the char at position 'repLen'
+        cLeft  = value(dereferer(saAt(saRange.i1, index)),    value(it).repLen);
+        cRight = value(dereferer(saAt(saRange.i2 -1, index)), value(it).repLen);
+    }
+
 
 #ifdef SEQAN_DEBUG
     //std::cout << "cLeft: " << cLeft << std::endl;

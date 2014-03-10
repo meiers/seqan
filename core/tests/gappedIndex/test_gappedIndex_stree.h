@@ -55,10 +55,10 @@
 void testManualExample()
 {
     typedef CyclicShape<FixedShape<0,GappedShape<HardwiredShape<3> >, 0> >      TShape; //1001
-    typedef Index<Peptide, IndexEsa< > >  TIndex;        // Gapped<ModCyclicShape<TShape> >
+    typedef Index<Peptide, IndexSa<Gapped<ModCyclicShape<TShape> > > >  TIndex;        // Gapped<ModCyclicShape<TShape> >
 
     Peptide s = "KeinerKleinerFeinerReinerHeiligerWeicherNeider";
-    TIndex index(s);            // , TShape()
+    TIndex index(s, TShape());            //, TShape()
     indexRequire(index, FibreSA());
 
     typedef Suffix<TIndex>::Type TModSuff;
@@ -115,7 +115,6 @@ void testManualExample()
     //  45	33	WCHNEER                 *
 
 
-/*
     Iterator<TIndex, TopDown<> >::Type treeIter(index);
 
     goDown(treeIter, 'E');
@@ -138,19 +137,27 @@ void testManualExample()
     SEQAN_ASSERT_EQ(range(treeIter), Pair<unsigned>(21,24));
     SEQAN_ASSERT_EQ(representative(treeIter), "EEIR");
     SEQAN_ASSERT_EQ(repLength(treeIter), 4u);
-*/
-    // TODO: test isFirstChild _isLeaf and other functions from index_sa_stree.h
-    // what about goUp, nodeUp
+
 
     Iterator<TIndex, TopDown< ParentLinks<Preorder> > >::Type myIterator(index);
+    for (unsigned i=0; i<13; ++i, ++myIterator)
+    {}
 
-    while (!atEnd(myIterator))
-    {
-        std::cout << representative(myIterator) << std::endl;
-        ++myIterator;
-    }
+    SEQAN_ASSERT_EQ(representative(myIterator), "RNEEIGEEIERID");
+    SEQAN_ASSERT(_isLeaf(myIterator, HideEmptyEdges()));
+    SEQAN_ASSERT_NOT(goDown(myIterator));
 
-    return 0;
+    ++myIterator;
+    SEQAN_ASSERT_EQ(representative(myIterator), "RE");
+
+    Iterator<TIndex, TopDown< ParentLinks<Preorder> > >::Type iter2 = myIterator;
+
+    ++myIterator;
+    for (; !atEnd(myIterator); ++myIterator, ++iter2)
+    {}
+    SEQAN_ASSERT_EQ(representative(iter2), "WCHNEER");
+
+
 }
 
 
