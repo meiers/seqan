@@ -58,7 +58,9 @@ namespace SEQAN_NAMESPACE_MAIN
 	{
 		Index<TText, TSpec> &index = haystack(finder);
 		indexRequire(index, EsaSA());
-		finder.range = equalRangeSAIterator(indexText(index), indexSA(index), pattern);
+        typedef typename SAValue<Index<TText, TSpec> >::Type TSAValue;
+        SuffixFunctor<Index<TText, TSpec>,  TSAValue> dereferer(index);
+		finder.range = equalRangeSAIterator(dereferer, indexSA(index), pattern);
 	}
 
 	template < typename TText, typename TSpec, typename TSpecFinder, typename TPattern >
@@ -71,7 +73,10 @@ namespace SEQAN_NAMESPACE_MAIN
 		Index<TText, TSpec> &index = haystack(finder);
 		indexRequire(index, EsaSA());
 		indexRequire(index, EsaLcpe());
-		finder.range = equalRangeLcpeIterator(indexText(index), indexSA(index), indexLcpe(index), pattern);
+        
+        typedef typename SAValue<Index<TText, TSpec> >::Type TSAValue;
+        SuffixFunctor<Index<TText, TSpec>,  TSAValue> dereferer(index);
+		finder.range = equalRangeLcpeIterator(dereferer, indexSA(index), indexLcpe(index), pattern);
 	}
 
 	template < typename TText, typename TSpec, typename TSpecFinder, typename TPattern >

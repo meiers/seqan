@@ -707,16 +707,17 @@ should use the functions @Function.posLocalize@, @Function.posGlobalize@, @Funct
 	struct Position< Index<TText, TSpec> >:
 		SAValue< Index<TText, TSpec> > {};
 
-//////////////////////////////////////////////////////////////////////////////
-// infix of an index
+// ----------------------------------------------------------------------------
+// Metafunction Infix                                                for Index
+// ----------------------------------------------------------------------------
 
-	template < typename TText, typename TSpec >
-    struct Infix< Index<TText, TSpec> >:
-		public Infix<TText> {};
+template < typename TText, typename TSpec >
+struct Infix< Index<TText, TSpec> >:
+    public Infix<TText> {};
 
-	template < typename TText, typename TSpec >
-    struct Infix< Index<TText, TSpec> const >:
-		public Infix<TText> {};
+template < typename TText, typename TSpec >
+struct Infix< Index<TText, TSpec> const >:
+    public Infix<TText const> {};
 
     
 // ----------------------------------------------------------------------------
@@ -725,17 +726,14 @@ should use the functions @Function.posLocalize@, @Function.posGlobalize@, @Funct
 
 // general Index
 template <typename TText, typename TSpec>
-struct Suffix<Index<TText, TSpec> >
-{
-    typedef typename Suffix<TText>::Type Type;
-};
+struct Suffix<Index<TText, TSpec> > :
+    public Suffix<TText> {};
 
 // general Index; const variant
 template <typename TText, typename TSpec>
-struct Suffix<Index<TText, TSpec> const>
-{
-    typedef typename Suffix<TText const>::Type Type;
-};
+struct Suffix<Index<TText, TSpec> const> :
+    public Suffix<TText const> {};
+
 
 //////////////////////////////////////////////////////////////////////////////
 // default table type
