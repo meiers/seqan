@@ -348,7 +348,6 @@ inline bool _goDown(Iter<Index<TText, IndexSa<TIndexSpec> >, VSTree<TopDown<TSpe
 
     TIndex const & index = container(it);
     TSA const & sa = indexSA(index);
-    TText const & text = indexText(index);
 
     // TODO(esiragusa): check nodeHullPredicate
 
@@ -458,13 +457,25 @@ inline bool _goRight(Iter<Index<TText, IndexSa<TIndexSpec> >, VSTree<TopDown<TSp
     }
 
     typedef typename SuffixFunctor<TIndex, typename Value<TSA>::Type>::result_type TSuffix;
-    SuffixFunctor<TIndex, typename Value<TSA>::Type>dereferer(index);
-    TSuffix leftSuff = dereferer(saRange.i1);
-    TSuffix rightSuff =dereferer(saRange.i2);
+    SuffixFunctor<TIndex, typename Value<TSA>::Type> dereferer(index);
 
-    // Get first and last characters in interval.
-    TAlphabet cLeft = value(leftSuff,  posAdd(saAt(saRange.i1, index), value(it).repLen)); //textAt(posAdd(saAt(saRange.i1, index), value(it).repLen), index);
-    TAlphabet cRight =value(rightSuff, posAdd(saAt(saRange.i2 - 1, index), value(it).repLen)); // textAt(posAdd(saAt(saRange.i2 - 1, index), value(it).repLen), index);
+    TAlphabet cLeft, cRight;
+
+    // switch for gapped suffixes; note that both should result in the same characters,
+    // the former one might just have less overhead.
+    if (IsSameType<TIndexSpec, void>::VALUE)
+    {
+        cLeft = textAt(posAdd(saAt(saRange.i1, index), value(it).repLen), index);
+        cRight= textAt(posAdd(saAt(saRange.i2 - 1, index), value(it).repLen), index);
+    }
+    else
+    {
+        // generate suffixes and the take the char at position 'repLen'
+        cLeft  = value(dereferer(saAt(saRange.i1, index)),    value(it).repLen);
+        cRight = value(dereferer(saAt(saRange.i2 -1, index)), value(it).repLen);
+    }
+
+
 
     SEQAN_ASSERT_NEQ(ordValue(cLeft), ordValue(value(it).lastChar));
 
