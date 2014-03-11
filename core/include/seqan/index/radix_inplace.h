@@ -46,10 +46,11 @@ namespace SEQAN_NAMESPACE_MAIN
 // struct RadixTextAccessor
 // ============================================================================
 
-template <typename TSAValue,
-typename TSize,
-typename TString,
-typename TSpec=void >
+template <
+    typename TSAValue,          // input
+    typename TString,           // string object that is referenced
+    typename TSpec = void,      // Suffix modifier
+    typename TSize = unsigned>  // return type (ordValue)
 struct RadixTextAccessor;
 /*
  * NOTE:
@@ -64,11 +65,9 @@ struct RadixTextAccessor;
 // struct RadixTextAccessor                                            [String]
 // ----------------------------------------------------------------------------
 
-template <typename TSAValue,
-typename TSize,
-typename TString>
-struct RadixTextAccessor<TSAValue, TSize, TString, void> :
-public std::unary_function<TSAValue, TSize>
+template <typename TSAValue, typename TString, typename TSize>
+struct RadixTextAccessor<TSAValue, TString, void, TSize> :
+    public std::unary_function<TSAValue, TSize>
 {
     TString const & text;
     typename Size<TString>::Type const L;
@@ -76,7 +75,8 @@ public std::unary_function<TSAValue, TSize>
     RadixTextAccessor(TString const &str) : text(str), L(length(str))
     {}
 
-    inline TSize operator()(TSAValue x, TSize depth) const
+    template <typename TSize2>
+    inline TSize operator()(TSAValue const &x, TSize2 depth) const
     {
         typename Size<TString>::Type pos = x + depth;
         if (pos >= L)   return 0;
@@ -89,12 +89,10 @@ public std::unary_function<TSAValue, TSize>
 // struct RadixTextAccessor                                         [StringSet]
 // ----------------------------------------------------------------------------
 
-template <typename TSAValue,
-typename TSize,
-typename TString,
-typename TSetSpec>
-struct RadixTextAccessor<TSAValue, TSize, StringSet<TString, TSetSpec>, void> :
-public std::unary_function<TSAValue, TSize>
+template <typename TSAValue, typename TString, typename TSetSpec, typename TSize>
+struct RadixTextAccessor<TSAValue, StringSet<TString, TSetSpec>, void, TSize> :
+    public std::unary_function<TSAValue, TSize>
+
 {
     StringSet<TString, TSetSpec> const & text;
     String<typename Size<TString>::Type> L;
@@ -106,7 +104,8 @@ public std::unary_function<TSAValue, TSize>
         L[i] = length(text[i]);
     }
 
-    inline TSize operator()(TSAValue x, TSize depth) const
+    template <typename TSize2>
+    inline TSize operator()(TSAValue const &x, TSize2 depth) const
     {
         typename Size<TString>::Type pos = getSeqOffset(x) + depth;
         typename Size<TString>::Type seq = getSeqNo(x);
@@ -120,27 +119,26 @@ public std::unary_function<TSAValue, TSize>
 // struct RadixTextAccessor                               [String, CyclicShape]
 // ----------------------------------------------------------------------------
 
-template <typename TSAValue,
-typename TSize,
-typename TString,
-typename TShape>
-struct RadixTextAccessor<TSAValue, TSize,TString,ModCyclicShape<CyclicShape<TShape> > > :
-public std::unary_function<TSAValue, TSize> // in, out
+template <typename TSAValue, typename TString, typename TShape, typename TSize>
+struct RadixTextAccessor<TSAValue, TString, ModCyclicShape<CyclicShape<TShape> >, TSize> :
+    public std::unary_function<TSAValue, TSize>
 {
     TString const & text;
-    TSize const L,w,s;
-    String<unsigned> positions;
+    typename Size<TString>::Type const L,w,s;
+    String<typename Size<TString>::Type> positions;
 
-    // Cargo < ModifiedString<ModCyclicShape> > = CyclicShape
     RadixTextAccessor(TString const &str, CyclicShape<TShape> const & shape) :
         text(str), L(length(str)), w(weight(shape)), s(shape.span)
     {
         carePositions(positions, shape);
+        // discard shape
     }
 
-    inline TSize operator()(TSAValue x, TSize depth) const
+    template <typename TSize2>
+    inline TSize operator()(TSAValue const &x, TSize2 depth) const
     {
-        typename Size<TString>::Type pos = x + depth/w * s + positions[ depth % w ];
+        typename Size<TString>::Type shapePos = depth - depth/w * w; // modulo
+        typename Size<TString>::Type pos = x + depth/w * s + positions[ shapePos ];
         if (pos >= L) return 0;
         TSize ret = ordValue(text[pos]);
         return ret+1;
@@ -153,34 +151,34 @@ public std::unary_function<TSAValue, TSize> // in, out
 
 // TODO: Maybe specialised version of hardwired shape that accesses the text even faster??
 
-template <typename TSAValue,
-typename TSize,
-typename TString,
-typename TSetSpec,
-typename TShape>
-struct RadixTextAccessor<TSAValue, TSize, StringSet<TString, TSetSpec>,
-ModCyclicShape<CyclicShape<TShape> > >: public std::unary_function<TSAValue, TSize>
+template <typename TSAValue, typename TString, typename TSetSpec, typename TShape, typename TSize>
+struct RadixTextAccessor<TSAValue,
+                        StringSet<TString, TSetSpec>,
+                        ModCyclicShape<CyclicShape<TShape> >,
+                        TSize> :
+    public std::unary_function<TSAValue, TSize>
+
 {
     StringSet<TString, TSetSpec> const & text;
     String<typename Size<TString>::Type> L;
-    String<unsigned> positions;
-    const TSize w, s;
+    String<typename Size<TString>::Type> positions;
+    const typename Size<TString>::Type w, s;
 
     RadixTextAccessor(StringSet<TString, TSetSpec> const &str, CyclicShape<TShape> const & shape) :
-    text(str),
-    w(weight(shape)),
-    s(shape.span)
+        text(str), w(weight(shape)), s(shape.span)
     {
         carePositions(positions, shape);
         resize(L, length(text), Exact());
         for(typename Size<TString>::Type i = 0; i < length(text); ++i)
-        L[i] = length(text[i]);
+            L[i] = length(text[i]);
     }
 
-    inline TSize operator()(TSAValue x, TSize depth) const
+    template <typename TSize2>
+    inline TSize operator()(TSAValue const &x, TSize2 depth) const
     {
-        typename Size<TString>::Type pos = getSeqOffset(x) + depth/w * s
-        + positions[ depth % w ];
+        typename Size<TString>::Type shapePos = depth - depth/w * w; // = depth % w
+        typename Size<TString>::Type pos = getSeqOffset(x) +
+                                           depth/w * s + positions[ shapePos ];
         typename Size<TString>::Type seq = getSeqNo(x);
         if (pos >= L[seq])   return 0;
         TSize ret = ordValue(text[seq][pos]);
@@ -276,55 +274,59 @@ struct RadixRecursionStack
 // InplaceRadixSorter                                   general alphabet <= 256
 // ----------------------------------------------------------------------------
 
-template <typename TValue,
-unsigned Q,                             // alph size = ValueSize + 1
-typename TAccessFunctor,                // text accessor
-typename TOrderFunctor,                 // For seperate sort of the 0 bucket.
-typename TSize = unsigned,              // type of depth and bucketCount a.s.o
-typename TBucketValue = unsigned>       // type the alphabet gets translated to
-struct InplaceRadixSorter {
+template <
+    unsigned Q,                             // alph size = ValueSize + 1
+    typename TAccessFunctor,                // text accessor
+    typename TOrderFunctor,                 // For seperate sort of the 0 bucket.
+    typename TSize = unsigned,              // type of depth and bucketCount a.s.o
+    typename TBucketValue = unsigned>       // type the alphabet gets translated to
+struct InplaceRadixSorter
+{
+    typedef typename TAccessFunctor::argument_type      TSAValue;
+    typedef typename TAccessFunctor::result_type        TOrdValue; // unsigned
 
-    // TODO: define type 'uchar' according to alphabet
-    typedef unsigned char uchar;
-    static const unsigned ORACLESIZE = 256;
+    static const unsigned ORACLESIZE = 10;
     TAccessFunctor const & textAccess;
     TOrderFunctor const & comp;
 
     InplaceRadixSorter(TAccessFunctor const & f, TOrderFunctor const & c) : textAccess(f), comp(c)
     {}
 
-    inline void operator()(TValue * beg,
-                           TValue * end,
+    inline void operator()(TSAValue * beg,
+                           TSAValue * end,
                            TSize depth,
-                           RadixRecursionStack<TValue, TSize> & stack)
+                           RadixRecursionStack<TSAValue, TSize> & stack)
     {
+        // Note(meiers): Watch out here when you want to parallelize
         static TSize bucketSize[Q];  // initialized to zero at startup
-        TValue* bucketEnd[Q];  // "static" makes little difference to speed
+        TSAValue* bucketEnd[Q];  // "static" makes little difference to speed
 
         // get bucket sizes (i.e. letter counts):
         // The intermediate oracle array makes it faster (see "Engineering
         // Radix Sort for Strings" by J Karkkainen & T Rantala)
-        for( TValue* i = beg; i < end; /* noop */ )
+        for( TSAValue* i = beg; i < end; /* noop */ )
         {
-            uchar oracle [ORACLESIZE]; // buffer for the next chars
-            uchar* oracleEnd = oracle + std::min( sizeof(oracle), std::size_t(end - i) );
+            // buffer for the next chars
+            TOrdValue oracle [ORACLESIZE];
+            TOrdValue* oracleEnd = oracle + std::min(static_cast<std::size_t>(ORACLESIZE),
+                                                     static_cast<std::size_t>(end - i) );
 
-            for( uchar* j = oracle; j < oracleEnd; ++j )
+            for( TOrdValue* j = oracle; j < oracleEnd; ++j )
                 *j = textAccess(*i++, depth);
 
-            for( uchar* j = oracle; j < oracleEnd; ++j )
+            for( TOrdValue* j = oracle; j < oracleEnd; ++j )
                 ++bucketSize[ *j ];
         }
 
         // get bucket ends, and put buckets on the stack to sort within them later:
-        // EDIT: 0 bucket is not sorted here !
+        // EDIT: 0 bucket is not sorted here, but later.
         TSize zeroBucketSize = bucketSize[0];
-        TValue* pos     = beg + bucketSize[0];
+        TSAValue* pos     = beg + bucketSize[0];
         bucketEnd[0] = pos;
 
         for( unsigned i = 1; i < Q; ++i )
         {
-            TValue* nextPos = pos + bucketSize[i];
+            TSAValue* nextPos = pos + bucketSize[i];
             if (nextPos - pos > 1)
             stack.push(pos, nextPos, depth+1);
             pos = nextPos;
@@ -332,9 +334,9 @@ struct InplaceRadixSorter {
         }
 
         // permute items into the correct buckets:
-        for( TValue* i = beg; i < end; ) {
+        for( TSAValue* i = beg; i < end; ) {
             unsigned subset;  // unsigned is faster than uchar!
-            TValue holdOut = *i;
+            TSAValue holdOut = *i;
             while( --bucketEnd[ subset = textAccess(holdOut, depth) ] > i )
             std::swap( *bucketEnd[subset], holdOut );
             *i = holdOut;
@@ -349,7 +351,6 @@ struct InplaceRadixSorter {
             std::cout << "Sorted zero bucket of size " << zeroBucketSize << std::endl;
 #endif
             std::sort(beg, beg+zeroBucketSize, comp);
-            //std::cout << "sort 0 bucket: " << zeroBucketSize << std::endl;
         }
 
     }
@@ -424,7 +425,7 @@ void __outputSA(TStr const & str, TSA const & sa, TPos from, TPos to)
 }
 
 // ----------------------------------------------------------------------------
-// Functors to compare suffixes from 0 bucket (no proper suffixes)
+// Functors to compare suffixes from 0 bucket (suffixes that are lex. equal)
 // ----------------------------------------------------------------------------
 
 template <typename TSAValue, typename TSuffixModifier=void>
@@ -465,12 +466,15 @@ void inplaceRadixSort(
 {
     typedef typename Value<typename Concatenator<TString>::Type>::Type TAlphabet;
     typedef typename Value<TSA>::Type                               TSAValue;
-    typedef typename Size<TAlphabet>::Type                          TOrdValue;
     typedef typename Size<TString>::Type                            TSize;
-    typedef RadixTextAccessor<TSAValue, TOrdValue, TString>         TAccessFunctor;
+
+    typedef RadixTextAccessor<TSAValue, TString>                    TAccessFunctor;
     typedef _ZeroBucketComparator<TSAValue>                         TCompareFunctor;
+
     static const unsigned SIGMA = ValueSize<TAlphabet>::VALUE + 1;
-    typedef InplaceRadixSorter<TSAValue, SIGMA, TAccessFunctor, TCompareFunctor, TSize>    TSorter;
+    SEQAN_ASSERT_LT_MSG(SIGMA, 1000u, "Attention: inplace radix sort is not suited for large alphabets");
+
+    typedef InplaceRadixSorter<SIGMA, TAccessFunctor, TCompareFunctor, TSize>    TSorter;
 
     if (length(sa) < 1) return; // otherwise access sa[0] fails
 
@@ -519,12 +523,15 @@ void inplaceRadixSort(
 {
     typedef typename Value<typename Concatenator<TString>::Type>::Type TAlphabet;
     typedef typename Value<TSA>::Type                               TSAValue;
-    typedef typename Size<TAlphabet>::Type                          TOrdValue;
     typedef typename Size<TString>::Type                            TSize;
-    typedef RadixTextAccessor<TSAValue, TOrdValue, TString, TMod>   TAccessFunctor;
+
+    typedef RadixTextAccessor<TSAValue, TString, TMod>              TAccessFunctor;
     typedef _ZeroBucketComparator<TSAValue>                         TCompareFunctor;
+
     static const unsigned SIGMA = ValueSize<TAlphabet>::VALUE + 1;
-    typedef InplaceRadixSorter<TSAValue, SIGMA, TAccessFunctor, TCompareFunctor, TSize>    TSorter;
+    SEQAN_ASSERT_LT_MSG(SIGMA, 1000u, "Attention: inplace radix sort is not suited for large alphabets");
+
+    typedef InplaceRadixSorter<SIGMA, TAccessFunctor, TCompareFunctor, TSize>    TSorter;
 
     if (length(sa) < 1) return; // otherwise access sa[0] fails
 
@@ -566,12 +573,15 @@ void inplaceFullRadixSort( TSA & sa, TString const & str)
 {
     typedef typename Value<typename Concatenator<TString>::Type>::Type TAlphabet;
     typedef typename Value<TSA>::Type                               TSAValue;
-    typedef typename Size<TAlphabet>::Type                          TOrdValue;
     typedef typename Size<TString>::Type                            TSize;
-    typedef RadixTextAccessor<TSAValue, TOrdValue, TString>         TAccessFunctor;
+
+    typedef RadixTextAccessor<TSAValue, TString>                    TAccessFunctor;
     typedef _ZeroBucketComparator<TSAValue>                         TCompareFunctor;
+
     static const unsigned SIGMA = ValueSize<TAlphabet>::VALUE + 1;
-    typedef InplaceRadixSorter<TSAValue, SIGMA, TAccessFunctor, TCompareFunctor, TSize>    TSorter;
+    SEQAN_ASSERT_LT_MSG(SIGMA, 1000u, "Attention: inplace radix sort is not suited for large alphabets");
+
+    typedef InplaceRadixSorter<SIGMA, TAccessFunctor, TCompareFunctor, TSize>    TSorter;
 
     if (length(sa) < 1) return; // otherwise access sa[0] fails
 
@@ -638,12 +648,15 @@ void inplaceFullRadixSort(TSA & sa,
 {
     typedef typename Value<typename Concatenator<TString>::Type>::Type TAlphabet;
     typedef typename Value<TSA>::Type                               TSAValue;
-    typedef typename Size<TAlphabet>::Type                          TOrdValue;
     typedef typename Size<TString>::Type                            TSize;
-    typedef RadixTextAccessor<TSAValue, TOrdValue, TString, TMod>   TAccessFunctor;
+
+    typedef RadixTextAccessor<TSAValue, TString, TMod>              TAccessFunctor;
     typedef _ZeroBucketComparator<TSAValue>                         TCompareFunctor;
+    
     static const unsigned SIGMA = ValueSize<TAlphabet>::VALUE + 1;
-    typedef InplaceRadixSorter<TSAValue, SIGMA, TAccessFunctor, TCompareFunctor, TSize>    TSorter;
+    SEQAN_ASSERT_LT_MSG(SIGMA, 1000u, "Attention: inplace radix sort is not suited for large alphabets");
+
+    typedef InplaceRadixSorter<SIGMA, TAccessFunctor, TCompareFunctor, TSize>    TSorter;
     
     if (length(sa) < 1) return; // otherwise access sa[0] fails
 
