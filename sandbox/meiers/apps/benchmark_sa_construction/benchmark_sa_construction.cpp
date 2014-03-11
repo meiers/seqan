@@ -621,7 +621,7 @@ void callBenchmarks(StringSet<TString, TSpec> const & set, int level=3) {
     CharString stringset = "StrSet";
 
 
-/*    {   //- Ungapped Indices ----------------------------------------------------------------
+    {   //- Ungapped Indices ----------------------------------------------------------------
 
         {
             typedef Index<StringSet<TString, TSpec> const, IndexSa<> > TIndex;
@@ -719,12 +719,11 @@ void callBenchmarks(StringSet<TString, TSpec> const & set, int level=3) {
     }
 
 
-*/
     { //----- Gapped Indices: 11000100101110 ---------------------------------------------------------
 
         typedef CyclicShape<FixedShape<0,GappedShape<HardwiredShape<1,4,3,2,1,1> >, 1> > TShape;
 
-/*        if (level>1)
+        if (level>1)
         {
             typedef Index<StringSet<TString, TSpec>, IndexSa<Gapped<ModCyclicShape<TShape> > > > TIndex;
             TIndex index(set);
@@ -748,13 +747,12 @@ void callBenchmarks(StringSet<TString, TSpec> const & set, int level=3) {
             TIndex index(concat(set));
             runtime(index, SAQSort(), shape2, saqsort, string);
         }
- */
         {
             typedef Index<StringSet<TString,TSpec>, IndexSa<Gapped<ModCyclicShape<TShape> > > > TIndex;
             TIndex index(set);
             runtime(index, Dislex<Skew7>(), shape2, dislex, stringset);
         }
-/*        {
+        {
             typedef Index<TString, IndexSa<Gapped<ModCyclicShape<TShape> > > > TIndex;
             TIndex index(concat(set));
             runtime(index, Dislex<Skew7>(), shape2, dislex, string);
@@ -769,9 +767,9 @@ void callBenchmarks(StringSet<TString, TSpec> const & set, int level=3) {
             TIndex index(concat(set));
             runtime(index, DislexExternal<TShape>(), shape2, dislexExt, string);
         }
- */
+
     }
-/*
+
     {   //----- Gapped Indices: 0001010 ---------------------------------------------------------
 
         typedef CyclicShape<FixedShape<3,GappedShape<HardwiredShape<2> >, 1> > TShape;
@@ -821,7 +819,7 @@ void callBenchmarks(StringSet<TString, TSpec> const & set, int level=3) {
             runtime(index, DislexExternal<TShape>(), shape3, dislexExt, string);
         }
     }
- */
+
 }
 
 // --------------------------------------------------------------------------
