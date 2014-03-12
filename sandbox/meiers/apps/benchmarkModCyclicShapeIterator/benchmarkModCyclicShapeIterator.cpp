@@ -56,6 +56,7 @@ struct AppOptions
 {
     seqan::String<char> infile;
     seqan::String<char> outfile;
+    CharString which;
 };
 
 
@@ -68,7 +69,7 @@ struct AppOptions
 // --------------------------------------------------------------------------
 
 seqan::ArgumentParser::ParseResult
-parseCommandLine(AppOptions & options, int argc, char const ** argv)
+parseCommandLine34(AppOptions & options, int argc, char const ** argv)
 {
     // Setup ArgumentParser.
     ArgumentParser parser("seqanBuildSuffixArray");
@@ -88,8 +89,12 @@ parseCommandLine(AppOptions & options, int argc, char const ** argv)
                                             "output",
                                             "Output file (<IN>.index if not specified)",
                                             seqan::ArgParseArgument::OUTPUTFILE, "OUT"));
-    //addOption(parser, seqan::ArgParseOption("v", "verbose", "Enable verbose output."));
-    //addOption(parser, seqan::ArgParseOption("vv", "very-verbose", "Enable very verbose output."));
+
+    addOption(parser, seqan::ArgParseOption("w",
+                                            "which",
+                                            "0/1 string specifying which tests to run and which not. Should at least have length 15",
+                                            seqan::ArgParseArgument::STRING));
+    setDefaultValue(parser, "which", "111111111111111");
 
     // Parse command line.
     seqan::ArgumentParser::ParseResult res = seqan::parse(parser, argc, argv);
@@ -107,6 +112,7 @@ parseCommandLine(AppOptions & options, int argc, char const ** argv)
     outfile += ".index";
     getOptionValue(outfile, parser, "output");
     options.outfile = outfile;
+    getOptionValue(options.which, parser, "which");
 
     return seqan::ArgumentParser::PARSE_OK;
 }
@@ -132,7 +138,7 @@ void benchmarkIterator(TModString const & txt, TMessage const & label)
         // backward:
         for(it = endIt; it != begIt; --it) if(*(it-1) == 'A') ++count;
     }
-    std::cout << length(txt) << "\t" << count << "\t" << sysTime() - start << "s" << "\t" << label << std::endl;
+    std::cout << length(txt) << "\t" << count << " \t" << sysTime() - start << "s" << " \t" << label << std::endl;
 }
 
 
@@ -141,7 +147,7 @@ void benchmarkIterator(TModString const & txt, TMessage const & label)
 // --------------------------------------------------------------------------
 
 template <typename TString>
-void callBenchmarks(TString const & txt)
+void callBenchmarks(TString const & txt, CharString whichOnes)
 {
     typedef CyclicShape<GenericShape> ShapeGen;
     typedef CyclicShape<FixedShape<0, GappedShape<HardwiredShape<> >, 0> > Shape1;
@@ -155,73 +161,96 @@ void callBenchmarks(TString const & txt)
     std::cout << "|T|    \t#As    \ttime  \ttype" << std::endl;
 
 
-    benchmarkIterator(txt, "noShape");
-
-
-    ShapeGen s1; stringToCyclicShape(s1, "1");
-    benchmarkIterator(ModifiedString<TString const, ModCyclicShape<ShapeGen> >(txt, s1),
-                      "Generic:1");
-
-    Shape1 s2;
-    benchmarkIterator(ModifiedString<TString const, ModCyclicShape<Shape1> >(txt, s2),
-                      "Fixed:1");
-
-
-    ShapeGen s3; stringToCyclicShape(s3, "111");
-    benchmarkIterator(ModifiedString<TString const, ModCyclicShape<ShapeGen> >(txt, s3),
-                      "Generic:111");
-
-    Shape3 s4;
-    benchmarkIterator(ModifiedString<TString const, ModCyclicShape<Shape3> >(txt, s4),
-                      "Fixed:111");
-
-
-    ShapeGen s5; stringToCyclicShape(s5, "1111");
-    benchmarkIterator(ModifiedString<TString const, ModCyclicShape<ShapeGen> >(txt, s5),
-                      "Generic:1111");
-
-    Shape4 s6;
-    benchmarkIterator(ModifiedString<TString const, ModCyclicShape<Shape4> >(txt, s6),
-                      "Fixed:1111");
-
-
-    ShapeGen s7; stringToCyclicShape(s7, "1111111111111111");
-    benchmarkIterator(ModifiedString<TString const, ModCyclicShape<ShapeGen> >(txt, s7),
-                      "Generic:16/16");
-
-    Shape16 s8;
-    benchmarkIterator(ModifiedString<TString const, ModCyclicShape<Shape16> >(txt, s8),
-                      "Fixed:16/16");
-
-
-    ShapeGen s9; stringToCyclicShape(s7, "11111111111111111");
-    benchmarkIterator(ModifiedString<TString const, ModCyclicShape<ShapeGen> >(txt, s9),
-                      "Generic:17/17");
-
-    Shape17 s10;
-    benchmarkIterator(ModifiedString<TString const, ModCyclicShape<Shape17> >(txt, s10),
-                      "Fixed:17/17");
 
 
 
-    ShapeGen s11; stringToCyclicShape(s11, "0110100111001001");
-    benchmarkIterator(ModifiedString<TString const, ModCyclicShape<ShapeGen> >(txt, s11),
-                      "Generic:8/16");
+    if (whichOnes[0] == '1') {
+        benchmarkIterator(txt, "noShape");
+    }
 
-    ShapeGap16 s12;
-    benchmarkIterator(ModifiedString<TString const, ModCyclicShape<ShapeGap16> >(txt, s12),
-                      "Fixed:8/16");
+    if (whichOnes[1] == '1') {
+        ShapeGen s1; stringToCyclicShape(s1, "1");
+        benchmarkIterator(ModifiedString<TString const, ModCyclicShape<ShapeGen> >(txt, s1),
+                          "Generic:1");
+    }
 
+    if (whichOnes[2] == '1') {
+        Shape1 s2;
+        benchmarkIterator(ModifiedString<TString const, ModCyclicShape<Shape1> >(txt, s2),
+                          "Fixed:1");
+    }
 
-    ShapeGen s13; stringToCyclicShape(s13, "01101001110010010");
-    benchmarkIterator(ModifiedString<TString const, ModCyclicShape<ShapeGen> >(txt, s13),
-                      "Generic:8/17");
+    if (whichOnes[3] == '1') {
+        ShapeGen s3; stringToCyclicShape(s3, "111");
+        benchmarkIterator(ModifiedString<TString const, ModCyclicShape<ShapeGen> >(txt, s3),
+                          "Generic:111");
+    }
 
-    ShapeGap17 s14;
-    benchmarkIterator(ModifiedString<TString const, ModCyclicShape<ShapeGap17> >(txt, s14),
-                      "Fixed:8/17");
+    if (whichOnes[4] == '1') {
+        Shape3 s4;
+        benchmarkIterator(ModifiedString<TString const, ModCyclicShape<Shape3> >(txt, s4),
+                          "Fixed:111");
+    }
 
+    if (whichOnes[5] == '1') {
+        ShapeGen s5; stringToCyclicShape(s5, "1111");
+        benchmarkIterator(ModifiedString<TString const, ModCyclicShape<ShapeGen> >(txt, s5),
+                          "Generic:1111");
+    }
 
+    if (whichOnes[6] == '1') {
+        Shape4 s6;
+        benchmarkIterator(ModifiedString<TString const, ModCyclicShape<Shape4> >(txt, s6),
+                          "Fixed:1111");
+    }
+
+    if (whichOnes[7] == '1') {
+        ShapeGen s7; stringToCyclicShape(s7, "1111111111111111");
+        benchmarkIterator(ModifiedString<TString const, ModCyclicShape<ShapeGen> >(txt, s7),
+                          "Generic:16/16");
+    }
+
+    if (whichOnes[8] == '1') {
+        Shape16 s8;
+        benchmarkIterator(ModifiedString<TString const, ModCyclicShape<Shape16> >(txt, s8),
+                          "Fixed:16/16");
+    }
+
+    if (whichOnes[9] == '1') {
+        ShapeGen s9; stringToCyclicShape(s9, "11111111111111111");
+        benchmarkIterator(ModifiedString<TString const, ModCyclicShape<ShapeGen> >(txt, s9),
+                          "Generic:17/17");
+    }
+
+    if (whichOnes[10] == '1') {
+        Shape17 s10;
+        benchmarkIterator(ModifiedString<TString const, ModCyclicShape<Shape17> >(txt, s10),
+                          "Fixed:17/17");
+    }
+
+    if (whichOnes[11] == '1') {
+        ShapeGen s11; stringToCyclicShape(s11, "0110100111001001");
+        benchmarkIterator(ModifiedString<TString const, ModCyclicShape<ShapeGen> >(txt, s11),
+                          "Generic:8/16");
+    }
+
+    if (whichOnes[12] == '1') {
+        ShapeGap16 s12;
+        benchmarkIterator(ModifiedString<TString const, ModCyclicShape<ShapeGap16> >(txt, s12),
+                          "Fixed:8/16");
+    }
+
+    if (whichOnes[13] == '1') {
+        ShapeGen s13; stringToCyclicShape(s13, "01101001110010010");
+        benchmarkIterator(ModifiedString<TString const, ModCyclicShape<ShapeGen> >(txt, s13),
+                          "Generic:8/17");
+    }
+
+    if (whichOnes[14] == '1') {
+        ShapeGap17 s14;
+        benchmarkIterator(ModifiedString<TString const, ModCyclicShape<ShapeGap17> >(txt, s14),
+                          "Fixed:8/17");
+    }
 }
 
 
@@ -236,7 +265,7 @@ int main(int argc, char const ** argv)
 {
     seqan::ArgumentParser parser;
     AppOptions options;
-    seqan::ArgumentParser::ParseResult res = parseCommandLine(options, argc, argv);
+    seqan::ArgumentParser::ParseResult res = parseCommandLine34(options, argc, argv);
 
     if (res != seqan::ArgumentParser::PARSE_OK)
         return res == seqan::ArgumentParser::PARSE_ERROR;
@@ -265,7 +294,7 @@ int main(int argc, char const ** argv)
     std::cout << "# input file : " << options.infile << std::endl;
     std::cout << "# timestamp  : " << ctime(&t) << std::endl;
 
-    callBenchmarks(concat(seqs));
+    callBenchmarks(concat(seqs), options.which);
     
     return 0;
 }
