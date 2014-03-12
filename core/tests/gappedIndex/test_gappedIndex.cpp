@@ -42,7 +42,7 @@
 SEQAN_BEGIN_TESTSUITE(test_gappedIndex)
 {
 
-    testManualExample();
+    SEQAN_CALL_TEST(test_gappedIndex_top_down_traversal);
 
 	SEQAN_CALL_TEST(test_gappedIndex_find_10_DnaString);
     SEQAN_CALL_TEST(test_gappedIndex_find_10_DnaString_Set);

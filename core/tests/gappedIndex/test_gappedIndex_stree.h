@@ -52,7 +52,7 @@
 // ============================================================================
 
 
-void testManualExample()
+SEQAN_DEFINE_TEST(test_gappedIndex_top_down_traversal)
 {
     typedef CyclicShape<FixedShape<0,GappedShape<HardwiredShape<3> >, 0> >      TShape; //1001
     typedef Index<Peptide, IndexSa<Gapped<ModCyclicShape<TShape> > > >  TIndex;        // Gapped<ModCyclicShape<TShape> >
@@ -156,7 +156,6 @@ void testManualExample()
     for (; !atEnd(myIterator); ++myIterator, ++iter2)
     {}
     SEQAN_ASSERT_EQ(representative(iter2), "WCHNEER");
-
 
 }
 
