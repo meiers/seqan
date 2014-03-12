@@ -750,7 +750,7 @@ struct Finite;
 template <typename TValue, unsigned SIZE> 
 struct ValueSize<SimpleType<TValue, Finite<SIZE> > >
 {
-    typedef __uint8 Type;
+    typedef __uint32 Type;          // NOTE(meiers): adaptation for my tests of radix sort
     static const Type VALUE = SIZE;
 };
 
