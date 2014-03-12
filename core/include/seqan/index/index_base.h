@@ -1224,9 +1224,10 @@ Hit at position: < 0 , 0 >
 	SEQAN_HOST_DEVICE inline typename Size<Index<TText, TSpec> >::Type 
 	suffixLength(TPos pos, Index<TText, TSpec> const &index)
     {
-		return length(indexText(index)) - pos;
+        return length(suffix(index, pos) );
+		//return length(indexText(index)) - pos;
 	}
-
+/*
 	template <typename TPos, typename TString, typename TSSetSpec, typename TSpec>
 	SEQAN_HOST_DEVICE inline typename Size<Index<StringSet<TString, TSSetSpec>, TSpec> >::Type 
 	suffixLength(TPos pos, Index<StringSet<TString, TSSetSpec>, TSpec> const &index)
@@ -1234,7 +1235,7 @@ Hit at position: < 0 , 0 >
         typename StringSetLimits<StringSet<TString, TSSetSpec> >::Type const &limits = stringSetLimits(index);
 		return sequenceLength(getSeqNo(pos, limits), index) - getSeqOffset(pos, limits);
 	}
-
+*/
 
 //////////////////////////////////////////////////////////////////////////////
 /**

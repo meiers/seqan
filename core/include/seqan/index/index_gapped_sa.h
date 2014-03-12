@@ -228,8 +228,8 @@ suffix(Index<TText, IndexSa<Gapped<TSuffixMod, TSpec> > > const &t, TPosBegin po
 // Function suffixLength()
 // ----------------------------------------------------------------------------
 
-// TODO(meiers): Is there a faster way than suffix creation to get the length??
-
+// TODO(meiers): There is a problem with ambigous calls to suffixLength, see definitions in index_base, too.
+/*
 template <typename TText, typename TSuffixMod, typename TSpec, typename TPosBegin>
 SEQAN_HOST_DEVICE inline typename Size<Index<TText, IndexSa<Gapped<TSuffixMod, TSpec> > > >::Type
 suffixLength(TPosBegin pos, Index<TText, IndexSa<Gapped<TSuffixMod, TSpec> > > &index)
@@ -243,7 +243,7 @@ suffixLength(TPosBegin pos, Index<TText, IndexSa<Gapped<TSuffixMod, TSpec> > > c
 {
     return length(suffix(index, pos) );
 }
-
+*/
 // ----------------------------------------------------------------------------
 // Function infixWithLength()
 // ----------------------------------------------------------------------------
