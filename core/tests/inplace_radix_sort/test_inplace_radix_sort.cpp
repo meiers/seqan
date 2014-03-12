@@ -42,6 +42,7 @@
 
 SEQAN_BEGIN_TESTSUITE(test_inplace_radix_sort)
 {
-	test();
+	benchmarkRadixSortOnRandomSequences();
+    //test();
 }
 SEQAN_END_TESTSUITE
