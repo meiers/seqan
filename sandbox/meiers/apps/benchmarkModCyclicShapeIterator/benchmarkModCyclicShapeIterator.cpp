@@ -92,9 +92,9 @@ parseCommandLine34(AppOptions & options, int argc, char const ** argv)
 
     addOption(parser, seqan::ArgParseOption("w",
                                             "which",
-                                            "0/1 string specifying which tests to run and which not. Should at least have length 15",
+                                            "0/1 string specifying which tests to run and which not. Should at least have length 16",
                                             seqan::ArgParseArgument::STRING));
-    setDefaultValue(parser, "which", "111111111111111");
+    setDefaultValue(parser, "which", "11111111111111111");
 
     // Parse command line.
     seqan::ArgumentParser::ParseResult res = seqan::parse(parser, argc, argv);
@@ -250,6 +250,12 @@ void callBenchmarks(TString const & txt, CharString whichOnes)
         ShapeGap17 s14;
         benchmarkIterator(ModifiedString<TString const, ModCyclicShape<ShapeGap17> >(txt, s14),
                           "Fixed:8/17");
+    }
+
+    if (whichOnes[15] == '1') {
+        std::stringstream ss;  ss << txt;
+        std::string s = ss.str();
+        benchmarkIterator(s, "std::string");
     }
 }
 
