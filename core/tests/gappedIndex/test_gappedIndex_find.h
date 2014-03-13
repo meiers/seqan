@@ -54,7 +54,7 @@ using namespace seqan;
  *    the order might differ.
  */
 template <typename TText, typename TQuerySet, typename TCyclicShape>
-void testFinder(TText const & text, TQuerySet const & querySet, TCyclicShape const & shape)
+void testFinder(TText const & text, TQuerySet const & querySet, TCyclicShape const & shape, bool verbose)
 {
     typedef typename Value<TQuerySet const>::Type               TQueryString;
     typedef typename Iterator<TQuerySet const, Standard>::Type  TQuerySetIter;
@@ -73,7 +73,7 @@ void testFinder(TText const & text, TQuerySet const & querySet, TCyclicShape con
 
     typedef Index<TText const, IndexSa<Gapped<ModCyclicShape<TCyclicShape> > > > TIndex;
     TIndex index(text, shape);
-    indexRequire(index, FibreSA());
+    indexCreate(index, FibreSA(), Dislex<>());
     Finder<TIndex> finder(index);
 
     // for all queries
@@ -84,7 +84,6 @@ void testFinder(TText const & text, TQuerySet const & querySet, TCyclicShape con
         typedef typename Position<Finder<Index<TText const> > >::Type TPos;
         String<TPos> res, modRes;
 
-//        std::cout << "QUERY: " << *qu << std::endl << " TEXT: " << concat(text) << std::endl;
         clear(correctFinder);
         goBegin(correctFinder);
         while (find(correctFinder, *qu))
@@ -93,7 +92,6 @@ void testFinder(TText const & text, TQuerySet const & querySet, TCyclicShape con
         clear(finder);
         goBegin(finder);
 
-//        std::cout << "MOD QUERY: " << *modQu << std::endl;
         while (find(finder, *modQu))
             appendValue(modRes, beginPosition(finder));
 
@@ -115,20 +113,19 @@ void testFinder(TText const & text, TQuerySet const & querySet, TCyclicShape con
 
                 ++it;
             }
-//            std::cout << "MOD RESULTS: " << modRes << std::endl << "RESULTS: " << res << std::endl;
 
-            std::cout << "(" << length(res) << ":" << length(modRes) << "),";
+            if (verbose) std::cout << "(" << length(res) << ":" << length(modRes) << "),";
             SEQAN_ASSERT_EQ_MSG(it, end(res),"Not all results found by the correct index have been found by the gapped index");
         } else {
-            std::cout << "(=),";
+            if (verbose) std::cout << "(=),";
         }
     }
-    std::cout << std::endl;
+    if (verbose) std::cout << std::endl;
 }
 
 
 template <typename TText, typename TShape>
-void call_testFinder(TText &text, TShape const & shape)
+void call_testFinder(TText &text, TShape const & shape, bool verbose = false)
 {
     // get randomText
     typedef typename Value<TText>::Type TAlph;
@@ -142,11 +139,11 @@ void call_testFinder(TText &text, TShape const & shape)
     generatePattern(queries, s, 100);
 
     // call test
-    testFinder(text, queries, shape);
+    testFinder(text, queries, shape, verbose);
 }
 
 template <typename TText, typename TSpec, typename TShape>
-void call_testFinder(StringSet<TText, TSpec> &text, TShape const & shape)
+void call_testFinder(StringSet<TText, TSpec> &text, TShape const & shape, bool verbose = false)
 {
     // get randomText
     typedef typename Value<TText>::Type TAlph;
@@ -160,7 +157,7 @@ void call_testFinder(StringSet<TText, TSpec> &text, TShape const & shape)
     generatePattern(queries, s, 80);
 
     // call test
-    testFinder(text, queries, shape);
+    testFinder(text, queries, shape, verbose);
 }
 
 
@@ -190,7 +187,6 @@ struct _ShapeDefs
         stringToCyclicShape(s_0011,     "0011");
     }
 };
-
 
 
 
@@ -249,6 +245,23 @@ SEQAN_DEFINE_TEST(test_gappedIndex_find_10_CharString_Set)
 {
     _ShapeDefs SD;
     StringSet<CharString> str;
+    call_testFinder(str, SD.S_10);
+    call_testFinder(str, SD.s_10);
+}
+
+
+// special
+SEQAN_DEFINE_TEST(test_gappedIndex_find_10_Finite)
+{
+    _ShapeDefs SD;
+    String<SimpleType<char, Finite<256> > > str;
+    call_testFinder(str, SD.S_10);
+    call_testFinder(str, SD.s_10);
+}
+SEQAN_DEFINE_TEST(test_gappedIndex_find_10_Finite_Set)
+{
+    _ShapeDefs SD;
+    StringSet<String<SimpleType<unsigned, Finite<256> > > > str;
     call_testFinder(str, SD.S_10);
     call_testFinder(str, SD.s_10);
 }

@@ -215,30 +215,33 @@ struct _RadixRecursionStackEntry
     {}
 };
 /*
- template <typename TSAValue, typename TSmallSize=unsigned>
- struct RadixRecursionStack
- {
- typedef _RadixRecursionStackEntry<TSAValue, TSmallSize> TEntry;
- String<TEntry> stack;
+template <typename TSAValue, typename TSmallSize=unsigned>
+struct RadixRecursionStack
+{
+    typedef _RadixRecursionStackEntry<TSAValue, TSmallSize> TEntry;
+    String<TEntry> stack;
 
- RadixRecursionStack()
- {}
+    RadixRecursionStack()
+    {
+        reserve(stack, 20000);
+    }
 
- inline bool empty() { return length(stack) <=0; }
+    inline bool empty() { return length(stack) <=0; }
 
- inline void push(TSAValue *beg, TSAValue *end, TSmallSize depth)
- {
- appendValue(stack, TEntry(beg, end, depth), Generous());
- }
- inline void pop(TSAValue *& beg, TSAValue *& end, TSmallSize &depth)
- {
- TEntry & top = back(stack);
- beg = top.from;
- end = top.to;
- depth = top.depth;
- eraseBack(stack);
- }
- }; */
+    inline void push(TSAValue *beg, TSAValue *end, TSmallSize depth)
+    {
+        appendValue(stack, TEntry(beg, end, depth), Generous());
+    }
+    inline void pop(TSAValue *& beg, TSAValue *& end, TSmallSize &depth)
+    {
+        TEntry & top = back(stack);
+        beg = top.from;
+        end = top.to;
+        depth = top.depth;
+        eraseBack(stack);
+    }
+};
+*/
 
 // TODO: this stack is not very generic, but so much faster than the one above :/
 
@@ -335,10 +338,10 @@ struct InplaceRadixSorter
 
         // permute items into the correct buckets:
         for( TSAValue* i = beg; i < end; ) {
-            unsigned subset;  // unsigned is faster than uchar!
+            TOrdValue subset;  // unsigned is faster than uchar!
             TSAValue holdOut = *i;
             while( --bucketEnd[ subset = textAccess(holdOut, depth) ] > i )
-            std::swap( *bucketEnd[subset], holdOut );
+                std::swap( *bucketEnd[subset], holdOut );
             *i = holdOut;
             i += bucketSize[subset];
             bucketSize[subset] = 0;  // reset it so we can reuse it
@@ -471,7 +474,7 @@ void inplaceRadixSort(
     typedef RadixTextAccessor<TSAValue, TString>                    TAccessFunctor;
     typedef _ZeroBucketComparator<TSAValue>                         TCompareFunctor;
 
-    static const unsigned SIGMA = ValueSize<TAlphabet>::VALUE + 1;
+    static const unsigned SIGMA = static_cast<unsigned>(ValueSize<TAlphabet>::VALUE) + 1;
     SEQAN_ASSERT_LT_MSG(SIGMA, 1000u, "Attention: inplace radix sort is not suited for large alphabets");
 
     typedef InplaceRadixSorter<SIGMA, TAccessFunctor, TCompareFunctor, TSize>    TSorter;
@@ -528,7 +531,7 @@ void inplaceRadixSort(
     typedef RadixTextAccessor<TSAValue, TString, TMod>              TAccessFunctor;
     typedef _ZeroBucketComparator<TSAValue>                         TCompareFunctor;
 
-    static const unsigned SIGMA = ValueSize<TAlphabet>::VALUE + 1;
+    static const unsigned SIGMA = static_cast<unsigned>(ValueSize<TAlphabet>::VALUE) + 1;
     SEQAN_ASSERT_LT_MSG(SIGMA, 1000u, "Attention: inplace radix sort is not suited for large alphabets");
 
     typedef InplaceRadixSorter<SIGMA, TAccessFunctor, TCompareFunctor, TSize>    TSorter;
@@ -578,7 +581,7 @@ void inplaceFullRadixSort( TSA & sa, TString const & str)
     typedef RadixTextAccessor<TSAValue, TString>                    TAccessFunctor;
     typedef _ZeroBucketComparator<TSAValue>                         TCompareFunctor;
 
-    static const unsigned SIGMA = ValueSize<TAlphabet>::VALUE + 1;
+    static const unsigned SIGMA = static_cast<unsigned>(ValueSize<TAlphabet>::VALUE) + 1;
     SEQAN_ASSERT_LT_MSG(SIGMA, 1000u, "Attention: inplace radix sort is not suited for large alphabets");
 
     typedef InplaceRadixSorter<SIGMA, TAccessFunctor, TCompareFunctor, TSize>    TSorter;
@@ -653,7 +656,7 @@ void inplaceFullRadixSort(TSA & sa,
     typedef RadixTextAccessor<TSAValue, TString, TMod>              TAccessFunctor;
     typedef _ZeroBucketComparator<TSAValue>                         TCompareFunctor;
     
-    static const unsigned SIGMA = ValueSize<TAlphabet>::VALUE + 1;
+    static const unsigned SIGMA = static_cast<unsigned>(ValueSize<TAlphabet>::VALUE) + 1;
     SEQAN_ASSERT_LT_MSG(SIGMA, 1000u, "Attention: inplace radix sort is not suited for large alphabets");
 
     typedef InplaceRadixSorter<SIGMA, TAccessFunctor, TCompareFunctor, TSize>    TSorter;
