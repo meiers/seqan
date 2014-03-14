@@ -112,7 +112,7 @@ struct Lastdb
 
     int build(TSeqSet const &databases, TIdSet const & ids, SeqanLastDbOptions &options)
     {
-        if (options.verbosity > 1)
+        if (options.verbosity)
             std::cout << "Building Suffix array... " << std::endl;
 
         {
@@ -126,10 +126,11 @@ struct Lastdb
                 indexCreate(index, FibreSA(), DislexExternal<TShape>() );
             save(index, toCString(options.outputName));
 
-            std::cout << sizeof(indexSA(index)[0]) << std::endl;
+            if (options.verbosity > 1)
+                std::cout << "Suffix array entries have a size of " << sizeof(indexSA(index)[0]) << " bytes" << std::endl;
         }
 
-        if (options.verbosity > 1)
+        if (options.verbosity)
             std::cout << "Building Look up table for K=" << K << "... " << std::endl;
 
         {
@@ -146,10 +147,13 @@ struct Lastdb
             //printTables(indexSA(index), indexDir(hashTab), databases);
         }
 
-
         // write the sequence Ids into file
         CharString fileName = options.outputName;
         append(fileName, ".ids");
+
+        if (options.verbosity > 1)
+            std::cout << "Writing the sequence IDs to " << fileName << "... " << std::endl;
+
         std::ofstream file(toCString(fileName), std::ios::out);
         if (file.good())
         {
@@ -163,9 +167,12 @@ struct Lastdb
         }
 
 
-        if (options.verbosity > 1) std::cout << "Writing property file... " << std::endl;
         fileName = options.outputName;
         append(fileName, ".prt");
+
+        if (options.verbosity > 1)
+            std::cout << "Writing property file to " << fileName << "... " << std::endl;
+
         return _writePropertyFile(fileName, static_cast<unsigned>(K), options.shapeChoice, static_cast<unsigned>(length(databases)));
     }
 };
@@ -277,8 +284,13 @@ int main(int argc, char const ** argv)
     if (isSet(parser, "very-verbose"))
         options.verbosity = 3;
 
-    // import database sequence
-    TStringSet databases;
+
+    // Import database sequence
+    // Note(meiers): Do not use MMap Strings here.
+    // The .concat string wouldn't be saved into a new file.
+    // see seqanLast_core for def. of TNormalStringSet
+    //
+    TNormalStringSet databases;
     StringSet<CharString> ids;
     if (!_importSequences(databases, ids, options.databaseFile, options.verbosity))
         return 1;

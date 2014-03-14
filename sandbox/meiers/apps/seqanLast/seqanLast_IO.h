@@ -81,6 +81,7 @@ struct SeqanLastOptions
         std::cout << "   mismatchScore:    " << mismatchScore << std::endl;
         std::cout << "   gapOpenScore:     " << gapOpenScore << std::endl;
         std::cout << "   gapExtendScore:   " << gapExtendScore << std::endl;
+        std::cout << "   gaplessXDrop:     " << gaplessXDrop << std::endl;
         std::cout << "   gappedXDrop:      " << gappedXDrop << std::endl;
         std::cout << "   gaplessThreshold: " << gaplessThreshold << std::endl;
         std::cout << "   gappedThreshold:  " << gappedThreshold << std::endl;
@@ -111,7 +112,7 @@ struct SeqanLastDbOptions
         std::cout << "Files:" << std::endl;
         std::cout << "   database:    " << databaseFile << std::endl;
         std::cout << "   output name: " << outputName  << std::endl;
-        std::cout << "Other:" << std::endl;
+        std::cout << "Options:" << std::endl;
         std::cout << "   shape:       " << shapeChoice << std::endl;
         std::cout << "   k:           " << k  << std::endl;
         std::cout << "algorithm:      " << algorithm << std::endl;

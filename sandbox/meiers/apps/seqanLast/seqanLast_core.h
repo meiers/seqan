@@ -40,7 +40,8 @@
 // =============================================================================
 
 // StringSet
-typedef StringSet<String<Dna5, MMap<> >, Owner<ConcatDirect<> > >         TStringSet;
+typedef StringSet<String<Dna5, MMap<> >, Owner<ConcatDirect<> > >         TMMapStringSet;
+typedef StringSet<String<Dna5>,          Owner<ConcatDirect<> > >         TNormalStringSet;
 
 // Shapes
 typedef CyclicShape<FixedShape<0, GappedShape<HardwiredShape<1> >, 1> >       Shape1;   // 110
@@ -50,12 +51,22 @@ namespace SEQAN_NAMESPACE_MAIN
 {
     // Define size type of Index<StringSet>
     template<>
-    struct SAValue<TStringSet>
+    struct SAValue<TMMapStringSet>
     {
         typedef Pair<unsigned char, unsigned int, Pack> Type;
     };
     template<>
-    struct SAValue<TStringSet const>
+    struct SAValue<TMMapStringSet const>
+    {
+        typedef Pair<unsigned char, unsigned int, Pack> Type;
+    };
+    template<>
+    struct SAValue<TNormalStringSet>
+    {
+        typedef Pair<unsigned char, unsigned int, Pack> Type;
+    };
+    template<>
+    struct SAValue<TNormalStringSet const>
     {
         typedef Pair<unsigned char, unsigned int, Pack> Type;
     };
@@ -73,12 +84,11 @@ template <typename TSigned, typename TSize, unsigned Q=64>
 struct DiagonalTable
 {
     typedef typename Iterator<String<Pair<TSigned,TSize> > >::Type TIter;
-    String<Pair<TSigned, TSize> > table[Q];
+    String<String<Pair<TSigned, TSize> > > table;
 
     DiagonalTable()
     {
-        for(unsigned i=0; i<Q; ++i)
-            table[i] = String<Pair<TSigned, TSize> >();
+        resize(table, Q, Exact());
     }
 
     bool redundant(TSize pGenome, TSize pQuery)
@@ -467,7 +477,7 @@ void linearLastal(
 
             // DEBUG
             if (verbosity > 2)
-                std::cout << "query [" << queryId << "," << queryPos << "] : \t\"" <<
+                std::cout << "query [" << int(queryId) << "," << queryPos << "] : \t\"" <<
                 infix(query, queryPos, std::min(static_cast<TDbSize>(queryPos + 30),
                                                 static_cast<TDbSize>(queryEnd-queryBeg))) << "...\", SA range: " << range <<
                 (range.i2 > range.i1 && range.i2 <= range.i1 + maxFreq ? " good" : " BAD") << std::endl;
@@ -492,8 +502,8 @@ void linearLastal(
 
                 // DEBUG
                 if (verbosity > 2)
-                    std::cout << "      seed adaptive   database [" << getSeqNo(*saFrom) << "," << beginPositionH(seed) <<
-                    "-" << endPositionH(seed) << "]\tquery [" << queryId << "," << beginPositionV(seed)
+                    std::cout << "      seed adaptive   database [" << int(getSeqNo(*saFrom)) << "," << beginPositionH(seed) <<
+                    "-" << endPositionH(seed) << "]\tquery [" << int(queryId) << "," << beginPositionV(seed)
                     << "-" << endPositionV(seed) << "]"   << std::endl;
 
                 // Gapless Alignment in both directions with a XDrop
@@ -502,12 +512,13 @@ void linearLastal(
                 _tglAlsCalls += cpuTime() - xxxx;
                 ++_cglAls;
 
+
                 // Mark diagonal as already
                 diagTable.add(endPositionH(seed), endPositionV(seed));
 
                 // DEBUG
                 if (verbosity > 2)
-                    std::cout << "           extended   database [" << getSeqNo(*saFrom) << "," <<
+                    std::cout << "           extended   database [" << int(getSeqNo(*saFrom)) << "," <<
                     beginPositionH(seed) << "-" << endPositionH(seed) << "]\tquery [" << queryPos <<
                     "," << beginPositionV(seed) << "-" << endPositionV(seed) << "]\tscore: " <<
                     score(seed) << std::endl;
@@ -523,7 +534,7 @@ void linearLastal(
                 ++_cgpAls;
 
                 if (verbosity > 2)
-                    std::cout << "      * aligned    database [" << getSeqNo(*saFrom) << "," <<
+                    std::cout << "      * aligned    database [" << int(getSeqNo(*saFrom)) << "," <<
                     beginPosition(row(alignObj,0)) << "-" << endPosition(row(alignObj,0)) << "]\tquery [" <<
                     queryPos << "," << beginPosition(row(alignObj,1)) << "-" <<
                     endPosition(row(alignObj,1)) << "]\tscore: " << finalScore << std::endl;

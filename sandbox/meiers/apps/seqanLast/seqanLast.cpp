@@ -66,12 +66,12 @@ int importAndRun(SeqanLastOptions &options,
                  TShape const &)
 {
     // typedefs happen here (generic functions follow)
-    typedef Align<typename Infix<TStringSet const>::Type>       TAlignment;
-    typedef SeqanLastMatch<Size<TStringSet>::Type, TAlignment>  TMatch;
+    typedef Align<typename Infix<TMMapStringSet const>::Type>       TAlignment;
+    typedef SeqanLastMatch<Size<TMMapStringSet>::Type, TAlignment>  TMatch;
 
 
     // Import Suffix Array
-    Index<TStringSet, IndexSa<Gapped<ModCyclicShape<TShape> > > > suffixArray;          // Index Type
+    Index<TMMapStringSet, IndexSa<Gapped<ModCyclicShape<TShape> > > > suffixArray;          // Index Type
     if (!open(suffixArray, toCString(options.databaseName)))
         return 1;
     if (options.verbosity>1)
@@ -97,7 +97,7 @@ int importAndRun(SeqanLastOptions &options,
 
 
     // Load Q-Gram table
-    Index<TStringSet, IndexQGram<UngappedShape<K> > > hashTab;
+    Index<TMMapStringSet, IndexQGram<UngappedShape<K> > > hashTab;
     f = options.databaseName;    append(f, ".dir");
     if (!open(indexDir(hashTab), toCString(f)))
         return 1;
@@ -106,7 +106,7 @@ int importAndRun(SeqanLastOptions &options,
 
 
     // Import Query
-    TStringSet querySet;
+    TMMapStringSet querySet;
     StringSet<CharString> queryIds;
     if (!_importSequences(querySet, queryIds, options.queryFile, options.verbosity))
         return 1;
@@ -137,7 +137,7 @@ int importAndRun(SeqanLastOptions &options,
 
     // Output
     std::ofstream file;
-	file.open(toCString(options.outputFile), ::std::ios_base::out | ::std::ios_base::app);
+	file.open(toCString(options.outputFile), ::std::ios_base::out);
 	if (options.outputFile == "stdout" || !file.is_open()) {
         if (options.outputFile != "stdout")
             std::cout << "Could not open \"" << options.outputFile << "\" to write output. Using stdout instead." << std::endl;
