@@ -1376,7 +1376,7 @@ suffix(Index<TText, TSpec> & t, TPosBegin pos_begin)
 
 // general Index: const variant
 template <typename TText, typename TSpec, typename TPosBegin>
-inline typename Suffix<TText>::Type
+inline typename Suffix<TText const>::Type
 suffix(Index<TText, TSpec> const &t, TPosBegin pos_begin)
 {
     return suffix(indexText(t), pos_begin);
