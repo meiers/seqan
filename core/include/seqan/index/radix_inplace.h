@@ -249,7 +249,7 @@ template <typename TSAValue, typename TSmallSize=unsigned>
 struct RadixRecursionStack
 {
     typedef _RadixRecursionStackEntry<TSAValue, TSmallSize> TEntry;
-    TEntry stack[256*200 + 1]; // enough for pattern length 200 on char
+    TEntry stack[256*256]; // enough for depth 256 on char
     TEntry *top;
 
     RadixRecursionStack() : top(stack) {}
@@ -288,7 +288,7 @@ struct InplaceRadixSorter
     typedef typename TAccessFunctor::argument_type      TSAValue;
     typedef typename TAccessFunctor::result_type        TOrdValue; // unsigned
 
-    static const unsigned ORACLESIZE = 10;
+    static const unsigned ORACLESIZE = 256;
     TAccessFunctor const & textAccess;
     TOrderFunctor const & comp;
 
