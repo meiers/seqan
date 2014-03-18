@@ -66,39 +66,19 @@ void radixSort2(TString const & text, TSA & sa, TSize depth)
     inplaceRadixSort(sa, text, depth);
 }
 
-
-// --------------------------------------------------------------------------
-// Function main()
-// --------------------------------------------------------------------------
-
-// Program entry point.
-
-int main(int argc, char const ** argv)
+template <typename TAlph>
+void doIt(TAlph const &, unsigned len, unsigned depth, unsigned version)
 {
-
-    if (argc != 4)
-    {
-        std::cerr << "Provide  (1) String Size  (2) depth  (3) radix version [1|2]" << std::endl;
-        return 1;
-    }
-
-    unsigned len = atoi(argv[1]);
-    unsigned depth = atoi(argv[2]);
-    unsigned version = atoi(argv[3]);
-
-    typedef Dna TAlph;
-
-
     String<TAlph> str;
     generateText(str, len);
-    String<Size<String<TAlph> >::Type> sa;
+    String<typename Size<String<TAlph> >::Type> sa;
     resize(sa, len);
     _initializeSA(sa, str);
 
     if (version ==1)
     {
-        std::cout << "LSD radix sort" << std::endl;
-        radixSort1(str, sa, depth);
+    std::cout << "LSD radix sort" << std::endl;
+    radixSort1(str, sa, depth);
     }
     if (version == 2)
     {
@@ -109,6 +89,41 @@ int main(int argc, char const ** argv)
     {
         std::cout << "Only String construction" << std::endl;
     }
+}
+
+// --------------------------------------------------------------------------
+// Function main()
+// --------------------------------------------------------------------------
+
+// Program entry point.
+
+int main(int argc, char const ** argv)
+{
+
+    if (argc != 5)
+    {
+        std::cerr << "Provide (1) String Size\n"\
+                     "        (2) depth\n"\
+                     "        (3) alphabet size (4, 256, 496)\n"\
+                     "        (4) radix version [1|2]" << std::endl;
+        return 1;
+    }
+
+    unsigned len = atoi(argv[1]);
+    unsigned depth = atoi(argv[2]);
+    unsigned K = atoi(argv[3]);
+    unsigned version = atoi(argv[4]);
+
+    switch(K)
+    {
+        case 4: doIt(Dna(), len, depth, version); break;
+        case 256: unsigned char ch; doIt(ch, len, depth, version); break;
+        case 4096: doIt(SimpleType<unsigned int, Finite<4096> >(), len, depth, version); break;
+        default: std::cerr << "Only alphabet size 4, 256 and 4096 allowed" << std::endl;
+    }
+
+
+
 
     return 0;
 }
