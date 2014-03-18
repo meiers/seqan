@@ -249,7 +249,7 @@ template <typename TSAValue, typename TSmallSize=unsigned>
 struct RadixRecursionStack
 {
     typedef _RadixRecursionStackEntry<TSAValue, TSmallSize> TEntry;
-    TEntry stack[256*256]; // enough for depth 256 on char
+    TEntry stack[256*256*4]; // enough for depth 256 on char
     TEntry *top;
 
     RadixRecursionStack() : top(stack) {}
