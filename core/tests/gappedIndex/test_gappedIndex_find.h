@@ -254,7 +254,7 @@ SEQAN_DEFINE_TEST(test_gappedIndex_find_10_CharString_Set)
 SEQAN_DEFINE_TEST(test_gappedIndex_find_10_Finite)
 {
     _ShapeDefs SD;
-    String<SimpleType<char, Finite<256> > > str;
+    String<SimpleType<unsigned, Finite<256> > > str;
     call_testFinder(str, SD.S_10);
     call_testFinder(str, SD.s_10);
 }

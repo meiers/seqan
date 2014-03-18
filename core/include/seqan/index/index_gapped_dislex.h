@@ -292,8 +292,8 @@ public std::unary_function<TInput, TResult>
 
             for (; saIt < saEnd && sbIt < sbEnd && p < _weight; ++saIt, ++sbIt, ++p)
             {
-                if (*saIt < *sbIt) return -1;
-                if (*saIt > *sbIt) return 1;
+                if (ordValue(*saIt) < ordValue(*sbIt)) return -1;
+                if (ordValue(*saIt) > ordValue(*sbIt)) return 1;
             }
 
             if (!(saIt < saEnd)) return -1;
@@ -341,8 +341,8 @@ public std::unary_function<TInput, TResult>
 
             for (; saIt < saEnd && sbIt < sbEnd && p < _weight; ++saIt, ++sbIt, ++p)
             {
-                if (*saIt < *sbIt) return -1;
-                if (*saIt > *sbIt) return 1;
+                if (ordValue(*saIt) < ordValue(*sbIt)) return -1;
+                if (ordValue(*saIt) > ordValue(*sbIt)) return 1;
             }
 
             // if both suffixes are not yet empty, the they are equal

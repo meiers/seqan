@@ -40,46 +40,9 @@
 #include "test_gappedIndex_stree.h"
 
 
-void analyzeProblemWithCharStrings()
-{
-    std::cout << "There is a problem with radix Sort on CharStrings. "
-              << "Here we generate a random sequence and sort its suffixes with radix sort. "
-              << "Change between char and unsigned char to demonstrate the problem" << std::endl;
-
-
-    typedef String<char> TString;
-    TString s;
-    generateText(s, 200);
-
-    Index<TString> index(s);
-    indexCreate(index, FibreSA(), InplaceRadixSort());
-
-    for (unsigned i=0; i< length(indexSA(index)); ++i)
-    {
-        String<unsigned> s = suffix(indexText(index), indexSA(index)[i]);
-        std::cout << indexSA(index)[i] << ":   \t";
-        for (unsigned j=0; j< length(s); ++j)
-        {
-            if (j>9)
-            {
-                std::cout << ", ...";
-                break;
-            }
-            std::cout << s[j] << ", ";
-        }
-        std::cout << std::endl;
-    }
-
-    std::cout << "done" << std::endl;
-}
 
 SEQAN_BEGIN_TESTSUITE(test_gappedIndex)
 {
-
-
-    analyzeProblemWithCharStrings();
-
-
     SEQAN_CALL_TEST(test_gappedIndex_top_down_traversal);
 
 	SEQAN_CALL_TEST(test_gappedIndex_find_10_DnaString);
