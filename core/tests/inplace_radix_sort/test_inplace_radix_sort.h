@@ -67,8 +67,6 @@ void test()
 
 }
 
-
-
 template <unsigned Q, typename TSize>
 void benchmarkRadixSortOnRandomSequences(TSize size)
 {
@@ -176,5 +174,9 @@ void benchmarkRadixSortOnRandomSequences()
     benchmarkRadixSortOnRandomSequences<512> ( 51200000);
     benchmarkRadixSortOnRandomSequences<512> (102400000);
 }
+
+
+////////////////////////////////////////////////////////////////////////////////////////
+
 
 #endif  // CORE_TESTS_INPLACE_RADIX_SORT_TEST_INPLACE_RADIX_SORT_H_
