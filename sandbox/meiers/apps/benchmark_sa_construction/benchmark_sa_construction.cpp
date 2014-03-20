@@ -883,8 +883,6 @@ int main(int argc, char const ** argv)
     if (options.mode == "linear")
         callBenchmarks(seqs, 1);
 
-
-
     
     return 0;
 }
