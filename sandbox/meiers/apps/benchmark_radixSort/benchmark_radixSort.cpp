@@ -33,6 +33,7 @@
 // ==========================================================================
 
 #include <seqan/index.h>
+#include <seqan/seq_io.h>
 #include "../tests/index/test_index_helpers.h"
 using namespace seqan;
 
@@ -91,39 +92,97 @@ void doIt(TAlph const &, unsigned len, unsigned depth, unsigned version)
     }
 }
 
+
+
+// --------------------------------------------------------------------------
+// benchmarkOnRealData()
+// --------------------------------------------------------------------------
+
+int benchmarkOnRealData(const char* fileName, unsigned depth, unsigned version)
+{
+    SequenceStream seqStream(fileName);
+    if (!isGood(seqStream))
+    {
+        std::cout << "ERROR: Could not open the file." << std::endl;
+        return 1;
+    }
+    Dna5String sequence;
+    CharString id;
+    if (readRecord(id, sequence, seqStream) != 0)
+    {
+        std::cout << "ERROR: Could not read " << std::endl;
+        return 1;
+    }
+    String<Size<Dna5String>::Type> sa;
+    resize(sa, length(sequence));
+    _initializeSA(sa, sequence);
+
+    std::cout << "length: " << length(sa) << std::endl;
+    if (version ==1)
+    {
+        std::cout << "LSD radix sort on "<< id << std::endl;
+        radixSort1(sequence, sa, depth);
+    }
+    if (version == 2)
+    {
+        std::cout << "MSD radix sort on "<< id  << std::endl;
+        radixSort2(sequence, sa, depth);
+    }
+    if (version == 3)
+    {
+        std::cout << "Only String construction on "<< id << std::endl;
+    }
+    return 0;
+}
+
+
 // --------------------------------------------------------------------------
 // Function main()
 // --------------------------------------------------------------------------
 
 // Program entry point.
-
+void _help()
+{
+    std::cout << "Mode 1: (1) String Size\n"\
+    "        (2) depth\n"\
+    "        (3) alphabet size (4, 256, 4096)\n"\
+    "        (4) radix version [1|2]" << std::endl;
+    std::cout << "Mode 2: (1) DNA fasta file\n"\
+    "        (2) depth\n"\
+    "        (3) radix verison [1|2]" << std::endl;
+}
 int main(int argc, char const ** argv)
 {
 
-    if (argc != 5)
+
+
+
+
+    if (argc == 4 && atoi(argv[2]) > 0 && atoi(argv[3]) > 0 && atoi(argv[3]) < 4 )
     {
-        std::cerr << "Provide (1) String Size\n"\
-                     "        (2) depth\n"\
-                     "        (3) alphabet size (4, 256, 496)\n"\
-                     "        (4) radix version [1|2]" << std::endl;
-        return 1;
+        unsigned depth   = atoi(argv[2]);
+        unsigned version = atoi(argv[3]);
+        // file name, depth, version
+        return benchmarkOnRealData(argv[1], depth, version);
     }
 
-    unsigned len = atoi(argv[1]);
-    unsigned depth = atoi(argv[2]);
-    unsigned K = atoi(argv[3]);
-    unsigned version = atoi(argv[4]);
-
-    switch(K)
+    if (argc == 5 && atoi(argv[1]) > 0 && atoi(argv[2]) > 0
+        && (atoi(argv[3]) == 4 || atoi(argv[3]) == 256 || atoi(argv[3]) == 4096)
+        && atoi(argv[4]) > 0 && atoi(argv[4]) < 4 )
     {
-        case 4: doIt(Dna(), len, depth, version); break;
-        case 256: unsigned char ch; doIt(ch, len, depth, version); break;
-        case 4096: doIt(SimpleType<unsigned int, Finite<4096> >(), len, depth, version); break;
-        default: std::cerr << "Only alphabet size 4, 256 and 4096 allowed" << std::endl;
+        unsigned len     = atoi(argv[1]);
+        unsigned depth   = atoi(argv[2]);
+        unsigned K       = atoi(argv[3]);
+        unsigned version = atoi(argv[4]);
+        switch(K)
+        {
+            case 4: doIt(Dna(), len, depth, version); break;
+            case 256: unsigned char ch; doIt(ch, len, depth, version); break;
+            case 4096: doIt(SimpleType<unsigned int, Finite<4096> >(), len, depth, version); break;
+            default: std::cerr << "Only alphabet size 4, 256 and 4096 allowed" << std::endl;
+        }
+        return 0;
     }
-
-
-
-
+    _help();
     return 0;
 }
