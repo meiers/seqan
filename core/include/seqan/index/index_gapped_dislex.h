@@ -385,7 +385,7 @@ struct GappedSuffixQgramLess_ <TSAValue, TShape, StringSet<TText, TSpec>, TResul
 // --------------------------------------------------------------------------
 
 template <typename TLexText, typename TSA, typename TText, typename TCyclicShape>
-inline TRank _dislex(                           // return max. rank
+inline typename Value<TLexText>::Type _dislex(
     TLexText & lexText,                         // random access (write)
     TSA const & partiallyOrderedSA,             // sequential scan
     TText const & origText,                     // random access
@@ -398,7 +398,7 @@ inline TRank _dislex(                           // return max. rank
     typedef ModifiedString<typename Suffix<TText const
     >::Type, ModCyclicShape<TCyclicShape> >      TModText;
 
-    if (length(partiallyOrderedSA) < 1) return; // otherwise *sa will fail
+    if (length(partiallyOrderedSA) < 1) return 0; // otherwise *sa will fail
 
     // dislex position calculator
     _dislexTransform<TSize> dislex(cyclic.span, length(origText));
@@ -436,7 +436,7 @@ inline TRank _dislex(                           // return max. rank
 // --------------------------------------------------------------------------
 
 template < typename TLexText, typename TSA, typename TText, typename TTextSpec, typename TCyclicShape>
-inline TRank _dislex(
+inline typename Value<typename Concatenator<TLexText>::Type>::Type _dislex(
     TLexText & lexText,                             // random access
     TSA const & partiallyOrderedSA,                 // sequential scan
     StringSet<TText, TTextSpec> const & origText,   // random access
@@ -454,7 +454,7 @@ inline TRank _dislex(
     typedef typename StringSetLimits<TStringSet>::Type      TStringSetLimits;   // expected: String<unsigned>
     typedef Pair<typename Size<TText>::Type>                TSetPosition;       // expected: Pair<unsigned>
 
-    if (length(partiallyOrderedSA) < 1) return; // otherwise *sa will fail
+    if (length(partiallyOrderedSA) < 1) return 0; // otherwise *sa will fail
     
     TStringSetLimits xxx = stringSetLimits(origText);
     _dislexTransformMulti<TSetPosition, TStringSetLimits>
@@ -571,30 +571,30 @@ inline void createGappedSuffixArray(
 
     //if (length(SA) < 1) return;
 
-    std::cout << "   |     init: " << sysTime() - teim << "s" << std::endl; teim = sysTime();
+    //std::cout << "   |     init: " << sysTime() - teim << "s" << std::endl; teim = sysTime();
 
     // sort newSA according to the Shape
     inplaceRadixSort(SA, s, weight(shape)+1, shape, ModCyclicShape<TCyclicShape>());
 
-    std::cout << "   | radix[" << (int)weight(shape) << "]: " << sysTime() - teim << "s" << std::endl; teim = sysTime();
+    //std::cout << "   | radix[" << (int)weight(shape) << "]: " << sysTime() - teim << "s" << std::endl; teim = sysTime();
 
     // disLexTransformation
     TLexText lexText;
     _dislex(lexText, SA, s, shape);
 
-    std::cout << "   |   dislex: " << sysTime() - teim << "s" << std::endl; teim = sysTime();
+    //std::cout << "   |   dislex: " << sysTime() - teim << "s" << std::endl; teim = sysTime();
 
     // Build Index using Skew7
     Index<TLexText, IndexSa<> > normalIndex(lexText);
     indexCreate(normalIndex, EsaSA(), TSACA());
 
-    std::cout << "   |     saca: " << sysTime() - teim << "s (len = " << length(concat(lexText)) << ")" << std::endl; teim = sysTime();
+    //std::cout << "   |     saca: " << sysTime() - teim << "s (len = " << length(concat(lexText)) << ")" << std::endl; teim = sysTime();
 
 
     // reverse Transform of Index:
     _dislexReverse(SA, indexSA(normalIndex), s, shape);
 
-    std::cout << "   |  reverse: " << sysTime() - teim << "s (len = " << length(indexSA(normalIndex)) << ")" << std::endl; teim = sysTime();
+    //std::cout << "   |  reverse: " << sysTime() - teim << "s (len = " << length(indexSA(normalIndex)) << ")" << std::endl; teim = sysTime();
 
 }
 
