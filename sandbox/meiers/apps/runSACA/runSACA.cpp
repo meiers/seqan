@@ -117,7 +117,7 @@ parseCommandLine(RunSACAOptions & options, int argc, char const ** argv)
     addArgument(parser, ArgParseArgument(ArgParseArgument::INPUTFILE, "FASTA FILE"));
 
     addOption(parser, seqan::ArgParseOption("a", "algorithm", "Specify the SACA algorithm to use.", ArgParseArgument::STRING, "STR"));
-    setValidValues(parser, "algorithm", "DislexSkew7 DislexLSS DislexExternal InplaceRadixSort QSort Skew7 None");
+    setValidValues(parser, "algorithm", "DislexSkew7 DislexExternal InplaceRadixSort QSort Skew7 None");
     setDefaultValue(parser, "algorithm", "None");
     addOption(parser, seqan::ArgParseOption("s", "shape", "Specify the cyclic shape.", ArgParseArgument::INTEGER, "[0..7]"));
     setMinValue(parser, "shape", "0");
@@ -148,16 +148,45 @@ parseCommandLine(RunSACAOptions & options, int argc, char const ** argv)
 }
 
 // --------------------------------------------------------------------------
+// Function build_Index() => translate runtime to compile time arguments
+// --------------------------------------------------------------------------
+
+template <typename TText, typename TShape, typename TAlg>
+void build_Index(TText const & text, TAlg const &, TShape const &)
+{
+    Index<TText const, IndexSa<Gapped<ModCyclicShape<TShape> > > > index(text);
+    indexCreate(index, FibreSA(), TAlg());
+}
+
+template <typename TText, typename TAlg>
+void build_Index_ungapped(TText const & text, TAlg const &)
+{
+    Index<TText const, IndexSa<> > index(text);
+    indexCreate(index, FibreSA(), TAlg());
+}
+
+// --------------------------------------------------------------------------
 // Function call() => translate runtime to compile time arguments
 // --------------------------------------------------------------------------
+
 
 template <typename T, typename TShape>
 void call2(T const & text, TShape const &, RunSACAOptions const & options)
 {
-    if (options.algorithm == "Dislex") {
-        
+
+    if (options.algorithm == "DislexSkew7")         build_Index(text, Dislex<Skew7>(), TShape());
+    if (options.algorithm == "DislexExternal")      build_Index(text, DislexExternal<TShape>(), TShape());
+    if (options.algorithm == "InplaceRadixSort")
+    {
+        if (TShape::span == 1)                      build_Index_ungapped(text, InplaceRadixSort());
+        else                                        build_Index(text, InplaceRadixSort(), TShape());
     }
-    if (options.algorithm == "") {}
+    if (options.algorithm == "QSort") {
+        if (TShape::span == 1)                      build_Index_ungapped(text, SAQSort());
+        else                                        build_Index(text, SAQSort(), TShape());
+    }
+    if (options.algorithm == "Skew7")               build_Index_ungapped(text, Skew7());
+    if (options.algorithm == "None")                std::cout << "No index built." << std::endl;
 }
 
 
@@ -165,14 +194,14 @@ template <typename T>
 void call(T const & text, RunSACAOptions const & options)
 {
     switch (options.shape) {
-        case 0: call2(text, CyclicShape<FixedShape<0,GappedShape<HardwiredShape<> >,0> >()); break;
-        case 1: call2(text, TShape_1(), options);
-        case 2: call2(text, TShape_2(), options);
-        case 3: call2(text, TShape_3(), options);
-        case 4: call2(text, TShape_4(), options);
-        case 5: call2(text, TShape_5(), options);
-        case 6: call2(text, TShape_6(), options);
-        case 7: call2(text, TShape_7(), options);
+        case 0: call2(text, CyclicShape<FixedShape<0,GappedShape<HardwiredShape<> >,0> >(), options); break;
+        case 1: call2(text, RunSACAOptions::TShape_1(), options); break;
+        case 2: call2(text, RunSACAOptions::TShape_2(), options); break;
+        case 3: call2(text, RunSACAOptions::TShape_3(), options); break;
+        case 4: call2(text, RunSACAOptions::TShape_4(), options); break;
+        case 5: call2(text, RunSACAOptions::TShape_5(), options); break;
+        case 6: call2(text, RunSACAOptions::TShape_6(), options); break;
+        case 7: call2(text, RunSACAOptions::TShape_7(), options); break;
     }
 }
 
@@ -190,8 +219,7 @@ void cast_and_run(T & text, RunSACAOptions const & options)
     unsigned sigma = 0;
     for (unsigned i = 0; i< 256; ++i)
         if (arr[i]) ++sigma;
-    
-    std::cout << ordValue('N') << "," << ordValue('n') << "," << ordValue('A') << std::endl;
+
     std::cout << "1 String: total length " << length(text) << std::endl;
     std::cout << "alphabet size: " << sigma << " (assuming 4: DNA, 5: DNA5, <=24: AminoAcid, >24: char)" << std::endl;
     
