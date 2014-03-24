@@ -463,7 +463,8 @@ public std::unary_function<TValue, TResult>
 template <typename TInput, typename TShape, typename TSACA>
 struct Pipe<TInput, DislexExternal<TShape, TSACA> >
 {
-    typedef BitPacked<>         TPack;
+    typedef If<typename Eval<  BitsPerValue<TypeOf_(TInput)>::VALUE * WEIGHT<TShape>::VALUE < 64  >::Type, BitPacked<>, Pack>         TPack;
+    // typedef Pack         TPack;
 
     // TODO(meiers): Define TPack depending on input type!
     //               Either Pack or BitPacked<>
@@ -546,7 +547,8 @@ struct Pipe<TInput, DislexExternal<TShape, TSACA> >
 template <typename TInput, typename TShape, typename TSACA, typename TPair, typename TLimits>
 struct Pipe<TInput, Multi<DislexExternal<TShape, TSACA>, TPair, TLimits> >
 {
-    typedef BitPacked<>         TPack;
+    typedef If<typename Eval<  BitsPerValue<TypeOf_(TInput)>::VALUE * WEIGHT<TShape>::VALUE < 64  >::Type, BitPacked<>, Pack>         TPack;
+    //typedef Pack TPack;
 
     // TODO(meiers): Define TPack depending on input type!
     //               Either Pack or BitPacked<>
