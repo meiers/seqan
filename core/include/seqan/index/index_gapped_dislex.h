@@ -118,7 +118,7 @@ public std::unary_function<TInput, TResult>
         TInput b = (N-x)%S;
         TInput ret = (S-1-b)*B + r;
         if (b <= C)
-        ret += C-b;
+            ret += C-b;
         return static_cast<TResult>(ret);
     }
 };
@@ -398,7 +398,7 @@ inline typename Value<TLexText>::Type _dislex(
     typedef ModifiedString<typename Suffix<TText const
     >::Type, ModCyclicShape<TCyclicShape> >      TModText;
 
-    if (length(partiallyOrderedSA) < 1) return 0; // otherwise *sa will fail
+    if (empty(partiallyOrderedSA)) return 0; // otherwise *sa will fail
 
     // dislex position calculator
     _dislexTransform<TSize> dislex(cyclic.span, length(origText));
@@ -411,10 +411,10 @@ inline typename Value<TLexText>::Type _dislex(
     TSAIter sa    = begin(partiallyOrderedSA, Standard());
     TSAIter saEnd = end(partiallyOrderedSA, Standard());
     TRank       rank    = 0;
-    TSAValue    txtPos  = *sa++;
+    TSAValue    txtPos  = *sa;
 
     // scan along the SA
-    for(; sa < saEnd; txtPos = *sa++)
+    for(++sa; sa != saEnd; ++sa)
     {
         // write rank to position in lexText
         lexText[dislex(txtPos)] = rank;
@@ -425,6 +425,7 @@ inline typename Value<TLexText>::Type _dislex(
 
         //std::cout << txtPos << "  ...   " << *sa << " -> " << comp(txtPos, *sa) << std::endl;
         SEQAN_ASSERT_GEQ(0, comp(txtPos,*sa));
+        txtPos = *sa;
     }
     lexText[dislex(txtPos)] = rank;
     return rank;
@@ -454,7 +455,7 @@ inline typename Value<typename Concatenator<TLexText>::Type>::Type _dislex(
     typedef typename StringSetLimits<TStringSet>::Type      TStringSetLimits;   // expected: String<unsigned>
     typedef Pair<typename Size<TText>::Type>                TSetPosition;       // expected: Pair<unsigned>
 
-    if (length(partiallyOrderedSA) < 1) return 0; // otherwise *sa will fail
+    if (empty(partiallyOrderedSA)) return 0; // otherwise *sa will fail
     
     TStringSetLimits xxx = stringSetLimits(origText);
     _dislexTransformMulti<TSetPosition, TStringSetLimits>
@@ -471,10 +472,9 @@ inline typename Value<typename Concatenator<TLexText>::Type>::Type _dislex(
     TSAIter saEnd = end(partiallyOrderedSA, Standard());
 
     TRank       rank = 0;
-    TSAValue    txtPos = *sa++;
+    TSAValue    txtPos = *sa;
 
-
-    for(; sa < saEnd; txtPos = *sa++)
+    for(++sa; sa != saEnd; ++sa)
     {
         // write rank to position in lexText
         lexText[dislex(txtPos)] = rank;
@@ -485,6 +485,7 @@ inline typename Value<typename Concatenator<TLexText>::Type>::Type _dislex(
 
         //std::cout << txtPos << "  ...   " << *sa << " -> " << comp(txtPos, *sa) << std::endl;
         SEQAN_ASSERT_GEQ(0, comp(txtPos,*sa));
+        txtPos = *sa;
     }
     lexText[dislex(txtPos)] = rank;
     return rank;
@@ -571,30 +572,32 @@ inline void createGappedSuffixArray(
 
     //if (length(SA) < 1) return;
 
-    //std::cout << "   |     init: " << sysTime() - teim << "s" << std::endl; teim = sysTime();
+    std::cout << "   |     init: " << sysTime() - teim << "s" << std::endl; teim = sysTime();
 
     // sort newSA according to the Shape
     inplaceRadixSort(SA, s, weight(shape)+1, shape, ModCyclicShape<TCyclicShape>());
 
-    //std::cout << "   | radix[" << (int)weight(shape) << "]: " << sysTime() - teim << "s" << std::endl; teim = sysTime();
+    std::cout << "   | radix[" << (int)weight(shape) << "]: " << sysTime() - teim << "s" << std::endl; teim = sysTime();
 
     // disLexTransformation
     TLexText lexText;
-    _dislex(lexText, SA, s, shape);
+    typename Size<TLexText>::Type alphabetSize = _dislex(lexText, SA, s, shape)+1u;
 
-    //std::cout << "   |   dislex: " << sysTime() - teim << "s" << std::endl; teim = sysTime();
+    std::cout << "   |   dislex: " << sysTime() - teim << "s" << std::endl; teim = sysTime();
 
     // Build Index using Skew7
-    Index<TLexText, IndexSa<> > normalIndex(lexText);
-    indexCreate(normalIndex, EsaSA(), TSACA());
 
-    //std::cout << "   |     saca: " << sysTime() - teim << "s (len = " << length(concat(lexText)) << ")" << std::endl; teim = sysTime();
+    String<typename Size<TLexText>::Type> innerSa;
+    resize(innerSa, length(SA), Exact());
+    createSuffixArray(innerSa, lexText, TSACA(), alphabetSize, 0);
+
+    std::cout << "   |     saca: " << sysTime() - teim << "s (len = " << length(concat(lexText)) << ")" << std::endl; teim = sysTime();
 
 
     // reverse Transform of Index:
-    _dislexReverse(SA, indexSA(normalIndex), s, shape);
+    _dislexReverse(SA, innerSa, s, shape);
 
-    //std::cout << "   |  reverse: " << sysTime() - teim << "s (len = " << length(indexSA(normalIndex)) << ")" << std::endl; teim = sysTime();
+    std::cout << "   |  reverse: " << sysTime() - teim << "s (len = " << length(innerSa) << ")" << std::endl; teim = sysTime();
 
 }
 
