@@ -497,14 +497,6 @@ void inplaceRadixSort(
         continue;
 
         radixSort(from, to, currDepth, stack);
-
-#ifdef CORE_INCLUDE_SEQAN_INDEX_RADIX_INPLACE_H_DEBUG_RADIX_SORT
-        unsigned dbg_from = from - &sa[0];
-        unsigned dbg_to = to - &sa[0];
-        std::cout << "Sorted from " << dbg_from << " to " << dbg_to << " in depth " << currDepth <<  std::endl;
-        __outputSA(str, sa, dbg_from, dbg_to);
-#endif
-
     }
 }
 
@@ -554,14 +546,6 @@ void inplaceRadixSort(
             continue;
 
         radixSort(from, to, currDepth, stack);
-
-#ifdef CORE_INCLUDE_SEQAN_INDEX_RADIX_INPLACE_H_DEBUG_RADIX_SORT
-        unsigned dbg_from = from - &sa[0];
-        unsigned dbg_to = to - &sa[0];
-        std::cout << "Sorted from " << dbg_from << " to " << dbg_to << " in depth " << currDepth <<  std::endl;
-        __outputSA(str, sa, dbg_from, dbg_to);
-#endif
-
     }
 }
 
