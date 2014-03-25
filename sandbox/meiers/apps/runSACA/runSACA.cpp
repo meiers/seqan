@@ -117,7 +117,7 @@ parseCommandLine(RunSACAOptions & options, int argc, char const ** argv)
     addArgument(parser, ArgParseArgument(ArgParseArgument::INPUTFILE, "FASTA FILE"));
 
     addOption(parser, seqan::ArgParseOption("a", "algorithm", "Specify the SACA algorithm to use.", ArgParseArgument::STRING, "STR"));
-    setValidValues(parser, "algorithm", "DislexSkew7 DislexExternal InplaceRadixSort QSort Skew7 None");
+    setValidValues(parser, "algorithm", "DislexSkew7 DislexExternal InplaceRadixSort QSort Skew7 SkewExternal None");
     setDefaultValue(parser, "algorithm", "None");
     addOption(parser, seqan::ArgParseOption("s", "shape", "Specify the cyclic shape.", ArgParseArgument::INTEGER, "[0..7]"));
     setMinValue(parser, "shape", "0");
@@ -160,10 +160,16 @@ void build_Index(TText const & text, TAlg const &, TShape const &)
 }
 
 template <typename TText, typename TAlg>
-void build_Index_ungapped(TText const & text, TAlg const &)
+void build_Index_ungapped(TText const & text, TAlg const &, bool external=false)
 {
     Index<TText const, IndexSa<> > index(text);
-    indexCreate(index, FibreSA(), TAlg());
+    if (external)
+    {
+        resize(indexSA(index), length(indexRawText(index)), Exact());
+        _createSuffixArrayPipelining(indexSA(index), indexText(index), Skew7()); // NOTE: ONLY SKEW !!!!
+    }
+    else
+        indexCreate(index, FibreSA(), TAlg());
     std::cout << "done creating an ungapped Index" << std::endl;
 }
 
@@ -188,6 +194,7 @@ void call2(T const & text, TShape const &, RunSACAOptions const & options)
         else                                        build_Index(text, SAQSort(), TShape());
     }
     if (options.algorithm == "Skew7")               build_Index_ungapped(text, Skew7());
+    if (options.algorithm == "SkewExternal")        build_Index_ungapped(text, Skew7(), true);
     if (options.algorithm == "None")                std::cout << "No index built." << std::endl;
 }
 
