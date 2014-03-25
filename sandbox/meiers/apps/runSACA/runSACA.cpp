@@ -156,6 +156,7 @@ void build_Index(TText const & text, TAlg const &, TShape const &)
 {
     Index<TText const, IndexSa<Gapped<ModCyclicShape<TShape> > > > index(text);
     indexCreate(index, FibreSA(), TAlg());
+    std::cout << "done creating the gapped Index" << std::endl;
 }
 
 template <typename TText, typename TAlg>
@@ -163,6 +164,7 @@ void build_Index_ungapped(TText const & text, TAlg const &)
 {
     Index<TText const, IndexSa<> > index(text);
     indexCreate(index, FibreSA(), TAlg());
+    std::cout << "done creating an ungapped Index" << std::endl;
 }
 
 // --------------------------------------------------------------------------
