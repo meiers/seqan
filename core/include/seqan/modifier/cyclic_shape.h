@@ -547,12 +547,13 @@ cyclicShapeToString(
     TShapeString & bitmap,
     CyclicShape<TSpec> const & me)
 {
+    typedef typename Size<CyclicShape<TSpec> >::Type TSize;
     clear(bitmap);
     if (weight(me) == 0)
         return;
 
-    typename Size<CyclicShape<TSpec> >::Type i, j;
-    for (i = 0; i < me.loffset; ++i)
+    TSize i, j;
+    for (i = 0; i < static_cast<TSize>(me.loffset); ++i)
         appendValue(bitmap, '0');
     for (i = 0; i < weight(me) - 1; ++i)
     {
