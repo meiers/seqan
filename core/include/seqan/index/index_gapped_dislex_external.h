@@ -130,8 +130,8 @@ struct _dislexTupleComp : public std::binary_function<TValue, TValue, TResult>
         TSize lb = posToLen(b.i1);
 
         // find out the real lengths of the gapped strings
-        TSize rla = (la < _span ? realLengths[la] : _weight);
-        TSize rlb = (lb < _span ? realLengths[lb] : _weight);
+        TSize rla = (la < static_cast<TSize>(_span) ? realLengths[la] : static_cast<TSize>(_weight));
+        TSize rlb = (lb < static_cast<TSize>(_span) ? realLengths[lb] : static_cast<TSize>(_weight));
 
 //        std::cout << a.i2 << "(" << la<< "), " << b.i2 << "(" << lb<< "). Real lengths are " << rla << "," << rlb;
 
@@ -145,7 +145,7 @@ struct _dislexTupleComp : public std::binary_function<TValue, TValue, TResult>
         }
 
         // if both strings have more than _weight chars, they are equal.
-        if (la >= _span && lb >= _span) {
+        if (la >= static_cast<TSize>(_span) && lb >= static_cast<TSize>(_span)) {
 //            std::cout << " return 0" << std::endl;
             return 0;
         }
@@ -213,11 +213,11 @@ template <typename TSize, typename TTupleValue,typename TShape, typename TResult
         TSize la = posToLen(a.i1);
         TSize lb = posToLen(b.i1);
 
-        TSize rla = (la < 2*_span ? realLengths[la] : 2*_weight);
-        TSize rlb = (lb < 2*_span ? realLengths[lb] : 2*_weight);
+        TSize rla = (la < 2*static_cast<TSize>(_span) ? realLengths[la] : 2*static_cast<TSize>(_weight));
+        TSize rlb = (lb < 2*static_cast<TSize>(_span) ? realLengths[lb] : 2*static_cast<TSize>(_weight));
 
         // if both strings have more than _weight chars, they are equal.
-        if (rla > _weight && rlb > _weight) return 0;
+        if (rla > static_cast<TSize>(_weight) && rlb > static_cast<TSize>(_weight)) return 0;
 
         // if they differ in size, the shorter one is smaller.
         if (rla != rlb)
