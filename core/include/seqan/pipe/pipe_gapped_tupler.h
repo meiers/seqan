@@ -581,18 +581,41 @@ control(Pipe< TInput, GappedTupler< TShape, omitLast, TPack > > &me,
     return control(me, ControlEof());
 }
 
+
+
+
+typedef Pipe< TInput, GappedTupler< TShape, omitLast, TPack > >	TPipe;
+    typedef TuplerNumberOfLastTuples_<TPipe::BufferSize, omitLast>  TLast;
+    typedef typename If<Eval<TPipe::BufferSize == TLast::VALUE>::VALUE, True, False> TSwitch;
+    _length(me, TSwitch());
+
+// Note(meiers): work-around to fix warnings related to "... >= 0 is always true ..."
 template <typename TInput, typename TShape, bool omitLast, typename TPack >
-// TODO(meiers): Return Size<TInput> ???
+inline typename Size< Pipe< TInput, GappedTupler<TShape, omitLast, TPack> > >::Type
+_length(Pipe<TInput, GappedTupler< TShape, omitLast, TPack > > const &me, True const &)
+{
+    return length(me.in);
+}
+template <typename TInput, typename TShape, bool omitLast, typename TPack >
+inline typename Size< Pipe< TInput, GappedTupler<TShape, omitLast, TPack> > >::Type
+_length(Pipe<TInput, GappedTupler< TShape, omitLast, TPack > > const &me, False const &)
+{
+    typedef Pipe< TInput, GappedTupler< TShape, omitLast, TPack > >	TPipe;
+    typedef TuplerNumberOfLastTuples_<TPipe::BufferSize, omitLast>  TLast;
+    if (length(me.in) >= (TPipe::BufferSize - TLast::VALUE))
+        return length(me.in) - (TPipe::BufferSize - TLast::VALUE);
+    else
+        return 0;
+}
+
+template <typename TInput, typename TShape, bool omitLast, typename TPack >
 inline typename Size< Pipe< TInput, GappedTupler<TShape, omitLast, TPack> > >::Type
 length(Pipe<TInput, GappedTupler< TShape, omitLast, TPack > > const &me)
 {
     typedef Pipe< TInput, GappedTupler< TShape, omitLast, TPack > >	TPipe;
     typedef TuplerNumberOfLastTuples_<TPipe::BufferSize, omitLast>  TLast;
-
-    if (TPipe::BufferSize != TLast::VALUE)
-        if (length(me.in) >= (TPipe::BufferSize - TLast::VALUE))
-            return length(me.in) - (TPipe::BufferSize - TLast::VALUE);
-    return 0;
+    typedef typename If<Eval<TPipe::BufferSize == TLast::VALUE>::VALUE, True, False> TSwitch;
+    return _length(me, TSwitch());
 }
 
 template <typename TInput, typename TShape, bool omitLast, typename TPack >
@@ -636,18 +659,35 @@ control(Pipe< TInput, Multi<GappedTupler< TShape, omitLast, TPack >, TPair, TLim
     return me.eos();
 }
 
+// Note(meiers): work-around to fix warnings related to "... >= 0 is always true ..."
+template <typename TInput, typename TShape, bool omitLast, typename TPack, typename TPair, typename TLimitsString >
+inline typename Size< Pipe< TInput, Multi<GappedTupler< TShape, omitLast, TPack >, TPair, TLimitsString> > >::Type
+_length(Pipe< TInput, Multi<GappedTupler< TShape, omitLast, TPack >, TPair, TLimitsString> > const &me, True const &)
+{
+    return length(me.in);
+}
+template <typename TInput, typename TShape, bool omitLast, typename TPack, typename TPair, typename TLimitsString >
+inline typename Size< Pipe< TInput, Multi<GappedTupler< TShape, omitLast, TPack >, TPair, TLimitsString> > >::Type
+_length(Pipe< TInput, Multi<GappedTupler< TShape, omitLast, TPack >, TPair, TLimitsString> > const &me, False const &)
+{
+    typedef Pipe< TInput, GappedTupler< TShape, omitLast, TPack > >	TPipe;
+    typedef TuplerNumberOfLastTuples_<TPipe::BufferSize, omitLast>  TLast;
+    unsigned seqs = countSequences(me);
+
+    if (length(me.in) >= seqs * (TPipe::BufferSize - TLast::VALUE))
+        return length(me.in) - seqs * (TPipe::BufferSize - TLast::VALUE);
+    else
+        return 0;
+}
+
 template <typename TInput, typename TShape, bool omitLast, typename TPack, typename TPair, typename TLimitsString >
 inline typename Size< Pipe< TInput, Multi<GappedTupler< TShape, omitLast, TPack >, TPair, TLimitsString> > >::Type
 length(Pipe< TInput, Multi<GappedTupler< TShape, omitLast, TPack >, TPair, TLimitsString> > const &me)
 {
     typedef Pipe< TInput, GappedTupler< TShape, omitLast, TPack > >	TPipe;
     typedef TuplerNumberOfLastTuples_<TPipe::BufferSize, omitLast>  TLast;
-    unsigned seqs = countSequences(me);
-
-    if (TPipe::BufferSize != TLast::VALUE)
-        if (length(me.in) >= seqs * (TPipe::BufferSize - TLast::VALUE))
-            return length(me.in) - seqs * (TPipe::BufferSize - TLast::VALUE);
-    return 0;
+    typedef typename If<Eval<TPipe::BufferSize == TLast::VALUE>::VALUE, True, False> TSwitch;
+    return _length(me, TSwitch());
 }
 
 template <typename TInput, typename TShape, bool omitLast, typename TPack, typename TPair, typename TLimitsString >
