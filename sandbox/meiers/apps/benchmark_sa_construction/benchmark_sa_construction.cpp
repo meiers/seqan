@@ -58,7 +58,10 @@ struct AppOptions
     CharString infile;
     CharString mode;
     bool qsort;
+    
+    bool special1;
 };
+
 
 
 // ==========================================================================
@@ -108,7 +111,8 @@ parseCommandLine(AppOptions & options, int argc, char const ** argv)
                     "larger files than runtime, but those should not be too repeat- (or N)-rich "
                     "as this usually kills radix Sort");
 
-
+    
+    addOption(parser, seqan::ArgParseOption("1", "special1", "Special mode: Measure the influence of string set size on dislex reverse!"));
 
     // Parse command line.
     seqan::ArgumentParser::ParseResult res = seqan::parse(parser, argc, argv);
@@ -124,6 +128,9 @@ parseCommandLine(AppOptions & options, int argc, char const ** argv)
     seqan::String<char> outfile;
     seqan::getArgumentValue(options.infile, parser, 0);
     seqan::getOptionValue(options.mode, parser, "mode");
+    
+    if( isSet(parser, "special1")) options.special1 = true;
+    else                           options.special1 = false;
 
     outfile = options.	infile;
     outfile += ".index";
@@ -823,6 +830,36 @@ void callBenchmarks(StringSet<TString, TSpec> const & set, int level=3) {
 }
 
 // --------------------------------------------------------------------------
+// Function special1()
+// --------------------------------------------------------------------------
+template <typename TSet>
+int special1(TSet const & set)
+{
+    String<typename SAValue<TSet const>::Type> sa;
+    resize(sa, lengthSum(set), Exact());
+    
+    String<typename Size<TSet>::Type> lexText;
+    resize(lexText, length(sa), Exact());
+    
+    for (unsigned i=0; i< length(sa); i+=2)
+        lexText[i] = i;
+    unsigned c = length(lexText) % 2;
+    for (unsigned i=1; i<length(lexText); i+=2)
+        lexText[i] = length(lexText) - i - c;
+    
+    //std::cout << "Strings prepared" << std::endl;
+    
+    double teim = sysTime();
+    
+    _dislexReverse(sa, lexText, set, CyclicShape<FixedShape<0,ShapePatternHunter,0> >());
+ 
+    std::cout << lengthSum(set) << "\t" << length(set) << "\t" << sysTime() - teim << std::endl;
+    
+    return 0;
+}
+
+
+// --------------------------------------------------------------------------
 // Function main()
 // --------------------------------------------------------------------------
 
@@ -862,6 +899,11 @@ int main(int argc, char const ** argv)
         std::cerr << "ERROR: Could not read from " << options.infile << std::endl;
         return 1;
     }
+    clear(ids);
+    
+    if(options.special1)
+        return special1(seqs);
+
     
 
     time_t t; time(&t);
