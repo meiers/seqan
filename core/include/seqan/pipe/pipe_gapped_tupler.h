@@ -581,15 +581,7 @@ control(Pipe< TInput, GappedTupler< TShape, omitLast, TPack > > &me,
     return control(me, ControlEof());
 }
 
-
-
-
-typedef Pipe< TInput, GappedTupler< TShape, omitLast, TPack > >	TPipe;
-    typedef TuplerNumberOfLastTuples_<TPipe::BufferSize, omitLast>  TLast;
-    typedef typename If<Eval<TPipe::BufferSize == TLast::VALUE>::VALUE, True, False> TSwitch;
-    _length(me, TSwitch());
-
-// Note(meiers): work-around to fix warnings related to "... >= 0 is always true ..."
+// Note(meiers): work-around "unsigned expression >= 0 is always true"
 template <typename TInput, typename TShape, bool omitLast, typename TPack >
 inline typename Size< Pipe< TInput, GappedTupler<TShape, omitLast, TPack> > >::Type
 _length(Pipe<TInput, GappedTupler< TShape, omitLast, TPack > > const &me, True const &)
@@ -607,14 +599,16 @@ _length(Pipe<TInput, GappedTupler< TShape, omitLast, TPack > > const &me, False 
     else
         return 0;
 }
-
 template <typename TInput, typename TShape, bool omitLast, typename TPack >
 inline typename Size< Pipe< TInput, GappedTupler<TShape, omitLast, TPack> > >::Type
 length(Pipe<TInput, GappedTupler< TShape, omitLast, TPack > > const &me)
 {
     typedef Pipe< TInput, GappedTupler< TShape, omitLast, TPack > >	TPipe;
     typedef TuplerNumberOfLastTuples_<TPipe::BufferSize, omitLast>  TLast;
-    typedef typename If<Eval<TPipe::BufferSize == TLast::VALUE>::VALUE, True, False> TSwitch;
+    typedef typename If<
+        typename Eval<static_cast<unsigned>(TPipe::BufferSize) == static_cast<unsigned>(TLast::VALUE)>::Type, 
+        True, 
+        False>::Type TSwitch;
     return _length(me, TSwitch());
 }
 
@@ -659,7 +653,7 @@ control(Pipe< TInput, Multi<GappedTupler< TShape, omitLast, TPack >, TPair, TLim
     return me.eos();
 }
 
-// Note(meiers): work-around to fix warnings related to "... >= 0 is always true ..."
+// Note(meiers): work-around "unsigned expression >= 0 is always true"
 template <typename TInput, typename TShape, bool omitLast, typename TPack, typename TPair, typename TLimitsString >
 inline typename Size< Pipe< TInput, Multi<GappedTupler< TShape, omitLast, TPack >, TPair, TLimitsString> > >::Type
 _length(Pipe< TInput, Multi<GappedTupler< TShape, omitLast, TPack >, TPair, TLimitsString> > const &me, True const &)
@@ -679,14 +673,16 @@ _length(Pipe< TInput, Multi<GappedTupler< TShape, omitLast, TPack >, TPair, TLim
     else
         return 0;
 }
-
 template <typename TInput, typename TShape, bool omitLast, typename TPack, typename TPair, typename TLimitsString >
 inline typename Size< Pipe< TInput, Multi<GappedTupler< TShape, omitLast, TPack >, TPair, TLimitsString> > >::Type
 length(Pipe< TInput, Multi<GappedTupler< TShape, omitLast, TPack >, TPair, TLimitsString> > const &me)
 {
     typedef Pipe< TInput, GappedTupler< TShape, omitLast, TPack > >	TPipe;
     typedef TuplerNumberOfLastTuples_<TPipe::BufferSize, omitLast>  TLast;
-    typedef typename If<Eval<TPipe::BufferSize == TLast::VALUE>::VALUE, True, False> TSwitch;
+    typedef typename If<
+        typename Eval<static_cast<unsigned>(TPipe::BufferSize) == static_cast<unsigned>(TLast::VALUE)>::Type, 
+        True, 
+        False>::Type TSwitch;
     return _length(me, TSwitch());
 }
 
