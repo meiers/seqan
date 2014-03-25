@@ -519,7 +519,12 @@ struct Pipe<TInput, DislexExternal<TShape, TSACA> >
         // 2. Sort Tuples by the first few characters
         TTupleComparator                                        _comp(length(textIn));
         TPoolSorter                                             sorter(tupler, _comp);
+
+        double teim = sysTime();
+
         sorter << tupler;
+
+        std::cout << "   | sorter << tupler: " << sysTime() - teim << "s" << std::endl; teim = sysTime();
 
         // 3. Name tuples by their rank
         TPipeNamer                                              namer(sorter, _comp);
@@ -529,11 +534,16 @@ struct Pipe<TInput, DislexExternal<TShape, TSACA> >
         TPoolMapper                                             mapper(namer, _map);
         mapper << namer;
 
+        std::cout << "   | mapper << namer:  " << sysTime() - teim << "s" << std::endl; teim = sysTime();
+
+
         // 5. Discard positions, keep rank
         TPipeFilterI2                                           filter(mapper);
 
         // 6. Run SACA on lex text
         pool << filter;
+
+        std::cout << "   | pool << filter:   " << sysTime() - teim << "s" << std::endl; teim = sysTime();
 
         // 7. Reverse Transform is done during the reading process
         return true;
@@ -614,7 +624,12 @@ struct Pipe<TInput, Multi<DislexExternal<TShape, TSACA>, TPair, TLimits> >
         // 2. Sort Tuples by the first few characters
         TTupleComparator                                        _comp(limits);
         TPoolSorter                                             sorter(tupler, _comp);
+
+        double teim = sysTime();
+
         sorter << tupler;
+
+        std::cout << "   | sorter << tupler: " << sysTime() - teim << "s" << std::endl; teim = sysTime();
 
         // 3. Name tuples by their rank
         TPipeNamer                                              namer(sorter, _comp);
@@ -624,12 +639,16 @@ struct Pipe<TInput, Multi<DislexExternal<TShape, TSACA>, TPair, TLimits> >
         TPoolMapper                                             mapper(namer, _map);
         mapper << namer;
 
+        std::cout << "   | mapper << namer:  " << sysTime() - teim << "s" << std::endl; teim = sysTime();
+
         // 5. Discard positions, keep rank
         TPipeFilterI2                                           filter(mapper);
 
         // 6. Run SACA on lex text
         pool << filter;
 
+        std::cout << "   | pool << filter:   " << sysTime() - teim << "s" << std::endl; teim = sysTime();
+        
         // 7. Reverse Transform is done during the reading process
         return true;
     }
