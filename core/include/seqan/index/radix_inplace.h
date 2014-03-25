@@ -40,7 +40,7 @@ namespace SEQAN_NAMESPACE_MAIN
 
 
 // turn on debug output for radix sort (will spam the screen)
-//#define CORE_INCLUDE_SEQAN_INDEX_RADIX_INPLACE_H_DEBUG_RADIX_SORT
+#define CORE_INCLUDE_SEQAN_INDEX_RADIX_INPLACE_H_DEBUG_RADIX_SORT
 
 // ============================================================================
 // struct RadixTextAccessor
@@ -249,7 +249,8 @@ template <typename TSAValue, typename TSmallSize=unsigned>
 struct RadixRecursionStack
 {
     typedef _RadixRecursionStackEntry<TSAValue, TSmallSize> TEntry;
-    TEntry stack[256*256*4]; // enough for depth 256 on char
+    static const unsigned STACKSIZE = 256*256*4;
+    TEntry stack[STACKSIZE]; // enough for depth 256 on char
     TEntry *top;
 
     RadixRecursionStack() : top(stack) {}
@@ -262,6 +263,8 @@ struct RadixRecursionStack
         top->to = end;
         top->depth = depth;
         ++top;
+        if (top == stack + STACKSIZE -1)
+            std::cerr << "FATAL ERROR: Radix Sort Stack limit reached." << std::endl;
     }
     inline void pop(TSAValue *& beg, TSAValue *& end, TSmallSize &depth)
     {
@@ -349,10 +352,6 @@ struct InplaceRadixSorter
 
         // sort the 0 bucket using std::sort
         if(zeroBucketSize > 1) {
-
-#ifdef CORE_INCLUDE_SEQAN_INDEX_RADIX_INPLACE_H_DEBUG_RADIX_SORT
-            std::cout << "Sorted zero bucket of size " << zeroBucketSize << std::endl;
-#endif
             std::sort(beg, beg+zeroBucketSize, comp);
         }
 
@@ -479,7 +478,7 @@ void inplaceRadixSort(
 
     typedef InplaceRadixSorter<SIGMA, TAccessFunctor, TCompareFunctor, TSize>    TSorter;
 
-    if (length(sa) < 1) return; // otherwise access sa[0] fails
+    if (empty(sa)) return; // otherwise access sa[0] fails
 
     TAccessFunctor textAccess(str);
     TSorter radixSort(textAccess, TCompareFunctor());
@@ -536,7 +535,7 @@ void inplaceRadixSort(
 
     typedef InplaceRadixSorter<SIGMA, TAccessFunctor, TCompareFunctor, TSize>    TSorter;
 
-    if (length(sa) < 1) return; // otherwise access sa[0] fails
+    if (empty(sa)) return; // otherwise access sa[0] fails
 
     TAccessFunctor textAccess(str, modiferCargo);
     TSorter radixSort(textAccess, TCompareFunctor());
@@ -581,12 +580,14 @@ void inplaceFullRadixSort( TSA & sa, TString const & str)
     typedef RadixTextAccessor<TSAValue, TString>                    TAccessFunctor;
     typedef _ZeroBucketComparator<TSAValue>                         TCompareFunctor;
 
+
+
     static const unsigned SIGMA = static_cast<unsigned>(ValueSize<TAlphabet>::VALUE) + 1;
     SEQAN_ASSERT_LT_MSG(SIGMA, 1000u, "Attention: inplace radix sort is not suited for large alphabets");
 
     typedef InplaceRadixSorter<SIGMA, TAccessFunctor, TCompareFunctor, TSize>    TSorter;
 
-    if (length(sa) < 1) return; // otherwise access sa[0] fails
+    if (empty(sa)) return; // otherwise access sa[0] fails
 
     TAccessFunctor textAccess(str);
     TSorter radixSort(textAccess, TCompareFunctor());
@@ -596,13 +597,6 @@ void inplaceFullRadixSort( TSA & sa, TString const & str)
 
     while(!stack.empty())
     {
-        // DEBUG
-        //        for(int i=0; i< (20u < length(sa) ? 20u : length(sa)); ++i)
-        //            std::cout << getSeqOffset(sa[i]) << ":" << suffix(str,sa[i]) << ", ";
-        //        std::cout << std::endl;
-        // END DEBUG
-
-
         TSAValue *from;
         TSAValue *to;
         TSize currDepth;
@@ -640,13 +634,13 @@ void inplaceFullRadixSort(TSA & sa,
 
     typedef RadixTextAccessor<TSAValue, TString, TMod>              TAccessFunctor;
     typedef _ZeroBucketComparator<TSAValue>                         TCompareFunctor;
-    
+ 
     static const unsigned SIGMA = static_cast<unsigned>(ValueSize<TAlphabet>::VALUE) + 1;
     SEQAN_ASSERT_LT_MSG(SIGMA, 1000u, "Attention: inplace radix sort is not suited for large alphabets");
 
     typedef InplaceRadixSorter<SIGMA, TAccessFunctor, TCompareFunctor, TSize>    TSorter;
     
-    if (length(sa) < 1) return; // otherwise access sa[0] fails
+    if (empty(sa)) return; // otherwise access sa[0] fails
 
     TAccessFunctor textAccess(str, modiferCargo);
     TSorter radixSort(textAccess, TCompareFunctor());

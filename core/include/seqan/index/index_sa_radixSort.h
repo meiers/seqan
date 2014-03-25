@@ -60,7 +60,6 @@ inline void createSuffixArray(
                               InplaceRadixSort const &)
 {
     typedef typename Size<TSA>::Type TSize;
-    typedef typename Iterator<TSA, Standard>::Type TIter;
 
     // 1. Fill suffix array with a permutation (the identity)
     _initializeSA(SA, s);
@@ -86,10 +85,7 @@ inline void createGappedSuffixArray(
                                     TMod const &,
                                     InplaceRadixSort const &)
 {
-    //static_cast<Nothing>(shape);
-
     typedef typename Size<TSA>::Type TSize;
-    typedef typename Iterator<TSA, Standard>::Type TIter;
     
     // 1. Fill suffix array with a permutation (the identity)
     _initializeSA(SA, s);
