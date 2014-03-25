@@ -587,11 +587,12 @@ inline typename Size< Pipe< TInput, GappedTupler<TShape, omitLast, TPack> > >::T
 length(Pipe<TInput, GappedTupler< TShape, omitLast, TPack > > const &me)
 {
     typedef Pipe< TInput, GappedTupler< TShape, omitLast, TPack > >	TPipe;
+    typedef TuplerNumberOfLastTuples_<TPipe::BufferSize, omitLast>  TLast;
 
-    if (length(me.in) >= (TPipe::BufferSize - TuplerNumberOfLastTuples_<TPipe::BufferSize, omitLast>::VALUE))
-        return length(me.in) - (TPipe::BufferSize - TuplerNumberOfLastTuples_<TPipe::BufferSize, omitLast>::VALUE);
-    else
-        return 0;
+    if (TPipe::BufferSize != TLast::VALUE)
+        if (length(me.in) >= (TPipe::BufferSize - TLast::VALUE))
+            return length(me.in) - (TPipe::BufferSize - TLast::VALUE);
+    return 0;
 }
 
 template <typename TInput, typename TShape, bool omitLast, typename TPack >
@@ -640,12 +641,13 @@ inline typename Size< Pipe< TInput, Multi<GappedTupler< TShape, omitLast, TPack 
 length(Pipe< TInput, Multi<GappedTupler< TShape, omitLast, TPack >, TPair, TLimitsString> > const &me)
 {
     typedef Pipe< TInput, GappedTupler< TShape, omitLast, TPack > >	TPipe;
+    typedef TuplerNumberOfLastTuples_<TPipe::BufferSize, omitLast>  TLast;
     unsigned seqs = countSequences(me);
 
-    if (length(me.in) >= seqs * (TPipe::BufferSize - TuplerNumberOfLastTuples_<TPipe::BufferSize, omitLast>::VALUE))
-        return length(me.in) - seqs * (TPipe::BufferSize - TuplerNumberOfLastTuples_<TPipe::BufferSize, omitLast>::VALUE);
-    else
-        return 0;
+    if (TPipe::BufferSize != TLast::VALUE)
+        if (length(me.in) >= seqs * (TPipe::BufferSize - TLast::VALUE))
+            return length(me.in) - seqs * (TPipe::BufferSize - TLast::VALUE);
+    return 0;
 }
 
 template <typename TInput, typename TShape, bool omitLast, typename TPack, typename TPair, typename TLimitsString >
