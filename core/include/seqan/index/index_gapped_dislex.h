@@ -57,38 +57,14 @@ struct Dislex {};
 // ==========================================================================
 
 // --------------------------------------------------------------------------
-// Metafunction LexValue
-// --------------------------------------------------------------------------
-
-// default definition
-template <typename TAlph, typename TMod>
-struct LexValue {
-    typedef unsigned int Type;
-};
-
-// TODO: smaller integer type if possible?
-
-
-// --------------------------------------------------------------------------
 // Metafunction LexText
 // --------------------------------------------------------------------------
 
 template <typename TText, typename TMod>
 struct LexText {
-    typedef typename Value<TText>::Type TAlph;
-    typedef typename LexValue<TAlph, TMod>::Type TSize;
-
+    typedef typename Size<TText>::Type TSize;
     typedef String<TSize> Type;
 };
-
-/*    template <typename TText, typename TSetSpec, typename TMod>
- struct LexText
- < StringSet<TText, TSetSpec>, TMod >
- {
- typedef StringSet<typename LexText<TText, TMod>::Type, Owner<ConcatDirect<> > > Type;
- };
- */
-
 
 
 // ==========================================================================
@@ -216,9 +192,12 @@ public std::unary_function<TInput, TResult>
         TResult ret;
         // binary search to find the corresponding sequence
         posLocalize(ret, x, limits);
+        return local2local(ret);
+    }
+    
+    inline TResult local2local(TResult ret) const
+    {
         TInput N = limits[ret.i1+1] - limits[ret.i1];
-
-        // TODO: Store the following values for each String?
         TInput B = N/S;
         TInput C = N%S;
         TInput b,r, i = ret.i2;
@@ -499,6 +478,7 @@ inline typename Value<typename Concatenator<TLexText>::Type>::Type _dislex(
 template <typename TSA, typename TCyclicShape, typename TText, typename TLexSA>
 void _dislexReverse(
     TSA & finalSA,                                  // random access
+    TLexSA &,                                       // not needed
     TLexSA const & lexSA,                           // sequential scan
     TText const &,                                  // not needed
     TCyclicShape const & cyclic)
@@ -514,19 +494,22 @@ void _dislexReverse(
     TSAIter insert      = begin(finalSA, Standard());
 
     for(; sa < saEnd; ++sa, ++insert)
-    *insert = dislexRev (*sa);
+        *insert = dislexRev (*sa);
 }
 
 // --------------------------------------------------------------------------
 // function _dislexReverse()                                      [StringSet]
 // --------------------------------------------------------------------------
 
+// fast, non-linear-time version
 template <typename TSA, typename TLexSA, typename TCyclicShape, typename TText, typename TTextSpec>
-void _dislexReverse(
+inline void _dislexReverse(
     TSA & finalSA,                                  // random access
+    TLexSA &,                                       // only needed in linear time variant
     TLexSA const & lexSA,                           // sequential scan
     StringSet<TText, TTextSpec> const & origText,
-    TCyclicShape const & cyclic)
+    TCyclicShape const & cyclic,
+    True const &)
 {
     typedef typename Iterator<TLexSA const, Standard>::Type TLexSAIter;
     typedef typename Iterator<TSA, Standard>::Type          TSAIter;
@@ -534,17 +517,62 @@ void _dislexReverse(
 
     typedef StringSet<TText, TTextSpec> const               TStringSet;
     typedef typename StringSetLimits<TStringSet>::Type      TStringSetLimits;   // expected: String<unsigned>
-
-    TStringSetLimits xxx = stringSetLimits(origText);
+ 
     _dislexReverseTransformMulti<TSize, TStringSetLimits>
-    dislexRev(cyclic.span, xxx);
+    dislexRev(cyclic.span, stringSetLimits(origText));
 
     TLexSAIter sa       = begin(lexSA, Standard());
     TLexSAIter saEnd    = end(lexSA, Standard());
     TSAIter insert      = begin(finalSA, Standard());
 
     for(; sa < saEnd; ++sa, ++insert)
-    *insert = dislexRev (*sa);
+        *insert = dislexRev (*sa);
+}
+
+// slow(?), linear-time version
+template <typename TSA, typename TLexSA, typename TCyclicShape, typename TText, typename TTextSpec>
+inline void _dislexReverse(
+    TSA & finalSA,                                  // random access
+    TLexSA & lexText,                               // only needed in linear time variant
+    TLexSA const & lexSA,                           // sequential scan
+    StringSet<TText, TTextSpec> const & origText,
+    TCyclicShape const & cyclic,
+    False const &)
+{
+    typedef typename Iterator<TLexSA const, Standard>::Type TLexSAIter;
+    typedef typename Iterator<TSA, Standard>::Type          TSAIter;
+    typedef typename Size<TSA>::Type                        TSize;
+
+    typedef StringSet<TText, TTextSpec> const               TStringSet;
+    typedef typename StringSetLimits<TStringSet>::Type      TStringSetLimits;
+
+    // Prepare reverse mapping functor
+    _dislexReverseTransformMulti<TSize, TStringSetLimits>
+    dislexRev(cyclic.span, stringSetLimits(origText));
+    
+    // inverse lexSA into lexText
+    for (TSize i=0; i< length(lexSA); ++i)
+        lexText[lexSA[i]] = i;
+    
+    // Iterate along inverse suffix array using the Pairincrementer!
+    PairIncrementer_<typename Value<TSA>::Type, TStringSetLimits> localPos;
+    setHost(localPos, stringSetLimits(origText));
+    TLexSAIter isaIt       = begin(lexText, Standard());
+    TLexSAIter isaEnd      = end(lexText, Standard());
+    
+    for (; isaIt != isaEnd; ++isaIt, ++localPos) 
+        finalSA[*isaIt] = dislexRev.local2local(value(localPos));
+}
+
+template <typename TSA, typename TLexSA, typename TCyclicShape, typename TText, typename TTextSpec>
+inline void _dislexReverse(
+    TSA & finalSA,                                  // random access
+    TLexSA & lexText,                               // only needed in linear time variant
+    TLexSA const & lexSA,                           // sequential scan
+    StringSet<TText, TTextSpec> const & origText,
+    TCyclicShape const & cyclic)
+{
+    _dislexReverse(finalSA, lexText, lexSA, origText, cyclic, False());
 }
 
 // --------------------------------------------------------------------------
@@ -562,9 +590,6 @@ inline void createGappedSuffixArray(
 {
     typedef typename LexText<TText, TCyclicShape>::Type         TLexText;
 
-    // if alph too big, problem with counter array!
-    SEQAN_ASSERT_GEQ(256u, valueSize<typename Value<TText>::Type>());
-
     double teim = sysTime();
 
     // insert positions into SA
@@ -581,21 +606,21 @@ inline void createGappedSuffixArray(
 
     // disLexTransformation
     TLexText lexText;
-    typename Size<TLexText>::Type alphabetSize = _dislex(lexText, SA, s, shape)+1u;
+    typename Value<TLexText>::Type sigma = _dislex(lexText, SA, s, shape)+1u;
 
     std::cout << "   |   dislex: " << sysTime() - teim << "s" << std::endl; teim = sysTime();
 
     // Build Index using Skew7
 
-    String<typename Size<TLexText>::Type> innerSa;
+    TLexText innerSa;
     resize(innerSa, length(SA), Exact());
-    createSuffixArray(innerSa, lexText, TSACA(), alphabetSize, 0);
+    createSuffixArray(innerSa, lexText, TSACA(), sigma, 0);
 
     std::cout << "   |     saca: " << sysTime() - teim << "s (len = " << length(concat(lexText)) << ")" << std::endl; teim = sysTime();
 
 
     // reverse Transform of Index:
-    _dislexReverse(SA, innerSa, s, shape);
+    _dislexReverse(SA, lexText, innerSa, s, shape) ;
 
     std::cout << "   |  reverse: " << sysTime() - teim << "s (len = " << length(innerSa) << ")" << std::endl; teim = sysTime();
 
