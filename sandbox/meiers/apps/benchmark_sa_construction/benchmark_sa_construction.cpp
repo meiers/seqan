@@ -832,29 +832,58 @@ void callBenchmarks(StringSet<TString, TSpec> const & set, int level=3) {
 // --------------------------------------------------------------------------
 // Function special1()
 // --------------------------------------------------------------------------
+
 template <typename TSet>
-int special1(TSet const & set)
+int special1_call(TSet const & set)
 {
-    String<typename SAValue<TSet const>::Type> sa;
+    
+    
+    String<Pair<unsigned> > sa;
     resize(sa, lengthSum(set), Exact());
     
-    String<typename Size<TSet>::Type> lexText;
+    String<unsigned> lexText;
     resize(lexText, length(sa), Exact());
     
-    for (unsigned i=0; i< length(sa); i+=2)
-        lexText[i] = i;
-    unsigned c = length(lexText) % 2;
-    for (unsigned i=1; i<length(lexText); i+=2)
-        lexText[i] = length(lexText) - i - c;
+    String<unsigned> lexSA;
+    resize(lexSA, length(sa), Exact());
     
-    //std::cout << "Strings prepared" << std::endl;
+    for (unsigned i=0; i< length(lexSA); i+=2)
+        lexSA[i] = i;
+    unsigned c = length(lexSA) % 2;
+    for (unsigned i=1; i<length(lexSA); i+=2)
+        lexSA[i] = length(lexSA) - i - c;
+    
+    //std::cout << "Strings prepared" << std::endl; 
     
     double teim = sysTime();
     
-    _dislexReverse(sa, lexText, set, CyclicShape<FixedShape<0,ShapePatternHunter,0> >());
- 
-    std::cout << lengthSum(set) << "\t" << length(set) << "\t" << sysTime() - teim << std::endl;
+    _dislexReverse(sa, lexText, lexSA, set, CyclicShape<FixedShape<0,ShapePatternHunter,0> >(), True());
     
+    double t1 = sysTime() - teim; teim = sysTime();
+ 
+    _dislexReverse(sa, lexText, lexSA, set, CyclicShape<FixedShape<0,ShapePatternHunter,0> >(), False());
+    
+    std::cout << lengthSum(set) << "\t" << length(set) << "\t" << t1 << "\t" << sysTime() - teim << std::endl;
+    
+    return 0;
+}
+
+int special1()
+{
+    std::cout << "total\tset\tbinary\tlinear" << std::endl;
+    for (unsigned num=1; num <=1000000; num=num*10)
+    {
+        for (unsigned len=1000000; len <= 1000000000; len*=10)
+        {
+            StringSet<DnaString, Owner<ConcatDirect<> > > set;
+            clear(set.limits);
+            for (unsigned l=0; l < num; ++l)
+                appendValue(set.limits, l * (len/num));
+            appendValue(set.limits, len);
+            
+            special1_call(set);
+        }
+    }
     return 0;
 }
 
@@ -884,7 +913,9 @@ int main(int argc, char const ** argv)
     seqan::StringSet<seqan::CharString> ids;
     seqan::StringSet<seqan::Dna5String> seqs;
 
-
+    if(options.special1)
+        return special1() ;
+        
 
     // New reading:
     // use the sequenceStream
@@ -900,11 +931,6 @@ int main(int argc, char const ** argv)
         return 1;
     }
     clear(ids);
-    
-    if(options.special1)
-        return special1(seqs);
-
-    
 
     time_t t; time(&t);
     std::cout << "############# Call Benchmarks for Seqan's SACAs ###############" << std::endl;
