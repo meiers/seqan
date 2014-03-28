@@ -501,7 +501,7 @@ void _dislexReverse(
 // function _dislexReverse()                                      [StringSet]
 // --------------------------------------------------------------------------
 
-// fast, non-linear-time version
+// non-linear-time version
 template <typename TSA, typename TLexSA, typename TCyclicShape, typename TText, typename TTextSpec>
 inline void _dislexReverse(
     TSA & finalSA,                                  // random access
@@ -529,7 +529,7 @@ inline void _dislexReverse(
         *insert = dislexRev (*sa);
 }
 
-// slow(?), linear-time version
+// linear-time version
 template <typename TSA, typename TLexSA, typename TCyclicShape, typename TText, typename TTextSpec>
 inline void _dislexReverse(
     TSA & finalSA,                                  // random access
@@ -572,7 +572,13 @@ inline void _dislexReverse(
     StringSet<TText, TTextSpec> const & origText,
     TCyclicShape const & cyclic)
 {
-    _dislexReverse(finalSA, lexText, lexSA, origText, cyclic, False());
+    // if the set consists only out of a single string, use pos localize
+    if (length(origText) == 1u)
+        _dislexReverse(finalSA, lexText, lexSA, origText, cyclic, True());
+
+    // otherwise build the inverse suffix array
+    else
+        _dislexReverse(finalSA, lexText, lexSA, origText, cyclic, False());
 }
 
 // --------------------------------------------------------------------------
