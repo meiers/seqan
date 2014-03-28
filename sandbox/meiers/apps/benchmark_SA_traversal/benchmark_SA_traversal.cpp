@@ -108,7 +108,7 @@ parseCommandLine(SATraversalOptions & options, int argc, char const ** argv)
 template <typename TIndex, typename TPatternSet, typename TSize>
 void benchmarkSearchUngapped(TIndex & index, TPatternSet const & set, TSize len)
 {
-    Finder<TIndex> finder(index);
+    Finder<TIndex, EsaFindMlr> finder(index);
 
     typedef typename Iterator<TPatternSet const, Standard>::Type TSetIter;
 
@@ -125,7 +125,7 @@ void benchmarkSearchUngapped(TIndex & index, TPatternSet const & set, TSize len)
 template <typename TIndex, typename TPatternSet, typename TSize, typename TShape>
 void benchmarkSearch(TIndex & index, TPatternSet const & set, TSize len, TShape const & shape)
 {
-    Finder<TIndex> finder(index);
+    Finder<TIndex, EsaFindMlr> finder(index);
 
     typedef typename Iterator<TPatternSet const, Standard>::Type TSetIter;
     typedef ModifiedString<typename Value<TPatternSet const>::Type, ModCyclicShape<TShape> > TModStr;
@@ -138,6 +138,51 @@ void benchmarkSearch(TIndex & index, TPatternSet const & set, TSize len, TShape 
         find(finder, prefix(TModStr(*setIt, shape), len));
     }
 }
+
+
+template <typename TIndex, typename TPatternSet, typename TSize>
+void benchmarkSearchUngapped_stree(TIndex & index, TPatternSet const & set, TSize len)
+{
+    typedef typename Iterator<TPatternSet const, Standard>::Type TSetIter;
+    typedef typename Iterator<typename Value<TPatternSet const>::Type, Standard>::Type TPatternIter;
+    typedef typename Iterator<TIndex, TopDown<> >::Type TTreeIter;
+
+    TTreeIter treeIt(index);
+
+    TSetIter setIt = begin(set, Standard());
+    TSetIter setEnd = end(set, Standard());
+    for(; setIt != setEnd; ++setIt)
+    {
+        TPatternIter patIt = begin(*setIt);
+        TPatternIter patEnd = patIt + len;
+        for(; patIt !=patEnd; ++patIt)
+            goDown(treeIt, *patIt);
+    }
+}
+
+template <typename TIndex, typename TPatternSet, typename TSize, typename TShape>
+void benchmarkSearch_stree(TIndex & index, TPatternSet const & set, TSize len, TShape const & shape)
+{
+    typedef typename Iterator<TPatternSet const, Standard>::Type    TSetIter;
+    typedef ModifiedString<typename Value<TPatternSet const>::Type, ModCyclicShape<TShape> > TModStr;
+    typedef typename Iterator<TModStr, Standard>::Type             TPatternIter;
+    typedef typename Iterator<TIndex, TopDown<> >::Type             TTreeIter;
+
+    TTreeIter treeIt(index);
+
+    TSetIter setIt = begin(set, Standard());
+    TSetIter setEnd = end(set, Standard());
+    for(; setIt != setEnd; ++setIt)
+    {
+        TModStr mod(*setIt);
+        TPatternIter patIt = begin(mod);
+        TPatternIter patEnd = patIt + len;
+        for(; patIt !=patEnd; ++patIt)
+            goDown(treeIt, *patIt);
+    }
+}
+
+
 
 // --------------------------------------------------------------------------
 // Function callAllTests()
@@ -157,7 +202,6 @@ void callAllTests(TText const & str, SATraversalOptions const &)
     unsigned maxPos = length(str) - 15000;
 
     // Generate a lot of random strings!
-    double teim = sysTime();
     StringSet<TText> patterns;
     resize(patterns, NUMPATTERNS);
     for (unsigned x = 0; x < NUMPATTERNS; ++x)
@@ -165,17 +209,24 @@ void callAllTests(TText const & str, SATraversalOptions const &)
         unsigned p = pickRandomNumber(rng) % maxPos;
         patterns[x] = prefix(suffix(str, p), 10000);
     }
-    std::cout << "Random pattern generation: " << sysTime() - teim << std::endl;
 
     // Ungapped Index
     {
         Index<TText, IndexSa<> > index(str);
         indexRequire(index, FibreSA());
+
         for (unsigned x = 0; x < plenSize; ++x)
         {
             double teim = sysTime();
             benchmarkSearchUngapped(index, patterns, PATTERNLENGTH[x]);
-            std::cout << "ungapped\t" << PATTERNLENGTH[x] << "\t" << sysTime() - teim << std::endl;
+            std::cout << "ungapped\tmlr\t" << PATTERNLENGTH[x] << "\t" << sysTime() - teim << std::endl;
+        }
+
+        for (unsigned x = 0; x < plenSize; ++x)
+        {
+            double teim = sysTime();
+            benchmarkSearchUngapped_stree(index, patterns, PATTERNLENGTH[x]);
+            std::cout << "ungapped\tstree\t" << PATTERNLENGTH[x] << "\t" << sysTime() - teim << std::endl;
         }
     }
 
@@ -184,11 +235,19 @@ void callAllTests(TText const & str, SATraversalOptions const &)
         typedef CyclicShape<FixedShape<0, GappedShape<HardwiredShape<1> >, 1> > TShape;
         Index<TText, IndexSa<Gapped<ModCyclicShape<TShape> > > > index(str);
         indexRequire(index, FibreSA());
+
         for (unsigned x = 0; x < plenSize; ++x)
         {
             double teim = sysTime();
             benchmarkSearch(index, patterns, PATTERNLENGTH[x], TShape());
-            std::cout << "Fixed 110\t" << PATTERNLENGTH[x] << "\t" << sysTime() - teim << std::endl;
+            std::cout << "Fixed 110\tmlr\t" << PATTERNLENGTH[x] << "\t" << sysTime() - teim << std::endl;
+        }
+
+        for (unsigned x = 0; x < plenSize; ++x)
+        {
+            double teim = sysTime();
+            benchmarkSearch_stree(index, patterns, PATTERNLENGTH[x], TShape());
+            std::cout << "Fixed 110\tstree\t" << PATTERNLENGTH[x] << "\t" << sysTime() - teim << std::endl;
         }
     }
 
@@ -197,14 +256,26 @@ void callAllTests(TText const & str, SATraversalOptions const &)
         typedef CyclicShape<FixedShape<0, GappedShape<HardwiredShape<2,1,1,3,2,2,1,1,2,1,2,2,1,1,2,2,2,1> >, 0> > TShape;
         Index<TText, IndexSa<Gapped<ModCyclicShape<TShape> > > > index(str);
         indexRequire(index, FibreSA());
+
         for (unsigned x = 0; x < plenSize; ++x)
         {
             double teim = sysTime();
             benchmarkSearch(index, patterns, PATTERNLENGTH[x], TShape());
-            std::cout << "Fixed19/30\t" << PATTERNLENGTH[x] << "\t" << sysTime() - teim << std::endl;
+            std::cout << "Fixed19/30\tmlr\t" << PATTERNLENGTH[x] << "\t" << sysTime() - teim << std::endl;
+        }
+
+        for (unsigned x = 0; x < plenSize; ++x)
+        {
+            double teim = sysTime();
+            benchmarkSearch_stree(index, patterns, PATTERNLENGTH[x], TShape());
+            std::cout << "Fixed19/30\tstree\t" << PATTERNLENGTH[x] << "\t" << sysTime() - teim << std::endl;
         }
     }
 
+
+// generic probably way too slow... won't finish before my deadline xD
+
+/*
     // Generic Shape 110
     {
         typedef CyclicShape<GenericShape> TShape;
@@ -234,6 +305,8 @@ void callAllTests(TText const & str, SATraversalOptions const &)
             std::cout << "Generic19/30\t" << PATTERNLENGTH[x] << "\t" << sysTime() - teim << std::endl;
         }
     }
+ */
+
 }
 
 // --------------------------------------------------------------------------
@@ -251,11 +324,6 @@ void castAndRun(T & text, SATraversalOptions const & options)
     for (unsigned i = 0; i< 256; ++i)
         if (arr[i]) ++sigma;
 
-    std::cout << "# Search time of 100.000 random substrings in an ordinary suffix array and in two gapped suffix arrays for the" <<
-                 "shapes \texttt{110} and a shape with span 30 and weight 19. The search is performed by binary search with mlr heuristics " <<
-                 "on the first 100MB of the input string. The pattern length describes the number of characters of the pattern that is " <<
-                 "searched for; times include the transformation of longer patterns to gapped strings of the requested size. " <<
-                 "Construction times of the indices are excluded.";
     std::cout << "# length " << length(text) << std::endl;
     std::cout << "# alphabet size: " << sigma << " (assuming 4: DNA, 5: DNA5, <=24: AminoAcid, >24: char)" << std::endl;
 
