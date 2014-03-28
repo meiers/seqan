@@ -240,14 +240,14 @@ void callAllTests(TText const & str, SATraversalOptions const &)
         {
             double teim = sysTime();
             benchmarkSearch(index, patterns, PATTERNLENGTH[x], TShape());
-            std::cout << "Fixed 110\tmlr\t" << PATTERNLENGTH[x] << "\t" << sysTime() - teim << std::endl;
+            std::cout << "Fixed110\tmlr\t" << PATTERNLENGTH[x] << "\t" << sysTime() - teim << std::endl;
         }
 
         for (unsigned x = 0; x < plenSize; ++x)
         {
             double teim = sysTime();
             benchmarkSearch_stree(index, patterns, PATTERNLENGTH[x], TShape());
-            std::cout << "Fixed 110\tstree\t" << PATTERNLENGTH[x] << "\t" << sysTime() - teim << std::endl;
+            std::cout << "Fixed110\tstree\t" << PATTERNLENGTH[x] << "\t" << sysTime() - teim << std::endl;
         }
     }
 
