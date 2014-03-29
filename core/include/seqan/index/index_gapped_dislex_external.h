@@ -35,6 +35,8 @@
 #ifndef CORE_INCLUDE_SEQAN_INDEX_INDEX_GAPPED_DISLEX_EXTERNAL_H_
 #define CORE_INCLUDE_SEQAN_INDEX_INDEX_GAPPED_DISLEX_EXTERNAL_H_
 
+//#define DISLEX_EXTERNAL_RUNNING_TIMES
+
 namespace SEQAN_NAMESPACE_MAIN
 {
     template <typename TShape, typename TSACA = Skew7>
@@ -115,8 +117,6 @@ struct _dislexTupleComp : public std::binary_function<TValue, TValue, TResult>
     _dislexTupleComp(TSize strLen) : posToLen(strLen)
     {
         cyclicShapeToSuffixLengths(realLengths, TShape());
-
-        //std::cout << "STRING: NORMAL MODE" << std::endl;
     }
 
     inline TResult operator() (const TValue &a, const TValue &b) const
@@ -212,8 +212,8 @@ template <typename TSize, typename TTupleValue,typename TShape, typename TResult
         if (la < lb) return -1;
         if (la > lb) return 1;
         
-	// only occurs when q-grams from the exact same position are passed
-	SEQAN_ASSERT_EQ(a.i1, b.i1);
+        // only occurs when q-grams from the exact same position are passed
+        SEQAN_ASSERT_EQ(a.i1, b.i1);
         return 0;
     }
 };
@@ -255,9 +255,6 @@ struct _dislexTupleCompMulti  : public std::binary_function<TValue, TValue, TRes
     {
         cyclicShapeToSuffixLengths(realLengths, TShape());
 
-        //std::cout << "MULTI: NORMAL MODE" << std::endl;
-
-        // extend the table to a size of 2*_span
         for (unsigned i=0; i<_span; ++i)
             realLengths[i+_span] = _weight + realLengths[i];
     }
@@ -274,7 +271,7 @@ struct _dislexTupleCompMulti  : public std::binary_function<TValue, TValue, TRes
         // find out the real lengths of the gapped strings
         TSize rla = (la.i2 < 2*_span ? realLengths[la.i2] : 2*_weight);
         TSize rlb = (lb.i2 < 2*_span ? realLengths[lb.i2] : 2*_weight);
-
+        
         // compare the overlap of the first n bases
         TSize n = std::min(static_cast<TSize>(_weight), std::min(rla, rlb) );
         for (TSize i = 0; i < n; i++, ++sa, ++sb)
@@ -297,10 +294,10 @@ struct _dislexTupleCompMulti  : public std::binary_function<TValue, TValue, TRes
 
         // In the same string, the length of the underlying suffix decides:
         if (la.i2 < lb.i2) return -1;
-        if (lb.i2 > lb.i2) return 1;
+        if (la.i2 > lb.i2) return 1;
 
-	// only occurs when q-grams from the exact same position are passed
-	SEQAN_ASSERT_EQ(a.i1, b.i1);
+        // only occurs when q-grams from the exact same position are passed
+        SEQAN_ASSERT_EQ(a.i1, b.i1);
         return 0;
     }
 };
@@ -328,9 +325,6 @@ struct _dislexTupleCompMulti<Pair<TSetPos, Tuple<TTupleValue, WEIGHT<TShape>::VA
     {
         cyclicShapeToSuffixLengths(realLengths, TShape());
 
-        //std::cout << "MULTI: BITPACKED MODE" << std::endl;
-
-        // extend the table to a size of 2*_span
         for (unsigned i=0; i<_span; ++i)
             realLengths[i+_span] = _weight + realLengths[i];
     }
@@ -363,7 +357,7 @@ struct _dislexTupleCompMulti<Pair<TSetPos, Tuple<TTupleValue, WEIGHT<TShape>::VA
         
         // In the same string, the length of the underlying suffix decides:
         if (la.i2 < lb.i2) return -1;
-        if (lb.i2 > lb.i2) return 1;
+        if (la.i2 > lb.i2) return 1;
         
 	// only occurs when q-grams from the exact same position are passed
 	SEQAN_ASSERT_EQ(a.i1, b.i1);
@@ -435,10 +429,6 @@ template <typename TInput, typename TShape, typename TSACA>
 struct Pipe<TInput, DislexExternal<TShape, TSACA> >
 {
     typedef If<typename Eval<  BitsPerValue<TypeOf_(TInput)>::VALUE * WEIGHT<TShape>::VALUE < 64  >::Type, BitPacked<>, Pack>         TPack;
-    // typedef Pack         TPack;
-
-    // TODO(meiers): Define TPack depending on input type!
-    //               Either Pack or BitPacked<>
 
     typedef Pipe<TInput, GappedTupler<TShape, false, TPack> >   TPipeTupler;
     typedef _dislexTupleComp<TypeOf_(TPipeTupler), TShape>      TTupleComparator;
@@ -490,12 +480,16 @@ struct Pipe<TInput, DislexExternal<TShape, TSACA> >
         // 2. Sort Tuples by the first few characters
         TTupleComparator                                        _comp(length(textIn));
         TPoolSorter                                             sorter(tupler, _comp);
-
+        
+#ifdef DISLEX_EXTERNAL_RUNNING_TIMES
         double teim = sysTime();
+#endif
 
         sorter << tupler;
 
+#ifdef DISLEX_EXTERNAL_RUNNING_TIMES
         std::cout << "   | sorter << tupler: " << sysTime() - teim << "s" << std::endl; teim = sysTime();
+#endif
 
         // 3. Name tuples by their rank
         TPipeNamer                                              namer(sorter, _comp);
@@ -503,10 +497,12 @@ struct Pipe<TInput, DislexExternal<TShape, TSACA> >
         // 4. Map text Positions to lexText positions
         TDislexMapper                                           _map(TShape::span, length(textIn));
         TPoolMapper                                             mapper(namer, _map);
+                
         mapper << namer;
 
+#ifdef DISLEX_EXTERNAL_RUNNING_TIMES
         std::cout << "   | mapper << namer:  " << sysTime() - teim << "s" << std::endl; teim = sysTime();
-
+#endif
 
         // 5. Discard positions, keep rank
         TPipeFilterI2                                           filter(mapper);
@@ -514,7 +510,9 @@ struct Pipe<TInput, DislexExternal<TShape, TSACA> >
         // 6. Run SACA on lex text
         pool << filter;
 
+#ifdef DISLEX_EXTERNAL_RUNNING_TIMES
         std::cout << "   | pool << filter:   " << sysTime() - teim << "s" << std::endl; teim = sysTime();
+#endif
 
         // 7. Reverse Transform is done during the reading process
         return true;
@@ -529,10 +527,6 @@ template <typename TInput, typename TShape, typename TSACA, typename TPair, type
 struct Pipe<TInput, Multi<DislexExternal<TShape, TSACA>, TPair, TLimits> >
 {
     typedef If<typename Eval<  BitsPerValue<TypeOf_(TInput)>::VALUE * WEIGHT<TShape>::VALUE < 64  >::Type, BitPacked<>, Pack>         TPack;
-    //typedef Pack TPack;
-
-    // TODO(meiers): Define TPack depending on input type!
-    //               Either Pack or BitPacked<>
 
     typedef Pipe<TInput, Multi<GappedTupler<TShape, false, TPack>,
             TPair, TLimits> >                                   TPipeTupler;
@@ -596,11 +590,15 @@ struct Pipe<TInput, Multi<DislexExternal<TShape, TSACA>, TPair, TLimits> >
         TTupleComparator                                        _comp(limits);
         TPoolSorter                                             sorter(tupler, _comp);
 
+#ifdef DISLEX_EXTERNAL_RUNNING_TIMES
         double teim = sysTime();
+#endif
 
         sorter << tupler;
 
+#ifdef DISLEX_EXTERNAL_RUNNING_TIMES
         std::cout << "   | sorter << tupler: " << sysTime() - teim << "s" << std::endl; teim = sysTime();
+#endif
 
         // 3. Name tuples by their rank
         TPipeNamer                                              namer(sorter, _comp);
@@ -610,7 +608,9 @@ struct Pipe<TInput, Multi<DislexExternal<TShape, TSACA>, TPair, TLimits> >
         TPoolMapper                                             mapper(namer, _map);
         mapper << namer;
 
+#ifdef DISLEX_EXTERNAL_RUNNING_TIMES
         std::cout << "   | mapper << namer:  " << sysTime() - teim << "s" << std::endl; teim = sysTime();
+#endif
 
         // 5. Discard positions, keep rank
         TPipeFilterI2                                           filter(mapper);
@@ -618,7 +618,9 @@ struct Pipe<TInput, Multi<DislexExternal<TShape, TSACA>, TPair, TLimits> >
         // 6. Run SACA on lex text
         pool << filter;
 
+#ifdef DISLEX_EXTERNAL_RUNNING_TIMES
         std::cout << "   | pool << filter:   " << sysTime() - teim << "s" << std::endl; teim = sysTime();
+#endif
         
         // 7. Reverse Transform is done during the reading process
         return true;

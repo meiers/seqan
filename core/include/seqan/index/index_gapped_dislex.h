@@ -35,6 +35,8 @@
 #ifndef CORE_INCLUDE_SEQAN_INDEX_INDEX_GAPPED_SA_DISLEX_H_
 #define CORE_INCLUDE_SEQAN_INDEX_INDEX_GAPPED_SA_DISLEX_H_
 
+//#define DISLEX_INTERNAL_RUNNING_TIMES
+
 namespace SEQAN_NAMESPACE_MAIN
 {
 
@@ -596,40 +598,47 @@ inline void createGappedSuffixArray(
 {
     typedef typename LexText<TText, TCyclicShape>::Type         TLexText;
 
+#ifdef DISLEX_INTERNAL_RUNNING_TIMES
     double teim = sysTime();
+#endif
 
     // insert positions into SA
     _initializeSA(SA, s);
 
-    //if (length(SA) < 1) return;
-
+#ifdef DISLEX_INTERNAL_RUNNING_TIMES
     std::cout << "   |     init: " << sysTime() - teim << "s" << std::endl; teim = sysTime();
+#endif
 
     // sort newSA according to the Shape
     inplaceRadixSort(SA, s, weight(shape)+1, shape, ModCyclicShape<TCyclicShape>());
 
+#ifdef DISLEX_INTERNAL_RUNNING_TIMES
     std::cout << "   | radix[" << (int)weight(shape) << "]: " << sysTime() - teim << "s" << std::endl; teim = sysTime();
+#endif
 
     // disLexTransformation
     TLexText lexText;
     typename Value<TLexText>::Type sigma = _dislex(lexText, SA, s, shape)+1u;
 
+#ifdef DISLEX_INTERNAL_RUNNING_TIMES
     std::cout << "   |   dislex: " << sysTime() - teim << "s" << std::endl; teim = sysTime();
+#endif
 
     // Build Index using Skew7
-
     TLexText innerSa;
     resize(innerSa, length(SA), Exact());
     createSuffixArray(innerSa, lexText, TSACA(), sigma, 0);
 
+#ifdef DISLEX_INTERNAL_RUNNING_TIMES
     std::cout << "   |     saca: " << sysTime() - teim << "s (len = " << length(concat(lexText)) << ")" << std::endl; teim = sysTime();
-
+#endif
 
     // reverse Transform of Index:
     _dislexReverse(SA, lexText, innerSa, s, shape) ;
 
+#ifdef DISLEX_INTERNAL_RUNNING_TIMES
     std::cout << "   |  reverse: " << sysTime() - teim << "s (len = " << length(innerSa) << ")" << std::endl; teim = sysTime();
-
+#endif
 }
 
     
