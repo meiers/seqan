@@ -50,7 +50,7 @@ struct _positionToLengthTransform
     _positionToLengthTransform(TSize len): N(len)
     {}
 
-    TSize operator()(TSize pos) const
+    inline TSize operator()(TSize pos) const
     {
         return N - pos;
     }
@@ -83,8 +83,6 @@ struct _positionToLengthTransformMulti
 // --------------------------------------------------------------------------
 // Comparator for naming tuples                                      [String]
 // --------------------------------------------------------------------------
-
-// TODO: _dislexTupleComp for bitvectors
 
 /*
  * @signature _dislexTupleComp<TValue, TShape, TResult = int>
@@ -133,42 +131,31 @@ struct _dislexTupleComp : public std::binary_function<TValue, TValue, TResult>
         TSize rla = (la < static_cast<TSize>(_span) ? realLengths[la] : static_cast<TSize>(_weight));
         TSize rlb = (lb < static_cast<TSize>(_span) ? realLengths[lb] : static_cast<TSize>(_weight));
 
-//        std::cout << a.i2 << "(" << la<< "), " << b.i2 << "(" << lb<< "). Real lengths are " << rla << "," << rlb;
-
         // compare the overlap of the first n bases
         TSize n = std::min(static_cast<TSize>(_weight), std::min(rla, rlb) );
         for (TSize i = 0; i < n; i++, ++sa, ++sb)
         {
             if (*sa == *sb) continue;
-//            std::cout << " return unequal because of diff. characters " << std::endl;
             return (*sa < *sb)? -1 : 1;
         }
 
         // if both strings have more than _weight chars, they are equal.
-        if (la >= static_cast<TSize>(_span) && lb >= static_cast<TSize>(_span)) {
-//            std::cout << " return 0" << std::endl;
+        if (la >= static_cast<TSize>(_span) && lb >= static_cast<TSize>(_span))
             return 0;
-        }
 
         // if they differ in size, the shorter one is smaller.
         if (rla != rlb)
-        {
-//            std::cout << " return -1 or 1 because real lengths differ." << std::endl;
             return (rla < rlb ? -1 : 1);
-        }
 
         // In the same string, the length of the underlying suffix decides:
-        if (la < lb) {
-//            std::cout << " return -1 because la < lb" << std::endl;
+        if (la < lb)
             return -1;
-        }
-        if (la > lb) {
-//            std::cout << " return 1 because la > lb" << std::endl;
-            return 1;
-        }
 
-        // last case a.i1 == b.i1
-//        std::cout << " return 0 because they are equal in every aspect" << std::endl;
+        if (la > lb) 
+            return 1;
+
+	// only occurs when q-grams from the exact same position are passed
+	SEQAN_ASSERT_EQ(a.i1, b.i1);
         return 0;
     }
 };
@@ -195,8 +182,6 @@ template <typename TSize, typename TTupleValue,typename TShape, typename TResult
     _dislexTupleComp(TSize strLen) : posToLen(strLen)
     {
         cyclicShapeToSuffixLengths(realLengths, TShape());
-
-        //std::cout << "STRING: BITPACKED MODE" << std::endl;
 
         // extend the table to a size of 2*_span // see TODO above (for Strings not needed)
         for (unsigned i=0; i<_span; ++i)
@@ -227,7 +212,8 @@ template <typename TSize, typename TTupleValue,typename TShape, typename TResult
         if (la < lb) return -1;
         if (la > lb) return 1;
         
-        // last case a.i1 == b.i1
+	// only occurs when q-grams from the exact same position are passed
+	SEQAN_ASSERT_EQ(a.i1, b.i1);
         return 0;
     }
 };
@@ -285,23 +271,6 @@ struct _dislexTupleCompMulti  : public std::binary_function<TValue, TValue, TRes
         TSetPos la = posToLen(a.i1);
         TSetPos lb = posToLen(b.i1);
 
-        /*
-         // the usual case:
-         // both tuples have more than _weight real characters.
-
-         // TODO: Tell compiler this is the more likely if-branch?
-         if(la.i2 >= 2*_span && lb.i2 >= 2*_span)
-         {
-         // TODO: Unroll loop using Loop struct?
-         for (TSize i = 0; i < _weight; ++i, ++sa, ++sb)
-         {
-         if (*sa == *sb) continue;
-         return (*sa < *sb)? -1 : 1;
-         }
-         return 0;
-         }
-         */
-
         // find out the real lengths of the gapped strings
         TSize rla = (la.i2 < 2*_span ? realLengths[la.i2] : 2*_weight);
         TSize rlb = (lb.i2 < 2*_span ? realLengths[lb.i2] : 2*_weight);
@@ -330,7 +299,8 @@ struct _dislexTupleCompMulti  : public std::binary_function<TValue, TValue, TRes
         if (la.i2 < lb.i2) return -1;
         if (lb.i2 > lb.i2) return 1;
 
-        // last case a.i1 == b.i1
+	// only occurs when q-grams from the exact same position are passed
+	SEQAN_ASSERT_EQ(a.i1, b.i1);
         return 0;
     }
 };
@@ -395,7 +365,8 @@ struct _dislexTupleCompMulti<Pair<TSetPos, Tuple<TTupleValue, WEIGHT<TShape>::VA
         if (la.i2 < lb.i2) return -1;
         if (lb.i2 > lb.i2) return 1;
         
-        // last case a.i1 == b.i1
+	// only occurs when q-grams from the exact same position are passed
+	SEQAN_ASSERT_EQ(a.i1, b.i1);
         return 0;
     }
 };
