@@ -35,7 +35,7 @@
 #ifndef CORE_INCLUDE_SEQAN_INDEX_INDEX_GAPPED_SA_DISLEX_H_
 #define CORE_INCLUDE_SEQAN_INDEX_INDEX_GAPPED_SA_DISLEX_H_
 
-//#define DISLEX_INTERNAL_RUNNING_TIMES
+#define DISLEX_INTERNAL_RUNNING_TIMES
 
 namespace SEQAN_NAMESPACE_MAIN
 {
@@ -623,7 +623,7 @@ inline void createGappedSuffixArray(
     typename Value<TLexText>::Type sigma = _dislex(lexText, SA, s, shape)+1u;
 
 #ifdef DISLEX_INTERNAL_RUNNING_TIMES
-    std::cout << "   |   dislex: " << sysTime() - teim << "s" << std::endl; teim = sysTime();
+    std::cout << "   |   dislex: " << sysTime() - teim << "s\t\tsigma = " << sigma << std::endl; teim = sysTime();
 #endif
 
     // Build Index using Skew7 into the memory of SA
@@ -637,7 +637,7 @@ inline void createGappedSuffixArray(
     _dislexReverse(SA, lexText, SA, s, shape) ;
 
 #ifdef DISLEX_INTERNAL_RUNNING_TIMES
-    std::cout << "   |  reverse: " << sysTime() - teim << "s (len = " << length(innerSa) << ")" << std::endl; teim = sysTime();
+    std::cout << "   |  reverse: " << sysTime() - teim << "s (len = " << length(SA) << ")" << std::endl; teim = sysTime();
 #endif
 }
 
@@ -678,7 +678,7 @@ inline void createGappedSuffixArray(
     typename Value<TLexText>::Type sigma = _dislex(lexText, SA, s, shape)+1u;
 
 #ifdef DISLEX_INTERNAL_RUNNING_TIMES
-    std::cout << "   |   dislex: " << sysTime() - teim << "s" << std::endl; teim = sysTime();
+    std::cout << "   |   dislex: " << sysTime() - teim << "s\t\tsigma = " << sigma << std::endl; teim = sysTime();
 #endif
 
     // Build Index using Skew7
