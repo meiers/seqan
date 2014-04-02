@@ -35,7 +35,7 @@
 #ifndef CORE_INCLUDE_SEQAN_INDEX_INDEX_GAPPED_DISLEX_EXTERNAL_H_
 #define CORE_INCLUDE_SEQAN_INDEX_INDEX_GAPPED_DISLEX_EXTERNAL_H_
 
-//#define DISLEX_EXTERNAL_RUNNING_TIMES
+#define DISLEX_EXTERNAL_RUNNING_TIMES
 
 namespace SEQAN_NAMESPACE_MAIN
 {
@@ -501,7 +501,7 @@ struct Pipe<TInput, DislexExternal<TShape, TSACA> >
         mapper << namer;
 
 #ifdef DISLEX_EXTERNAL_RUNNING_TIMES
-        std::cout << "   | mapper << namer:  " << sysTime() - teim << "s" << std::endl; teim = sysTime();
+        std::cout << "   | mapper << namer:  " << sysTime() - teim << "s\tsigma = " << (namer.tmp.i2 +1)<< std::endl; teim = sysTime();
 #endif
 
         // 5. Discard positions, keep rank
@@ -511,7 +511,7 @@ struct Pipe<TInput, DislexExternal<TShape, TSACA> >
         pool << filter;
 
 #ifdef DISLEX_EXTERNAL_RUNNING_TIMES
-        std::cout << "   | pool << filter:   " << sysTime() - teim << "s" << std::endl; teim = sysTime();
+        std::cout << "   | pool << filter:   " << sysTime() - teim << "s (len = " << length(textIn) << ")" << std::endl; teim = sysTime();
 #endif
 
         // 7. Reverse Transform is done during the reading process
@@ -609,7 +609,7 @@ struct Pipe<TInput, Multi<DislexExternal<TShape, TSACA>, TPair, TLimits> >
         mapper << namer;
 
 #ifdef DISLEX_EXTERNAL_RUNNING_TIMES
-        std::cout << "   | mapper << namer:  " << sysTime() - teim << "s" << std::endl; teim = sysTime();
+        std::cout << "   | mapper << namer:  " << sysTime() - teim << "s\tsigma = " << (namer.tmp.i2 +1) << std::endl; teim = sysTime();
 #endif
 
         // 5. Discard positions, keep rank
@@ -619,7 +619,7 @@ struct Pipe<TInput, Multi<DislexExternal<TShape, TSACA>, TPair, TLimits> >
         pool << filter;
 
 #ifdef DISLEX_EXTERNAL_RUNNING_TIMES
-        std::cout << "   | pool << filter:   " << sysTime() - teim << "s" << std::endl; teim = sysTime();
+        std::cout << "   | pool << filter:   " << sysTime() - teim << "s (len = " << length(textIn) << ")" << std::endl; teim = sysTime();
 #endif
         
         // 7. Reverse Transform is done during the reading process

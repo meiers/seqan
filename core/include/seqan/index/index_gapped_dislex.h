@@ -250,10 +250,10 @@ struct GappedSuffixQgramLess_ : public std::binary_function<TSAValue, TSAValue, 
 
     TText const &   _text;
     TShape const &  _shape;
-    TSize const     _weight;
+    TSize const     _weight, _span, N;
 
     GappedSuffixQgramLess_(TText const &text, TShape const & shape, TSize weight):
-    _text(text), _shape(shape), _weight(weight)
+    _text(text), _shape(shape), _weight(weight), _span(shape.span), N(length(text))
     {}
 
     inline int operator() (TSAValue a, TSAValue b) const
@@ -273,13 +273,29 @@ struct GappedSuffixQgramLess_ : public std::binary_function<TSAValue, TSAValue, 
 
         for (; saIt < saEnd && sbIt < sbEnd && p < _weight; ++saIt, ++sbIt, ++p)
         {
+            if (ordValue(*saIt) == ordValue(*sbIt)) continue;
             if (ordValue(*saIt) < ordValue(*sbIt)) return -1;
             if (ordValue(*saIt) > ordValue(*sbIt)) return 1;
         }
+        
+        // both cyclic shapes are "full" (stronger criterium than p == _weight)
+        if (a+_span <= N && b+_span <= N)
+            return 0;
+        
+        // now: at least one is incomplete!
+        // if they are equally long, start position decides!
+        if (sbEnd - sbIt == saEnd - saIt)
+        {
+            if (a < b) return 1;
+            if (a > b) return -1;
+        }
 
-        if (!(saIt < saEnd)) return -1;
-        if (!(sbIt < sbEnd)) return 1;
-
+        // now they are not equally long!
+        if (!(sbIt < sbEnd)) return 1; // b has ended
+        if (!(saIt < saEnd)) return -1;// a has ended
+        
+        // should never be reached
+        SEQAN_ASSERT_EQ(true, false);
         return 0;
     }
 };
@@ -325,6 +341,7 @@ struct GappedSuffixQgramLess_ <TSAValue, TShape, StringSet<TText, TSpec>, TResul
 
         for (; saIt < saEnd && sbIt < sbEnd && p < _weight; ++saIt, ++sbIt, ++p)
         {
+            if (ordValue(*saIt) == ordValue(*sbIt)) continue;
             if (ordValue(*saIt) < ordValue(*sbIt)) return -1;
             if (ordValue(*saIt) > ordValue(*sbIt)) return 1;
         }
@@ -336,11 +353,11 @@ struct GappedSuffixQgramLess_ <TSAValue, TShape, StringSet<TText, TSpec>, TResul
         // if both suffixes are empty, the seq. id and then the underlying suffix length decides
         if (!(saIt < saEnd) && !(sbIt < sbEnd))
         {
-            if (getSeqNo(a) > getSeqNo(b)) return -1;
             if (getSeqNo(a) < getSeqNo(b)) return 1;
-
-            if (getSeqOffset(a) > getSeqOffset(b)) return -1;
+            if (getSeqNo(a) > getSeqNo(b)) return -1;
+            
             if (getSeqOffset(a) < getSeqOffset(b)) return 1;
+            if (getSeqOffset(a) > getSeqOffset(b)) return -1;
 
             // Does not occur
             SEQAN_ASSERT_EQ(true,false);
@@ -348,8 +365,8 @@ struct GappedSuffixQgramLess_ <TSAValue, TShape, StringSet<TText, TSpec>, TResul
         }
 
         // only one suffix is empty
-        if (!(saIt < saEnd)) return -1;
         if (!(sbIt < sbEnd)) return 1;
+        if (!(saIt < saEnd)) return -1;
 
         // Does not occur
         SEQAN_ASSERT_EQ(true, false);
@@ -360,6 +377,69 @@ struct GappedSuffixQgramLess_ <TSAValue, TShape, StringSet<TText, TSpec>, TResul
 // ============================================================================
 // Functions
 // ============================================================================
+
+
+// --------------------------------------------------------------------------
+// helper function _maxSigma: determine an upper bound for the alphabet size
+// --------------------------------------------------------------------------
+
+template <typename TText>
+typename Size<TText>::Type _maxSigma(TText const & text, typename Size<TText>::Type weight, typename Size<TText>::Type span)
+{
+    typedef typename Size<TText>::Type TSize;
+    typedef typename Value<TText const>::Type TAlph;
+    typedef typename Iterator<TText const>::Type TIter;
+    
+    // short texts
+    if (length(text) == 0)
+        return 1;
+    if (length(text) < span)
+        return length(text);
+    
+    String<TSize> alphabet;
+    resize(alphabet, valueSize<TAlph>());
+    std::fill(begin(alphabet), end(alphabet), 0u);    
+    
+    for(TIter it=begin(text); it!=end(text); ++it)
+        ++alphabet[ordValue(*it)];
+        
+    TSize sigma = 0;
+    for(unsigned i=0; i<length(alphabet); ++i)
+        if(alphabet[i]) sigma++;
+    
+    TSize fullShapes = std::min( static_cast<TSize>(std::pow(sigma, weight)), length(text)-span+1);
+    TSize incompleteShapes = span-1;
+    
+    return fullShapes + incompleteShapes;
+}
+
+template <typename TText, typename TSpec>
+typename Size<TText>::Type _maxSigma(StringSet<TText, TSpec> const & text, typename Size<TText>::Type weight, typename Size<TText>::Type span)
+{
+    typedef typename Size<TText>::Type TSize;
+    typedef typename Value<typename Value<TText const>::Type>::Type TAlph;
+    
+    String<TSize> alphabet;
+    resize(alphabet, valueSize<TAlph>());
+    std::fill(begin(alphabet), end(alphabet), 0u);    
+    
+    for(TSize i=0; i<length(text); ++i)
+        for (TSize j=0; j<length(text[i]); ++j)
+            ++alphabet[ordValue(text[i][j])];
+
+    TSize sigma = 0;
+    for(unsigned i=0; i<length(alphabet); ++i)
+        if(alphabet[i]) sigma++;
+     
+    TSize incompleteShapes = 0;
+    for (TSize i=0; i< length(text); ++i)
+        incompleteShapes += std::min(length(text[i]), static_cast<TSize>(span));
+        
+    TSize fullShapes = std::min( static_cast<TSize>(std::pow(sigma, weight)), lengthSum(text)-incompleteShapes);
+    
+    return fullShapes + incompleteShapes;
+}
+
 
 // --------------------------------------------------------------------------
 // function _dislex()                                                [String]
@@ -444,7 +524,7 @@ inline typename Value<typename Concatenator<TLexText>::Type>::Type _dislex(
 
 
     // q-gram comparator to determine rank
-    GappedSuffixQgramLess_<TSAValue, TCyclicShape, StringSet<TText, TTextSpec> const> comp(origText, cyclic, static_cast<TSize>(weight(cyclic)));
+    GappedSuffixQgramLess_<TSAValue, TCyclicShape, StringSet<TText, TTextSpec> > comp(origText, cyclic, static_cast<TSize>(weight(cyclic)));
 
     resize(lexText, lengthSum(origText));
 
@@ -623,7 +703,9 @@ inline void createGappedSuffixArray(
     typename Value<TLexText>::Type sigma = _dislex(lexText, SA, s, shape)+1u;
 
 #ifdef DISLEX_INTERNAL_RUNNING_TIMES
-    std::cout << "   |   dislex: " << sysTime() - teim << "s\t\tsigma = " << sigma << std::endl; teim = sysTime();
+    typename Value<TLexText>::Type maxSigma = _maxSigma(s, weight(shape), shape.span);
+    std::cout << "   |   dislex: " << sysTime() - teim << "s\t\tsigma = " << sigma << " (" << maxSigma << ")" << std::endl; teim = sysTime();
+    SEQAN_ASSERT_GEQ(maxSigma, sigma);
 #endif
 
     // Build Index using Skew7 into the memory of SA
@@ -678,7 +760,9 @@ inline void createGappedSuffixArray(
     typename Value<TLexText>::Type sigma = _dislex(lexText, SA, s, shape)+1u;
 
 #ifdef DISLEX_INTERNAL_RUNNING_TIMES
-    std::cout << "   |   dislex: " << sysTime() - teim << "s\t\tsigma = " << sigma << std::endl; teim = sysTime();
+    typename Value<TLexText>::Type maxSigma = _maxSigma(s, weight(shape), shape.span);
+    std::cout << "   |   dislex: " << sysTime() - teim << "s\t\tsigma = " << sigma << " (" << maxSigma << ")" << std::endl; teim = sysTime();
+    //SEQAN_ASSERT_GEQ(maxSigma, sigma);
 #endif
 
     // Build Index using Skew7
