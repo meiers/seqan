@@ -199,7 +199,7 @@ struct SuffixLess_ :
         }
 
         // if both suffixes are empty, the suff pos decides
-        if (!(saIt < saEnd) && !(sbIt < sbEnd))
+        if (!(saIt < saEnd) && !(sbIt < sbEnd)) // NOTE: cannot write == here because of _offset
             return a > b;
 
         return sbIt < sbEnd; // a < b only if sb is not empty
@@ -253,13 +253,16 @@ struct SuffixLess_<TSAValue, StringSet<TString, TSetSpec> const, TSuffixMod> :
             if (ordLess(*sbIt, *saIt)) return false;
         }
 
-        // if both suffixes are empty, the first the seqId and then the suff pos decide
-        if (!(saIt < saEnd) && !(sbIt < sbEnd))
+        // if both suffixes are empty, at first the underlying length and then the seqId decide
+        if (!(saIt < saEnd) && !(sbIt < sbEnd)) // NOTE: cannot write == here because of _offset
         {
-            if (getSeqNo(a) == getSeqNo(b))
-                return a.i2 > b.i2;
-            else
+            typename Size<TText>::Type lena = suffixLength(a, _text);
+            typename Size<TText>::Type lenb = suffixLength(b, _text);
+
+            if (lena == lenb)
                 return getSeqNo(a) > getSeqNo(b);
+            else
+                return lena < lenb;
         }
 
         // a < b  if sb is not yet empty

@@ -545,7 +545,7 @@ inline typename Value<typename Concatenator<TLexText>::Type>::Type _dislex(
             ++rank;
 
         std::cout << txtPos << "  ...   " << *sa << " -> " << comp(txtPos, *sa) << "\t\"" << TModText(suffix(origText, txtPos)) << "\", \"" << TModText(suffix(origText, *sa)) << "\"" << std::endl;
-        SEQAN_ASSERT_GEQ(0, comp(txtPos,*sa));
+//        SEQAN_ASSERT_GEQ(0, comp(txtPos,*sa));
         txtPos = *sa;
     }
     lexText[dislex(txtPos)] = rank;
