@@ -307,6 +307,7 @@ struct InplaceRadixSorter
         static TSize bucketSize[Q];  // initialized to zero at startup
         TSAValue* bucketEnd[Q];  // "static" makes little difference to speed
 
+
         // get bucket sizes (i.e. letter counts):
         // The intermediate oracle array makes it faster (see "Engineering
         // Radix Sort for Strings" by J Karkkainen & T Rantala)
@@ -351,10 +352,8 @@ struct InplaceRadixSorter
         }
 
         // sort the 0 bucket using std::sort
-        if(zeroBucketSize > 1) {
+        if(zeroBucketSize > 1)
             std::sort(beg, beg+zeroBucketSize, comp);
-        }
-
     }
 };
 
@@ -430,29 +429,61 @@ void __outputSA(TStr const & str, TSA const & sa, TPos from, TPos to)
 // Functors to compare suffixes from 0 bucket (suffixes that are lex. equal)
 // ----------------------------------------------------------------------------
 
-template <typename TSAValue, typename TSuffixModifier=void>
-struct _ZeroBucketComparator
+template <typename TSAValue, typename TLimitsString=Nothing, typename TSuffixModifier=void>
+struct _ZeroBucketComparator;
+
+// String with modifier
+template <typename TSAValue, typename TSuffixModifier>
+struct _ZeroBucketComparator<TSAValue, Nothing, TSuffixModifier>
 {
-    _ZeroBucketComparator(){}
+    _ZeroBucketComparator(Nothing const &) {}
 
     inline bool operator()(TSAValue const & a, TSAValue const & b)
     {
         return a > b;
     }
 };
-
-// StringSet
-template <typename TV1, typename TV2, typename TSpec, typename TSuffixModifier>
-struct _ZeroBucketComparator<Pair<TV1, TV2, TSpec>, TSuffixModifier >
+// String without modifier
+template <typename TSAValue>
+struct _ZeroBucketComparator<TSAValue, Nothing, void>
 {
-    typedef Pair<TV1, TV2, TSpec> TSAValue;
-    _ZeroBucketComparator(){}
+    _ZeroBucketComparator(Nothing const &) {}
 
     inline bool operator()(TSAValue const & a, TSAValue const & b)
     {
-        if(getSeqNo(a) != getSeqNo(b))
-        return getSeqNo(a) > getSeqNo(b);
-        return getSeqOffset(a) > getSeqOffset(b);
+        return a > b;
+    }
+};
+// StringSet without modifier
+template <typename TSAValue, typename TLimitsString>
+struct _ZeroBucketComparator<TSAValue, TLimitsString, void>
+{
+    _ZeroBucketComparator(TLimitsString const &) {}
+
+    inline bool operator()(TSAValue const & a, TSAValue const & b)
+    {
+        if (getSeqNo(a) == getSeqNo(b))
+            return getSeqOffset(a) > getSeqOffset(b);
+        else
+            return getSeqNo(a) > getSeqNo(b);
+    }
+};
+// StringSet with modifier
+template <typename TSAValue, typename TLimitsString, typename TSuffixModifier>
+struct _ZeroBucketComparator
+{
+    TLimitsString const & limits;
+    _ZeroBucketComparator(TLimitsString const & lim) : limits(lim) {}
+
+    inline bool operator()(TSAValue const & a, TSAValue const & b)
+    {
+        typename Size<TLimitsString>::Type lena = limits[getSeqNo(a)+1]-limits[getSeqNo(a)] - getSeqOffset(a);
+        typename Size<TLimitsString>::Type lenb = limits[getSeqNo(b)+1]-limits[getSeqNo(b)] - getSeqOffset(b);
+
+        if (lena == lenb)
+            return getSeqNo(a) > getSeqNo(b);
+        else
+            return lena < lenb;
     }
 };
 
@@ -469,19 +500,20 @@ void inplaceRadixSort(
     typedef typename Value<typename Concatenator<TString>::Type>::Type TAlphabet;
     typedef typename Value<TSA>::Type                               TSAValue;
     typedef typename Size<TString>::Type                            TSize;
+    typedef typename StringSetLimits<TString>::Type                 TLimitsString; // "Nothing" for Strings
 
-    typedef RadixTextAccessor<TSAValue, TString>                    TAccessFunctor;
-    typedef _ZeroBucketComparator<TSAValue>                         TCompareFunctor;
+    typedef RadixTextAccessor<TSAValue, TString>                    TAccessor;
+    typedef _ZeroBucketComparator<TSAValue, TLimitsString>          TZeroComp;
 
     static const unsigned SIGMA = static_cast<unsigned>(ValueSize<TAlphabet>::VALUE) + 1;
     SEQAN_ASSERT_LT_MSG(SIGMA, 1000u, "Attention: inplace radix sort is not suited for large alphabets");
 
-    typedef InplaceRadixSorter<SIGMA, TAccessFunctor, TCompareFunctor, TSize>    TSorter;
+    typedef InplaceRadixSorter<SIGMA, TAccessor, TZeroComp, TSize>    TSorter;
 
     if (empty(sa)) return; // otherwise access sa[0] fails
 
-    TAccessFunctor textAccess(str);
-    TSorter radixSort(textAccess, TCompareFunctor());
+    TAccessor textAccess(str);
+    TSorter radixSort(textAccess, TZeroComp(stringSetLimits(str)));
 
     RadixRecursionStack<TSAValue, TSize> stack;
     stack.push(&sa[0], &sa[0]+length(sa), 0);
@@ -518,19 +550,20 @@ void inplaceRadixSort(
     typedef typename Value<typename Concatenator<TString>::Type>::Type TAlphabet;
     typedef typename Value<TSA>::Type                               TSAValue;
     typedef typename Size<TString>::Type                            TSize;
+    typedef typename StringSetLimits<TString>::Type                 TLimitsString; // "Nothing" for Strings
 
-    typedef RadixTextAccessor<TSAValue, TString, TMod>              TAccessFunctor;
-    typedef _ZeroBucketComparator<TSAValue>                         TCompareFunctor;
+    typedef RadixTextAccessor<TSAValue, TString, TMod>              TAccessor;
+    typedef _ZeroBucketComparator<TSAValue, TLimitsString, TMod>    TZeroComp;
 
     static const unsigned SIGMA = static_cast<unsigned>(ValueSize<TAlphabet>::VALUE) + 1;
     SEQAN_ASSERT_LT_MSG(SIGMA, 1000u, "Attention: inplace radix sort is not suited for large alphabets");
 
-    typedef InplaceRadixSorter<SIGMA, TAccessFunctor, TCompareFunctor, TSize>    TSorter;
+    typedef InplaceRadixSorter<SIGMA, TAccessor, TZeroComp, TSize>    TSorter;
 
     if (empty(sa)) return; // otherwise access sa[0] fails
 
-    TAccessFunctor textAccess(str, modiferCargo);
-    TSorter radixSort(textAccess, TCompareFunctor());
+    TAccessor textAccess(str, modiferCargo);
+    TSorter radixSort(textAccess, TZeroComp(stringSetLimits(str)));
 
     RadixRecursionStack<TSAValue, TSize> stack;
     stack.push(&sa[0], &sa[0]+length(sa), 0);
@@ -560,21 +593,22 @@ void inplaceFullRadixSort( TSA & sa, TString const & str)
     typedef typename Value<typename Concatenator<TString>::Type>::Type TAlphabet;
     typedef typename Value<TSA>::Type                               TSAValue;
     typedef typename Size<TString>::Type                            TSize;
+    typedef typename StringSetLimits<TString>::Type                 TLimitsString; // "Nothing" for Strings
 
-    typedef RadixTextAccessor<TSAValue, TString>                    TAccessFunctor;
-    typedef _ZeroBucketComparator<TSAValue>                         TCompareFunctor;
+    typedef RadixTextAccessor<TSAValue, TString>                    TAccessor;
+    typedef _ZeroBucketComparator<TSAValue,TLimitsString>           TZeroComp;
 
 
 
     static const unsigned SIGMA = static_cast<unsigned>(ValueSize<TAlphabet>::VALUE) + 1;
     SEQAN_ASSERT_LT_MSG(SIGMA, 1000u, "Attention: inplace radix sort is not suited for large alphabets");
 
-    typedef InplaceRadixSorter<SIGMA, TAccessFunctor, TCompareFunctor, TSize>    TSorter;
+    typedef InplaceRadixSorter<SIGMA, TAccessor, TZeroComp, TSize>    TSorter;
 
     if (empty(sa)) return; // otherwise access sa[0] fails
 
-    TAccessFunctor textAccess(str);
-    TSorter radixSort(textAccess, TCompareFunctor());
+    TAccessor textAccess(str);
+    TSorter radixSort(textAccess, TZeroComp(stringSetLimits(str)));
 
     RadixRecursionStack<TSAValue, TSize> stack;
     stack.push(&sa[0], &sa[0]+length(sa), 0);
@@ -590,12 +624,12 @@ void inplaceFullRadixSort( TSA & sa, TString const & str)
         continue;
 
         // other sort algorithm for small buckets:
-        if(to - from < 20)
+/*        if(to - from < 20)
         {
             ::std::sort( from, to, SuffixLess_<TSAValue, TString const, void>(str, currDepth));
             continue;
         }
-
+*/
         radixSort(from, to, currDepth, stack);
     }
 }
@@ -615,19 +649,20 @@ void inplaceFullRadixSort(TSA & sa,
     typedef typename Value<typename Concatenator<TString>::Type>::Type TAlphabet;
     typedef typename Value<TSA>::Type                               TSAValue;
     typedef typename Size<TString>::Type                            TSize;
+    typedef typename StringSetLimits<TString>::Type                 TLimitsString; // "Nothing" for Strings
 
-    typedef RadixTextAccessor<TSAValue, TString, TMod>              TAccessFunctor;
-    typedef _ZeroBucketComparator<TSAValue>                         TCompareFunctor;
+    typedef RadixTextAccessor<TSAValue, TString, TMod>              TAccessor;
+    typedef _ZeroBucketComparator<TSAValue,TLimitsString,TMod>      TZeroComp;
  
     static const unsigned SIGMA = static_cast<unsigned>(ValueSize<TAlphabet>::VALUE) + 1;
     SEQAN_ASSERT_LT_MSG(SIGMA, 1000u, "Attention: inplace radix sort is not suited for large alphabets");
 
-    typedef InplaceRadixSorter<SIGMA, TAccessFunctor, TCompareFunctor, TSize>    TSorter;
+    typedef InplaceRadixSorter<SIGMA, TAccessor, TZeroComp, TSize>    TSorter;
     
     if (empty(sa)) return; // otherwise access sa[0] fails
 
-    TAccessFunctor textAccess(str, modiferCargo);
-    TSorter radixSort(textAccess, TCompareFunctor());
+    TAccessor textAccess(str, modiferCargo);
+    TSorter radixSort(textAccess, TZeroComp(stringSetLimits(str)));
     
     RadixRecursionStack<TSAValue, TSize> stack;
     stack.push(&sa[0], &sa[0]+length(sa), 0);
@@ -643,12 +678,12 @@ void inplaceFullRadixSort(TSA & sa,
         continue;
 
         // other sort algorithm for small buckets:
-        if(to - from < 20)
+/*        if(to - from < 20)
         {
             ::std::sort( from, to, SuffixLess_<TSAValue, TString const, TMod>(str, modiferCargo, currDepth));
             continue;
         }
-
+*/
         radixSort(from, to, currDepth, stack);
     }
 }
