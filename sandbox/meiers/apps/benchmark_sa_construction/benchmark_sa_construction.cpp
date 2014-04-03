@@ -161,8 +161,8 @@ void createAndCheckSACA(
         typename Size<TIndex>::Type errs =0;
         typename Iterator<typename Fibre<TIndex, EsaSA>::Type>::Type it2 = begin(indexSA(index));
         for(typename Iterator<TSuffAr const>::Type it=begin(correctSA); it < end(correctSA); ++it, ++it2)
-        //if(*it != *it2) std::cout << std::endl << "   |-> err " << ++errs << " at pos " << it - begin(correctSA) << ": correct " << *it << " , seen " << *it2;
-        if(*it != *it2) ++errs;
+        if(*it != *it2) std::cout << std::endl << "   |-> err " << ++errs << " at pos " << it - begin(correctSA) << ": correct " << *it << " ,\tseen " << *it2;
+        //if(*it != *it2) ++errs;
         std::cout << "errors:" << errs << std::endl;
         if (errs > 0)
             ++globalWrongMethods;
