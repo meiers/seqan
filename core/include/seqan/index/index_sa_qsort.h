@@ -194,8 +194,8 @@ struct SuffixLess_ :
 
         for (; saIt < saEnd && sbIt < sbEnd; ++saIt, ++sbIt)
         {
-            if (*saIt < *sbIt) return true;
-            if (*saIt > *sbIt) return false;
+            if (ordLess(*saIt, *sbIt)) return true;
+            if (ordLess(*sbIt, *saIt)) return false;
         }
 
         // if both suffixes are empty, the suff pos decides
@@ -249,8 +249,8 @@ struct SuffixLess_<TSAValue, StringSet<TString, TSetSpec> const, TSuffixMod> :
 
         for (; saIt < saEnd && sbIt < sbEnd; ++saIt, ++sbIt)
         {
-            if (*saIt < *sbIt) return true;
-            if (*saIt > *sbIt) return false;
+            if (ordLess(*saIt, *sbIt)) return true;
+            if (ordLess(*sbIt, *saIt)) return false;
         }
 
         // if both suffixes are empty, the first the seqId and then the suff pos decide
