@@ -378,7 +378,6 @@ struct GappedSuffixQgramLess_ <TSAValue, TShape, StringSet<TText, TSpec>, TResul
 // Functions
 // ============================================================================
 
-
 // --------------------------------------------------------------------------
 // helper function _maxSigma: determine an upper bound for the alphabet size
 // --------------------------------------------------------------------------
@@ -412,6 +411,7 @@ typename Size<TText>::Type _maxSigma(TText const & text, typename Size<TText>::T
     
     return fullShapes + incompleteShapes;
 }
+
 
 template <typename TText, typename TSpec>
 typename Size<TText>::Type _maxSigma(StringSet<TText, TSpec> const & text, typename Size<TText>::Type weight, typename Size<TText>::Type span)
@@ -680,48 +680,48 @@ inline void createGappedSuffixArray(
 {
     typedef typename LexText<TText, TCyclicShape>::Type         TLexText;
 
-#ifdef DISLEX_INTERNAL_RUNNING_TIMES
+    #ifdef DISLEX_INTERNAL_RUNNING_TIMES
     double teim = sysTime();
-#endif
+    #endif
 
     // insert positions into SA
     _initializeSA(SA, s);
 
-#ifdef DISLEX_INTERNAL_RUNNING_TIMES
+    #ifdef DISLEX_INTERNAL_RUNNING_TIMES
     std::cout << "   |     init: " << sysTime() - teim << "s" << std::endl; teim = sysTime();
-#endif
+    #endif
 
     // sort newSA according to the Shape
     inplaceRadixSort(SA, s, weight(shape)+1, shape, ModCyclicShape<TCyclicShape>());
 
-#ifdef DISLEX_INTERNAL_RUNNING_TIMES
+    #ifdef DISLEX_INTERNAL_RUNNING_TIMES
     std::cout << "   | radix[" << (int)weight(shape) << "]: " << sysTime() - teim << "s" << std::endl; teim = sysTime();
-#endif
+    #endif
 
     // disLexTransformation
     TLexText lexText;
     typename Value<TLexText>::Type sigma = _dislex(lexText, SA, s, shape)+1u;
 
-#ifdef DISLEX_INTERNAL_RUNNING_TIMES
+    #ifdef DISLEX_INTERNAL_RUNNING_TIMES
     typename Value<TLexText>::Type maxSigma = _maxSigma(s,  static_cast<typename Value<TLexText>::Type>(weight(shape)),
                                                             static_cast<typename Value<TLexText>::Type>(shape.span));
     std::cout << "   |   dislex: " << sysTime() - teim << "s\t\tsigma = " << sigma << " (" << maxSigma << ")" << std::endl; teim = sysTime();
-    SEQAN_ASSERT_GEQ(maxSigma, sigma);
-#endif
+    SEQAN_ASSERT_GEQ_MSG(maxSigma, sigma, "Alphabet size of lecical names exceeds the theoretical upper bound");
+    #endif
 
     // Build Index using Skew7 into the memory of SA
     createSuffixArray(SA, lexText, TSACA(), sigma, 0);
 
-#ifdef DISLEX_INTERNAL_RUNNING_TIMES
+    #ifdef DISLEX_INTERNAL_RUNNING_TIMES
     std::cout << "   |     saca: " << sysTime() - teim << "s (len = " << length(concat(lexText)) << ")" << std::endl; teim = sysTime();
-#endif
+    #endif
 
     // reverse Transform of Index:
     _dislexReverse(SA, lexText, SA, s, shape) ;
 
-#ifdef DISLEX_INTERNAL_RUNNING_TIMES
+    #ifdef DISLEX_INTERNAL_RUNNING_TIMES
     std::cout << "   |  reverse: " << sysTime() - teim << "s (len = " << length(SA) << ")" << std::endl; teim = sysTime();
-#endif
+    #endif
 }
 
 // --------------------------------------------------------------------------
@@ -738,50 +738,49 @@ inline void createGappedSuffixArray(
 {
     typedef typename LexText<TText, TCyclicShape>::Type         TLexText;
 
-#ifdef DISLEX_INTERNAL_RUNNING_TIMES
+    #ifdef DISLEX_INTERNAL_RUNNING_TIMES
     double teim = sysTime();
-#endif
+    #endif
 
     // insert positions into SA
     _initializeSA(SA, s);
 
-#ifdef DISLEX_INTERNAL_RUNNING_TIMES
+    #ifdef DISLEX_INTERNAL_RUNNING_TIMES
     std::cout << "   |     init: " << sysTime() - teim << "s" << std::endl; teim = sysTime();
-#endif
+    #endif
 
     // sort newSA according to the Shape
     inplaceRadixSort(SA, s, weight(shape)+1, shape, ModCyclicShape<TCyclicShape>());
 
-#ifdef DISLEX_INTERNAL_RUNNING_TIMES
+    #ifdef DISLEX_INTERNAL_RUNNING_TIMES
     std::cout << "   | radix[" << (int)weight(shape) << "]: " << sysTime() - teim << "s" << std::endl; teim = sysTime();
-#endif
+    #endif
 
     // disLexTransformation
     TLexText lexText;
     typename Value<TLexText>::Type sigma = _dislex(lexText, SA, s, shape)+1u;
 
-#ifdef DISLEX_INTERNAL_RUNNING_TIMES
+    #ifdef DISLEX_INTERNAL_RUNNING_TIMES
     typename Value<TLexText>::Type maxSigma = _maxSigma(s, weight(shape), shape.span);
     std::cout << "   |   dislex: " << sysTime() - teim << "s\t\tsigma = " << sigma << " (" << maxSigma << ")" << std::endl; teim = sysTime();
-    //SEQAN_ASSERT_GEQ(maxSigma, sigma);
-#endif
+    SEQAN_ASSERT_GEQ_MSG(maxSigma, sigma, "Alphabet size of lecical names exceeds the theoretical upper bound");
+    #endif
 
     // Build Index using Skew7
     TLexText innerSa;
     resize(innerSa, length(SA), Exact());
     createSuffixArray(innerSa, lexText, TSACA(), sigma, 0);
 
-#ifdef DISLEX_INTERNAL_RUNNING_TIMES
+    #ifdef DISLEX_INTERNAL_RUNNING_TIMES
     std::cout << "   |     saca: " << sysTime() - teim << "s (len = " << length(concat(lexText)) << ")" << std::endl; teim = sysTime();
-#endif
+    #endif
 
     // reverse Transform of Index:
     _dislexReverse(SA, lexText, innerSa, s, shape) ;
 
-#ifdef DISLEX_INTERNAL_RUNNING_TIMES
+    #ifdef DISLEX_INTERNAL_RUNNING_TIMES
     std::cout << "   |  reverse: " << sysTime() - teim << "s (len = " << length(innerSa) << ")" << std::endl; teim = sysTime();
-#endif
-
+    #endif
 }
 
 } //namespace

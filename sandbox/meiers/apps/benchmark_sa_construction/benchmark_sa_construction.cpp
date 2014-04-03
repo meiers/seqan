@@ -419,21 +419,24 @@ void callBenchmarksForCorrectness(StringSet<TString, TSpec> const & set) {
 
 
     // labels for output
-    CharString ungapped  = "ungapped______";
-    CharString shape101  = "101___________";
-    CharString shape100  = "100___________";
-    CharString shape001  = "001___________";
-    CharString shape010  = "010___________";
-    CharString shape2    = "11000100101110";
-    CharString shape3    = "0001010_______";
-    CharString skew7     = "Skew7";
-    CharString skew3     = "Skew3";
-    CharString saqsort   = "QSort";
-    CharString dislex    = "Dislex";
-    CharString dislexExt = "Extern";
-    CharString radix     = "Radix";
-    CharString string    = "String";
-    CharString stringset = "StrSet";
+    CharString ungapped     = "ungapped______";
+    CharString shape101     = "101___________";
+    CharString shape100     = "100___________";
+    CharString shape110     = "110___________";
+    CharString shape1001    = "1001__________";
+    CharString shape001     = "001___________";
+    CharString shape010     = "010___________";
+    CharString shape2       = "11000100101110";
+    CharString shape3       = "0001010_______";
+    CharString shape101010  = "101010________";
+    CharString skew7        = "Skew7";
+    CharString skew3        = "Skew3";
+    CharString saqsort      = "QSort";
+    CharString dislex       = "Dislex";
+    CharString dislexExt    = "Extern";
+    CharString radix        = "Radix";
+    CharString string       = "String";
+    CharString stringset    = "StrSet";
 
 
     std:: cout << "Whole String Set" << std::endl;
@@ -468,13 +471,30 @@ void callBenchmarksForCorrectness(StringSet<TString, TSpec> const & set) {
 
         typedef CyclicShape<FixedShape<0,GappedShape<HardwiredShape<2> >, 0> > TShape;
         runOnACertainShape(set, TShape(), shape101);
-    } 
+    }
+    {   //- Gapped Indices: 101010 -------------------------------------------------------------
+
+        typedef CyclicShape<FixedShape<0,GappedShape<HardwiredShape<2,2> >, 1> > TShape;
+        runOnACertainShape(set, TShape(), shape101010);
+    }
     {   //- Gapped Indices: 100 ----------------------------------------------------------------
 
         typedef CyclicShape<FixedShape<0,GappedShape<HardwiredShape<> >, 2> > TShape;
         runOnACertainShape(set, TShape(), shape100);
-    }    
-    {   //- Gapped Indices: 001 ----------------------------------------------------------------
+    }
+    {   //- Gapped Indices: 1001 ---------------------------------------------------------------
+
+        typedef CyclicShape<FixedShape<0,GappedShape<HardwiredShape<3> >, 0> > TShape;
+        runOnACertainShape(set, TShape(), shape1001);
+    }
+    {   //- Gapped Indices: 110 ----------------------------------------------------------------
+
+        typedef CyclicShape<FixedShape<0,GappedShape<HardwiredShape<1> >, 1> > TShape;
+        runOnACertainShape(set, TShape(), shape110);
+    }
+
+
+ /*   {   //- Gapped Indices: 001 ----------------------------------------------------------------
 
         typedef CyclicShape<FixedShape<2,GappedShape<HardwiredShape<> >, 0> > TShape;
         runOnACertainShape(set, TShape(), shape001);
@@ -483,18 +503,18 @@ void callBenchmarksForCorrectness(StringSet<TString, TSpec> const & set) {
 
         typedef CyclicShape<FixedShape<1,GappedShape<HardwiredShape<> >, 1> > TShape;
         runOnACertainShape(set, TShape(), shape010);
-    }    
+    }    */
     { //----- Gapped Indices: 11000100101110 ---------------------------------------------------------
 
         typedef CyclicShape<FixedShape<0,GappedShape<HardwiredShape<1,4,3,2,1,1> >, 1> > TShape;
         runOnACertainShape(set, TShape(), shape2);
     }
-    { //----- Gapped Indices: 0001010 ---------------------------------------------------------
+/*    { //----- Gapped Indices: 0001010 ---------------------------------------------------------
 
         typedef CyclicShape<FixedShape<3,GappedShape<HardwiredShape<2> >, 1> > TShape;
         runOnACertainShape(set, TShape(), shape3);
     }
-
+*/
     std::cout << std::endl << std::endl;
     std::cout << "Number of test cases that are incorrect: " << globalWrongMethods << std::endl;
 }

@@ -281,7 +281,8 @@ struct _dislexTupleCompMulti  : public std::binary_function<TValue, TValue, TRes
         }
 
         // if both strings have more than _weight chars, they are equal.
-        if (rla > _weight && rlb > _weight) return 0;
+        //if (rla > _weight && rlb > _weight) return 0;
+        if (la.i2 > _span && lb.i2 > _span) return 0;
 
         // if they differ in size, the shorter one is smaller.
         if (rla != rlb)
@@ -345,6 +346,7 @@ struct _dislexTupleCompMulti<Pair<TSetPos, Tuple<TTupleValue, WEIGHT<TShape>::VA
 
         // if both strings have more than _weight chars, they are equal.
         if (rla > _weight && rlb > _weight) return 0;
+
 
         // if they differ in size, the shorter one is smaller.
         if (rla != rlb)
