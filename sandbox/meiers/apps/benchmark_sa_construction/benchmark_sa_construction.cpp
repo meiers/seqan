@@ -364,11 +364,11 @@ void runOnACertainShape(StringSet<TString, TSpec> const & set,
         TIndex index(set);
         createAndCheckSACA(index, Dislex<Skew7>(), correctSA1, shapeLabel, dislex, stringset);
     }
-    {
+/*    {
         typedef Index<StringSet<TString,TSpec>, IndexSa<Gapped<ModCyclicShape<TShape> > > > TIndex;
         TIndex index(set);
         createAndCheckSACA(index, DislexExternal<TShape>(), correctSA1, shapeLabel, dislexExt, stringset);
-    }
+    } */
     clear(correctSA1);
     
     
@@ -426,6 +426,7 @@ void callBenchmarksForCorrectness(StringSet<TString, TSpec> const & set) {
     CharString shape1001    = "1001__________";
     CharString shape001     = "001___________";
     CharString shape010     = "010___________";
+    CharString shape0110    = "0110___________";
     CharString shape2       = "11000100101110";
     CharString shape3       = "0001010_______";
     CharString shape101010  = "101010________";
@@ -494,7 +495,7 @@ void callBenchmarksForCorrectness(StringSet<TString, TSpec> const & set) {
     }
 
 
- /*   {   //- Gapped Indices: 001 ----------------------------------------------------------------
+    {   //- Gapped Indices: 001 ----------------------------------------------------------------
 
         typedef CyclicShape<FixedShape<2,GappedShape<HardwiredShape<> >, 0> > TShape;
         runOnACertainShape(set, TShape(), shape001);
@@ -503,18 +504,23 @@ void callBenchmarksForCorrectness(StringSet<TString, TSpec> const & set) {
 
         typedef CyclicShape<FixedShape<1,GappedShape<HardwiredShape<> >, 1> > TShape;
         runOnACertainShape(set, TShape(), shape010);
-    }    */
+    }
+    {   //- Gapped Indices: 0110 ---------------------------------------------------------------
+
+        typedef CyclicShape<FixedShape<1,GappedShape<HardwiredShape<1> >, 1> > TShape;
+        runOnACertainShape(set, TShape(), shape0110);
+    }
     { //----- Gapped Indices: 11000100101110 ---------------------------------------------------------
 
         typedef CyclicShape<FixedShape<0,GappedShape<HardwiredShape<1,4,3,2,1,1> >, 1> > TShape;
         runOnACertainShape(set, TShape(), shape2);
     }
-/*    { //----- Gapped Indices: 0001010 ---------------------------------------------------------
+    { //----- Gapped Indices: 0001010 ---------------------------------------------------------
 
         typedef CyclicShape<FixedShape<3,GappedShape<HardwiredShape<2> >, 1> > TShape;
         runOnACertainShape(set, TShape(), shape3);
     }
-*/
+
     std::cout << std::endl << std::endl;
     std::cout << "Number of test cases that are incorrect: " << globalWrongMethods << std::endl;
 }
