@@ -407,7 +407,7 @@ typename Size<TText>::Type _maxSigma(TText const & text, typename Size<TText>::T
     for(unsigned i=0; i<length(alphabet); ++i)
         if(alphabet[i]) sigma++;
     
-    TSize fullShapes = std::min( static_cast<TSize>(std::pow(sigma, weight)), length(text)-span+1);
+    TSize fullShapes = std::min( static_cast<TSize>(std::pow(double(sigma), double(weight))), length(text)-span+1);
     TSize incompleteShapes = span-1;
     
     return fullShapes + incompleteShapes;
@@ -435,7 +435,7 @@ typename Size<TText>::Type _maxSigma(StringSet<TText, TSpec> const & text, typen
     for (TSize i=0; i< length(text); ++i)
         incompleteShapes += std::min(length(text[i]), static_cast<TSize>(span));
         
-    TSize fullShapes = std::min( static_cast<TSize>(std::pow(sigma, weight)), lengthSum(text)-incompleteShapes);
+    TSize fullShapes = std::min( static_cast<TSize>(std::pow(double(sigma), double(weight))), lengthSum(text)-incompleteShapes);
     
     return fullShapes + incompleteShapes;
 }
@@ -484,7 +484,7 @@ inline typename Value<TLexText>::Type _dislex(
         if(comp(txtPos, *sa))
             ++rank;
 
-        //std::cout << txtPos << "  ...   " << *sa << " -> " << comp(txtPos, *sa) << std::endl;
+        //std::cout << txtPos << "  ...   " << *sa << " -> " << comp(txtPos, *sa) << "\t\"" << TModText(suffix(origText, txtPos)) << "\", \"" << TModText(suffix(origText, *sa)) << "\"" << std::endl;
         SEQAN_ASSERT_GEQ(0, comp(txtPos,*sa));
         txtPos = *sa;
     }
@@ -544,7 +544,7 @@ inline typename Value<typename Concatenator<TLexText>::Type>::Type _dislex(
         if(comp(txtPos, *sa))
             ++rank;
 
-        //std::cout << txtPos << "  ...   " << *sa << " -> " << comp(txtPos, *sa) << std::endl;
+        std::cout << txtPos << "  ...   " << *sa << " -> " << comp(txtPos, *sa) << "\t\"" << TModText(suffix(origText, txtPos)) << "\", \"" << TModText(suffix(origText, *sa)) << "\"" << std::endl;
         SEQAN_ASSERT_GEQ(0, comp(txtPos,*sa));
         txtPos = *sa;
     }
@@ -703,7 +703,8 @@ inline void createGappedSuffixArray(
     typename Value<TLexText>::Type sigma = _dislex(lexText, SA, s, shape)+1u;
 
 #ifdef DISLEX_INTERNAL_RUNNING_TIMES
-    typename Value<TLexText>::Type maxSigma = _maxSigma(s, weight(shape), shape.span);
+    typename Value<TLexText>::Type maxSigma = _maxSigma(s,  static_cast<typename Value<TLexText>::Type>(weight(shape)),
+                                                            static_cast<typename Value<TLexText>::Type>(shape.span));
     std::cout << "   |   dislex: " << sysTime() - teim << "s\t\tsigma = " << sigma << " (" << maxSigma << ")" << std::endl; teim = sysTime();
     SEQAN_ASSERT_GEQ(maxSigma, sigma);
 #endif
