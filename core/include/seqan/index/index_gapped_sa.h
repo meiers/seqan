@@ -159,7 +159,7 @@ struct DefaultIndexCreator<Index<TText, IndexSa<Gapped<ModCyclicShape<TShape>,TS
     typedef typename AllowsFastRandomAccess<TSA>::Type                      TRandomSA;
     typedef typename AllowsFastRandomAccess<TText>::Type                    TRandomText;
     typedef typename If<And<TRandomText,TRandomSA>,
-                        SAQSort,
+                        Dislex<Skew7>,
                         DislexExternal<TShape> >::Type                      Type;
 };
 
