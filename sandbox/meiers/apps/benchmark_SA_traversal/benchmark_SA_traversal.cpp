@@ -174,7 +174,7 @@ void benchmarkSearch_stree(TIndex & index, TPatternSet const & set, TSize len, T
     TSetIter setEnd = end(set, Standard());
     for(; setIt != setEnd; ++setIt)
     {
-        TModStr mod(*setIt);
+        TModStr mod(*setIt, shape);
         TPatternIter patIt = begin(mod);
         TPatternIter patEnd = patIt + len;
         for(; patIt !=patEnd; ++patIt)
