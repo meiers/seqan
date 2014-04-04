@@ -277,7 +277,36 @@ struct GappedSuffixQgramLess_ : public std::binary_function<TSAValue, TSAValue, 
             if (ordValue(*saIt) < ordValue(*sbIt)) return -1;
             if (ordValue(*saIt) > ordValue(*sbIt)) return 1;
         }
-        
+
+        typename Size<TText>::Type lena = N - a;
+        typename Size<TText>::Type lenb = N - b;
+
+        // both cyclic shapes are "full"
+        if (lena >= _shape.span && lenb >= _shape.span)
+            return 0;
+
+        // if they are equally long, start position decides
+        if (sbEnd - sbIt == saEnd - saIt)
+        {
+            if (lena > lenb) return 1;
+            if (lena < lenb) return -1;
+            // should never occur:
+            SEQAN_ASSERT_EQ(true,false);
+            return 0;
+        }
+
+        // they are not equally long
+        if (!(sbIt < sbEnd)) return 1;
+        if (!(saIt < saEnd)) return -1;
+
+        // should never occur:
+        SEQAN_ASSERT_EQ(true, false);
+        return 0;
+
+
+
+
+/*
         // both cyclic shapes are "full" (stronger criterium than p == _weight)
         if (a+_span <= N && b+_span <= N)
             return 0;
@@ -297,6 +326,7 @@ struct GappedSuffixQgramLess_ : public std::binary_function<TSAValue, TSAValue, 
         // should never be reached
         SEQAN_ASSERT_EQ(true, false);
         return 0;
+ */
     }
 };
 
@@ -346,34 +376,35 @@ struct GappedSuffixQgramLess_ <TSAValue, TShape, StringSet<TText, TSpec>, TResul
             if (ordValue(*saIt) > ordValue(*sbIt)) return 1;
         }
 
-        // use limits string here!
-
+        typename Size<TSet>::Type lena = length(_text[getSeqNo(a)]) - getSeqOffset(a);
+        typename Size<TSet>::Type lenb = length(_text[getSeqNo(b)]) - getSeqOffset(b);
 
         // both cyclic shapes are more than "full"
-        // (differs from string version by the case N-a == span)
-//        if (a+_span < N && b+_span < N)
-//            return 0;
+        if (lena > _shape.span && lenb > _shape.span)
+            return 0;
 
-        // if both suffixes are equally long
-        if (!(saIt < saEnd) && !(sbIt < sbEnd))
+        // if they are equally long, start position and seqId decide
+        if (sbEnd - sbIt == saEnd - saIt)
         {
-            if (getSeqNo(a) < getSeqNo(b)) return 1;
-            if (getSeqNo(a) > getSeqNo(b)) return -1;
-            
-            if (getSeqOffset(a) < getSeqOffset(b)) return 1;
-            if (getSeqOffset(a) > getSeqOffset(b)) return -1;
-
-            // Does not occur
+            if (lena == lenb)
+            {
+                if (getSeqNo(a) < getSeqNo(b)) return 1;
+                if (getSeqNo(a) > getSeqNo(b)) return -1;
+            } else {
+                if (lena > lenb) return 1;
+                if (lena < lenb) return -1;
+            }
+            // should never occur:
             SEQAN_ASSERT_EQ(true,false);
             return 0;
         }
 
-        // only one suffix is empty
+        // they are not equally long
         if (!(sbIt < sbEnd)) return 1;
         if (!(saIt < saEnd)) return -1;
 
-        // Does not occur
-//        SEQAN_ASSERT_EQ(true, false);
+        // should never occur:
+        SEQAN_ASSERT_EQ(true, false);
         return 0;
     }
 };
@@ -548,8 +579,8 @@ inline typename Value<typename Concatenator<TLexText>::Type>::Type _dislex(
         if(comp(txtPos, *sa))
             ++rank;
 
-        std::cout << txtPos << "  ...   " << *sa << " -> " << comp(txtPos, *sa) << "\t\"" << TModText(suffix(origText, txtPos)) << "\", \"" << TModText(suffix(origText, *sa)) << "\"" << std::endl;
-//        SEQAN_ASSERT_GEQ(0, comp(txtPos,*sa));
+        //std::cout << txtPos << "  ...   " << *sa << " -> " << comp(txtPos, *sa) << "\t\"" << TModText(suffix(origText, txtPos)) << "\", \"" << TModText(suffix(origText, *sa)) << "\"" << std::endl;
+        SEQAN_ASSERT_GEQ(0, comp(txtPos,*sa));
         txtPos = *sa;
     }
     lexText[dislex(txtPos)] = rank;
@@ -767,7 +798,7 @@ inline void createGappedSuffixArray(
     #ifdef DISLEX_INTERNAL_RUNNING_TIMES
     typename Value<TLexText>::Type maxSigma = _maxSigma(s, weight(shape), shape.span);
     std::cout << "   |   dislex: " << sysTime() - teim << "s\t\tsigma = " << sigma << " (" << maxSigma << ")" << std::endl; teim = sysTime();
-//    SEQAN_ASSERT_GEQ_MSG(maxSigma, sigma, "Alphabet size of lecical names exceeds the theoretical upper bound");
+    SEQAN_ASSERT_GEQ_MSG(maxSigma, sigma, "Alphabet size of lecical names exceeds the theoretical upper bound");
     #endif
 
     // Build Index using Skew7
