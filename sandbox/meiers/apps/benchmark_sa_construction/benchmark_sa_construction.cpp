@@ -364,11 +364,11 @@ void runOnACertainShape(StringSet<TString, TSpec> const & set,
         TIndex index(set);
         createAndCheckSACA(index, Dislex<Skew7>(), correctSA1, shapeLabel, dislex, stringset);
     }
-/*    {
+    {
         typedef Index<StringSet<TString,TSpec>, IndexSa<Gapped<ModCyclicShape<TShape> > > > TIndex;
         TIndex index(set);
         createAndCheckSACA(index, DislexExternal<TShape>(), correctSA1, shapeLabel, dislexExt, stringset);
-    } */
+    }
     clear(correctSA1);
     
     

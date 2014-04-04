@@ -41,6 +41,7 @@ namespace SEQAN_NAMESPACE_MAIN
 {
     template <typename TShape, typename TSACA = Skew7>
     struct DislexExternal {};
+
 // --------------------------------------------------------------------------
 // Filter to transform positions to lengths                          [String]
 // --------------------------------------------------------------------------
@@ -79,9 +80,6 @@ struct _positionToLengthTransformMulti
     }
 };
 
-    // TODO(meiers): Comparator for Strings compares one char too much right now.
-    //               Only for string sets this is necessary!
-
 // --------------------------------------------------------------------------
 // Comparator for naming tuples                                      [String]
 // --------------------------------------------------------------------------
@@ -94,7 +92,7 @@ struct _positionToLengthTransformMulti
  *                fixed-length sequence tuple (possibly bitpacked)
  * @tparam TShape expects a fixed CyclicShape (CyclicShape<FixedShape<...> >)
  *
- * Only for hardwired cyclic shapes!!
+ * Only for hardwired cyclic shapes! There is a overload for bitpacked tuples
  *
  * @see _dislexTupleCompMulti
  */
@@ -116,6 +114,9 @@ struct _dislexTupleComp : public std::binary_function<TValue, TValue, TResult>
 
     _dislexTupleComp(TSize strLen) : posToLen(strLen)
     {
+        #ifdef DISLEX_EXTERNAL_RUNNING_TIMES
+        std::cout << "   | String, Tuple version"  << std::endl;
+        #endif
         cyclicShapeToSuffixLengths(realLengths, TShape());
     }
 
@@ -131,7 +132,7 @@ struct _dislexTupleComp : public std::binary_function<TValue, TValue, TResult>
         TSize rla = (la < static_cast<TSize>(_span) ? realLengths[la] : static_cast<TSize>(_weight));
         TSize rlb = (lb < static_cast<TSize>(_span) ? realLengths[lb] : static_cast<TSize>(_weight));
 
-        // compare the overlap of the first n bases
+        // lexicographical comparison
         TSize n = std::min(static_cast<TSize>(_weight), std::min(rla, rlb) );
         for (TSize i = 0; i < n; i++, ++sa, ++sb)
         {
@@ -139,23 +140,20 @@ struct _dislexTupleComp : public std::binary_function<TValue, TValue, TResult>
             return (*sa < *sb)? -1 : 1;
         }
 
-        // if both strings have more than _weight chars, they are equal.
+        // both cyclic shapes are "full"
         if (la >= static_cast<TSize>(_span) && lb >= static_cast<TSize>(_span))
             return 0;
 
-        // if they differ in size, the shorter one is smaller.
+        // if they are NOT equally long
         if (rla != rlb)
             return (rla < rlb ? -1 : 1);
 
-        // In the same string, the length of the underlying suffix decides:
-        if (la < lb)
-            return -1;
+        // if they are equally long
+        if (la > lb) return 1;
+        if (la < lb) return -1;
 
-        if (la > lb) 
-            return 1;
-
-	// only occurs when q-grams from the exact same position are passed
-	SEQAN_ASSERT_EQ(a.i1, b.i1);
+        // only occurs when q-grams from the exact same position are passed
+        SEQAN_ASSERT_EQ(a.i1, b.i1);
         return 0;
     }
 };
@@ -176,16 +174,15 @@ template <typename TSize, typename TTupleValue,typename TShape, typename TResult
         _span = TShape::span,
         _weight = WEIGHT<TShape>::VALUE
     };
-    TSize realLengths[2*_span];
+    TSize realLengths[_span];
     _positionToLengthTransform<TSize> posToLen;
 
     _dislexTupleComp(TSize strLen) : posToLen(strLen)
     {
+        #ifdef DISLEX_EXTERNAL_RUNNING_TIMES
+        std::cout << "   | String, Bitpacked version"  << std::endl;
+        #endif
         cyclicShapeToSuffixLengths(realLengths, TShape());
-
-        // extend the table to a size of 2*_span // see TODO above (for Strings not needed)
-        for (unsigned i=0; i<_span; ++i)
-            realLengths[i+_span] = _weight + realLengths[i];
     }
 
     inline TResult operator() (const TValue &a, const TValue &b) const
@@ -194,24 +191,25 @@ template <typename TSize, typename TTupleValue,typename TShape, typename TResult
         if (a.i2 < b.i2) return -1;
         if (a.i2 > b.i2) return 1;
 
-        // find out the real lengths of the gapped strings
         TSize la = posToLen(a.i1);
         TSize lb = posToLen(b.i1);
 
-        TSize rla = (la < 2*static_cast<TSize>(_span) ? realLengths[la] : 2*static_cast<TSize>(_weight));
-        TSize rlb = (lb < 2*static_cast<TSize>(_span) ? realLengths[lb] : 2*static_cast<TSize>(_weight));
+        // find out the real lengths of the gapped strings
+        TSize rla = (la < static_cast<TSize>(_span) ? realLengths[la] : static_cast<TSize>(_weight));
+        TSize rlb = (lb < static_cast<TSize>(_span) ? realLengths[lb] : static_cast<TSize>(_weight));
 
-        // if both strings have more than _weight chars, they are equal.
-        if (rla > static_cast<TSize>(_weight) && rlb > static_cast<TSize>(_weight)) return 0;
+        // both cyclic shapes are "full"
+        if (la >= static_cast<TSize>(_span) && lb >= static_cast<TSize>(_span))
+            return 0;
 
-        // if they differ in size, the shorter one is smaller.
+        // if they are NOT equally long
         if (rla != rlb)
             return (rla < rlb ? -1 : 1);
-        
-        // In the same string, the length of the underlying suffix decides:
-        if (la < lb) return -1;
+
+        // if they are equally long
         if (la > lb) return 1;
-        
+        if (la < lb) return -1;
+
         // only occurs when q-grams from the exact same position are passed
         SEQAN_ASSERT_EQ(a.i1, b.i1);
         return 0;
@@ -222,8 +220,6 @@ template <typename TSize, typename TTupleValue,typename TShape, typename TResult
 // --------------------------------------------------------------------------
 // Comparator for naming tuples                                   [StringSet]
 // --------------------------------------------------------------------------
-
-// TODO: _dislexTupleCompMulti for bitvectors
 
 /*
  * @signature _dislexTupleCompMulti<TValue, TShape, TResult = int>
@@ -248,17 +244,16 @@ struct _dislexTupleCompMulti  : public std::binary_function<TValue, TValue, TRes
         _span = TShape::span,
         _weight = WEIGHT<TShape>::VALUE
     };
-    TSize realLengths[2*_span];
+    TSize realLengths[_span];
     _positionToLengthTransformMulti<TLimitString, TSetPos> posToLen;
 
     _dislexTupleCompMulti(TLimitString const & limits) : posToLen(limits)
     {
+        #ifdef DISLEX_EXTERNAL_RUNNING_TIMES
+        std::cout << "   | String Set, Tuple version"  << std::endl;
+        #endif
         cyclicShapeToSuffixLengths(realLengths, TShape());
-
-        for (unsigned i=0; i<_span; ++i)
-            realLengths[i+_span] = _weight + realLengths[i];
     }
-
 
     inline TResult operator() (const TValue &a, const TValue &b) const
     {
@@ -269,10 +264,10 @@ struct _dislexTupleCompMulti  : public std::binary_function<TValue, TValue, TRes
         TSetPos lb = posToLen(b.i1);
 
         // find out the real lengths of the gapped strings
-        TSize rla = (la.i2 < 2*_span ? realLengths[la.i2] : 2*_weight);
-        TSize rlb = (lb.i2 < 2*_span ? realLengths[lb.i2] : 2*_weight);
+        TSize rla = (la.i2 < _span ? realLengths[la.i2] : _weight);
+        TSize rlb = (lb.i2 < _span ? realLengths[lb.i2] : _weight);
         
-        // compare the overlap of the first n bases
+        // lexicographical comparison
         TSize n = std::min(static_cast<TSize>(_weight), std::min(rla, rlb) );
         for (TSize i = 0; i < n; i++, ++sa, ++sb)
         {
@@ -280,22 +275,23 @@ struct _dislexTupleCompMulti  : public std::binary_function<TValue, TValue, TRes
             return (*sa < *sb)? -1 : 1;
         }
 
-        // if both strings have more than _weight chars, they are equal.
-        //if (rla > _weight && rlb > _weight) return 0;
-        if (la.i2 > _span && lb.i2 > _span) return 0;
+        // both cyclic shapes are more than "full"
+        if (la.i2 > static_cast<TSize>(_span) && lb.i2 > static_cast<TSize>(_span))
+            return 0;
 
-        // if they differ in size, the shorter one is smaller.
+        // if they are NOT equally long
         if (rla != rlb)
             return (rla < rlb ? -1 : 1);
 
-        // if both have the same number of chars,
-        // at first the string ID is relevant:
-        if (la.i1 > lb.i1) return -1;
-        if (la.i1 < lb.i1) return 1;
-
-        // In the same string, the length of the underlying suffix decides:
-        if (la.i2 < lb.i2) return -1;
-        if (la.i2 > lb.i2) return 1;
+        // if they are equally long
+        if (la.i2 == lb.i2)
+        {
+            if (la.i1 < lb.i1) return 1;
+            if (la.i1 > lb.i1) return -1;
+        } else {
+            if (la.i2 > lb.i2) return 1;
+            if (la.i2 < lb.i2) return -1;
+        }
 
         // only occurs when q-grams from the exact same position are passed
         SEQAN_ASSERT_EQ(a.i1, b.i1);
@@ -319,15 +315,15 @@ struct _dislexTupleCompMulti<Pair<TSetPos, Tuple<TTupleValue, WEIGHT<TShape>::VA
         _span = TShape::span,
         _weight = WEIGHT<TShape>::VALUE
     };
-    TSize realLengths[2*_span];
+    TSize realLengths[_span];
     _positionToLengthTransformMulti<TLimitString, TSetPos> posToLen;
 
     _dislexTupleCompMulti(TLimitString const & limits) : posToLen(limits)
     {
+        #ifdef DISLEX_EXTERNAL_RUNNING_TIMES
+        std::cout << "   | String Set, BitPacked version"  << std::endl;
+        #endif
         cyclicShapeToSuffixLengths(realLengths, TShape());
-
-        for (unsigned i=0; i<_span; ++i)
-            realLengths[i+_span] = _weight + realLengths[i];
     }
 
 
@@ -341,28 +337,29 @@ struct _dislexTupleCompMulti<Pair<TSetPos, Tuple<TTupleValue, WEIGHT<TShape>::VA
         TSetPos lb = posToLen(b.i1);
 
         // find out the real lengths of the gapped strings
-        TSize rla = (la.i2 < 2*_span ? realLengths[la.i2] : 2*_weight);
-        TSize rlb = (lb.i2 < 2*_span ? realLengths[lb.i2] : 2*_weight);
+        TSize rla = (la.i2 < _span ? realLengths[la.i2] : _weight);
+        TSize rlb = (lb.i2 < _span ? realLengths[lb.i2] : _weight);
 
-        // if both strings have more than _weight chars, they are equal.
-        if (rla > _weight && rlb > _weight) return 0;
+        // both cyclic shapes are more than "full"
+        if (la.i2 > static_cast<TSize>(_span) && lb.i2 > static_cast<TSize>(_span))
+            return 0;
 
-
-        // if they differ in size, the shorter one is smaller.
+        // if they are NOT equally long
         if (rla != rlb)
             return (rla < rlb ? -1 : 1);
 
-        // if both have the same number of chars,
-        // at first the string ID is relevant:
-        if (la.i1 > lb.i1) return -1;
-        if (la.i1 < lb.i1) return 1;
-        
-        // In the same string, the length of the underlying suffix decides:
-        if (la.i2 < lb.i2) return -1;
-        if (la.i2 > lb.i2) return 1;
-        
-	// only occurs when q-grams from the exact same position are passed
-	SEQAN_ASSERT_EQ(a.i1, b.i1);
+        // if they are equally long
+        if (la.i2 == lb.i2)
+        {
+            if (la.i1 < lb.i1) return 1;
+            if (la.i1 > lb.i1) return -1;
+        } else {
+            if (la.i2 > lb.i2) return 1;
+            if (la.i2 < lb.i2) return -1;
+        }
+
+        // only occurs when q-grams from the exact same position are passed
+        SEQAN_ASSERT_EQ(a.i1, b.i1);
         return 0;
     }
 };
@@ -430,7 +427,8 @@ public std::unary_function<TValue, TResult>
 template <typename TInput, typename TShape, typename TSACA>
 struct Pipe<TInput, DislexExternal<TShape, TSACA> >
 {
-    typedef If<typename Eval<  BitsPerValue<TypeOf_(TInput)>::VALUE * WEIGHT<TShape>::VALUE < 64  >::Type, BitPacked<>, Pack>         TPack;
+    typedef typename If<typename Eval< BitsPerValue<TypeOf_(TInput)>::VALUE * WEIGHT<TShape>::VALUE <= 64  >::Type,
+                        BitPacked<>, Pack >::Type               TPack;
 
     typedef Pipe<TInput, GappedTupler<TShape, false, TPack> >   TPipeTupler;
     typedef _dislexTupleComp<TypeOf_(TPipeTupler), TShape>      TTupleComparator;
@@ -483,15 +481,15 @@ struct Pipe<TInput, DislexExternal<TShape, TSACA> >
         TTupleComparator                                        _comp(length(textIn));
         TPoolSorter                                             sorter(tupler, _comp);
         
-#ifdef DISLEX_EXTERNAL_RUNNING_TIMES
+        #ifdef DISLEX_EXTERNAL_RUNNING_TIMES
         double teim = sysTime();
-#endif
+        #endif
 
         sorter << tupler;
 
-#ifdef DISLEX_EXTERNAL_RUNNING_TIMES
+        #ifdef DISLEX_EXTERNAL_RUNNING_TIMES
         std::cout << "   | sorter << tupler: " << sysTime() - teim << "s" << std::endl; teim = sysTime();
-#endif
+        #endif
 
         // 3. Name tuples by their rank
         TPipeNamer                                              namer(sorter, _comp);
@@ -502,9 +500,9 @@ struct Pipe<TInput, DislexExternal<TShape, TSACA> >
                 
         mapper << namer;
 
-#ifdef DISLEX_EXTERNAL_RUNNING_TIMES
+        #ifdef DISLEX_EXTERNAL_RUNNING_TIMES
         std::cout << "   | mapper << namer:  " << sysTime() - teim << "s\tsigma = " << (namer.tmp.i2 +1)<< std::endl; teim = sysTime();
-#endif
+        #endif
 
         // 5. Discard positions, keep rank
         TPipeFilterI2                                           filter(mapper);
@@ -512,9 +510,9 @@ struct Pipe<TInput, DislexExternal<TShape, TSACA> >
         // 6. Run SACA on lex text
         pool << filter;
 
-#ifdef DISLEX_EXTERNAL_RUNNING_TIMES
+        #ifdef DISLEX_EXTERNAL_RUNNING_TIMES
         std::cout << "   | pool << filter:   " << sysTime() - teim << "s (len = " << length(textIn) << ")" << std::endl; teim = sysTime();
-#endif
+        #endif
 
         // 7. Reverse Transform is done during the reading process
         return true;
@@ -528,7 +526,8 @@ struct Pipe<TInput, DislexExternal<TShape, TSACA> >
 template <typename TInput, typename TShape, typename TSACA, typename TPair, typename TLimits>
 struct Pipe<TInput, Multi<DislexExternal<TShape, TSACA>, TPair, TLimits> >
 {
-    typedef If<typename Eval<  BitsPerValue<TypeOf_(TInput)>::VALUE * WEIGHT<TShape>::VALUE < 64  >::Type, BitPacked<>, Pack>         TPack;
+    typedef typename If<typename Eval< BitsPerValue<TypeOf_(TInput)>::VALUE * WEIGHT<TShape>::VALUE <= 64  >::Type,
+                        BitPacked<>, Pack >::Type               TPack;
 
     typedef Pipe<TInput, Multi<GappedTupler<TShape, false, TPack>,
             TPair, TLimits> >                                   TPipeTupler;
@@ -592,15 +591,15 @@ struct Pipe<TInput, Multi<DislexExternal<TShape, TSACA>, TPair, TLimits> >
         TTupleComparator                                        _comp(limits);
         TPoolSorter                                             sorter(tupler, _comp);
 
-#ifdef DISLEX_EXTERNAL_RUNNING_TIMES
+        #ifdef DISLEX_EXTERNAL_RUNNING_TIMES
         double teim = sysTime();
-#endif
+        #endif
 
         sorter << tupler;
 
-#ifdef DISLEX_EXTERNAL_RUNNING_TIMES
+        #ifdef DISLEX_EXTERNAL_RUNNING_TIMES
         std::cout << "   | sorter << tupler: " << sysTime() - teim << "s" << std::endl; teim = sysTime();
-#endif
+        #endif
 
         // 3. Name tuples by their rank
         TPipeNamer                                              namer(sorter, _comp);
@@ -610,9 +609,9 @@ struct Pipe<TInput, Multi<DislexExternal<TShape, TSACA>, TPair, TLimits> >
         TPoolMapper                                             mapper(namer, _map);
         mapper << namer;
 
-#ifdef DISLEX_EXTERNAL_RUNNING_TIMES
+        #ifdef DISLEX_EXTERNAL_RUNNING_TIMES
         std::cout << "   | mapper << namer:  " << sysTime() - teim << "s\tsigma = " << (namer.tmp.i2 +1) << std::endl; teim = sysTime();
-#endif
+        #endif
 
         // 5. Discard positions, keep rank
         TPipeFilterI2                                           filter(mapper);
@@ -620,9 +619,9 @@ struct Pipe<TInput, Multi<DislexExternal<TShape, TSACA>, TPair, TLimits> >
         // 6. Run SACA on lex text
         pool << filter;
 
-#ifdef DISLEX_EXTERNAL_RUNNING_TIMES
+        #ifdef DISLEX_EXTERNAL_RUNNING_TIMES
         std::cout << "   | pool << filter:   " << sysTime() - teim << "s (len = " << length(textIn) << ")" << std::endl; teim = sysTime();
-#endif
+        #endif
         
         // 7. Reverse Transform is done during the reading process
         return true;
