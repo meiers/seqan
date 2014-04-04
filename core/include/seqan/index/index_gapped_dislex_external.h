@@ -264,8 +264,8 @@ struct _dislexTupleCompMulti  : public std::binary_function<TValue, TValue, TRes
         TSetPos lb = posToLen(b.i1);
 
         // find out the real lengths of the gapped strings
-        TSize rla = (la.i2 < _span ? realLengths[la.i2] : _weight);
-        TSize rlb = (lb.i2 < _span ? realLengths[lb.i2] : _weight);
+        TSize rla = (la.i2 < static_cast<TSize>(_span) ? realLengths[la.i2] : static_cast<TSize>(_weight));
+        TSize rlb = (lb.i2 < static_cast<TSize>(_span) ? realLengths[lb.i2] : static_cast<TSize>(_weight));
         
         // lexicographical comparison
         TSize n = std::min(static_cast<TSize>(_weight), std::min(rla, rlb) );
@@ -337,9 +337,9 @@ struct _dislexTupleCompMulti<Pair<TSetPos, Tuple<TTupleValue, WEIGHT<TShape>::VA
         TSetPos lb = posToLen(b.i1);
 
         // find out the real lengths of the gapped strings
-        TSize rla = (la.i2 < _span ? realLengths[la.i2] : _weight);
-        TSize rlb = (lb.i2 < _span ? realLengths[lb.i2] : _weight);
-
+        TSize rla = (la.i2 < static_cast<TSize>(_span) ? realLengths[la.i2] : static_cast<TSize>(_weight));
+        TSize rlb = (lb.i2 < static_cast<TSize>(_span) ? realLengths[lb.i2] : static_cast<TSize>(_weight));
+        
         // both cyclic shapes are more than "full"
         if (la.i2 > static_cast<TSize>(_span) && lb.i2 > static_cast<TSize>(_span))
             return 0;
