@@ -271,11 +271,11 @@ struct GappedSuffixQgramLess_ : public std::binary_function<TSAValue, TSAValue, 
 
         TSize p = 0;
 
+        // lexicographical comparison
         for (; saIt < saEnd && sbIt < sbEnd && p < _weight; ++saIt, ++sbIt, ++p)
         {
             if (ordValue(*saIt) == ordValue(*sbIt)) continue;
-            if (ordValue(*saIt) < ordValue(*sbIt)) return -1;
-            if (ordValue(*saIt) > ordValue(*sbIt)) return 1;
+            return (ordValue(*saIt) < ordValue(*sbIt) ? -1 : 1);
         }
 
         typename Size<TText>::Type lena = N - a;
@@ -302,31 +302,6 @@ struct GappedSuffixQgramLess_ : public std::binary_function<TSAValue, TSAValue, 
         // should never occur:
         SEQAN_ASSERT_EQ(true, false);
         return 0;
-
-
-
-
-/*
-        // both cyclic shapes are "full" (stronger criterium than p == _weight)
-        if (a+_span <= N && b+_span <= N)
-            return 0;
-        
-        // at least one is incomplete
-        // if they are equally long, start position decides
-        if (sbEnd - sbIt == saEnd - saIt)
-        {
-            if (a < b) return 1;
-            if (a > b) return -1;
-        }
-
-        // they are not equally long
-        if (!(sbIt < sbEnd)) return 1; // b has ended
-        if (!(saIt < saEnd)) return -1;// a has ended
-        
-        // should never be reached
-        SEQAN_ASSERT_EQ(true, false);
-        return 0;
- */
     }
 };
 
@@ -369,11 +344,11 @@ struct GappedSuffixQgramLess_ <TSAValue, TShape, StringSet<TText, TSpec>, TResul
 
         TSize p = 0;
 
+        // lexicographical comparison
         for (; saIt < saEnd && sbIt < sbEnd && p < _weight; ++saIt, ++sbIt, ++p)
         {
             if (ordValue(*saIt) == ordValue(*sbIt)) continue;
-            if (ordValue(*saIt) < ordValue(*sbIt)) return -1;
-            if (ordValue(*saIt) > ordValue(*sbIt)) return 1;
+            return (ordValue(*saIt) < ordValue(*sbIt) ? -1 : 1);
         }
 
         typename Size<TSet>::Type lena = length(_text[getSeqNo(a)]) - getSeqOffset(a);
