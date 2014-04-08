@@ -64,9 +64,11 @@ struct Dislex {};
 
 template <typename TText, typename TMod>
 struct LexText {
-    typedef typename Size<TText>::Type TSize;
+    typedef typename SAValue<TText>::Type TSize;
     typedef String<TSize> Type;
 };
+template <typename TText, typename TSpec, typename TMod>
+struct LexText<StringSet<TText,TSpec>, TMod> : LexText<TText, TMod> {};
 
 
 // ==========================================================================
