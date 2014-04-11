@@ -222,7 +222,7 @@ void call2(T const & text, TShape const &, RunSACAOptions const & options)
 {
 
     if (options.algorithm == "DislexSkew7")         build_Index(text, Dislex<Skew7>(), TShape());
-/*  if (options.algorithm == "DislexExternal")      build_Index(text, DislexExternal<TShape>(), TShape());
+    if (options.algorithm == "DislexExternal")      build_Index(text, DislexExternal<TShape>(), TShape());
     if (options.algorithm == "InplaceRadixSort")
     {
         if (TShape::span == 1)                      build_Index_ungapped(text, InplaceRadixSort());
@@ -235,7 +235,7 @@ void call2(T const & text, TShape const &, RunSACAOptions const & options)
     if (options.algorithm == "Skew7")               build_Index_ungapped(text, Skew7());
     if (options.algorithm == "SkewExternal")        build_Index_ungapped(text, Skew7(), true);
     if (options.algorithm == "None")                std::cout << "No index built." << std::endl;
-*/
+
 }
 
 
@@ -245,13 +245,12 @@ void call(T const & text, RunSACAOptions const & options)
     switch (options.shape) {
         case 0: call2(text, CyclicShape<FixedShape<0,GappedShape<HardwiredShape<> >,0> >(), options); break;
         case 1: call2(text, RunSACAOptions::TShape_1(), options); break;
-/*        case 2: call2(text, RunSACAOptions::TShape_2(), options); break;
+        case 2: call2(text, RunSACAOptions::TShape_2(), options); break;
         case 3: call2(text, RunSACAOptions::TShape_3(), options); break;
         case 4: call2(text, RunSACAOptions::TShape_4(), options); break;
         case 5: call2(text, RunSACAOptions::TShape_5(), options); break;
         case 6: call2(text, RunSACAOptions::TShape_6(), options); break;
         case 7: call2(text, RunSACAOptions::TShape_7(), options); break;
-*/
     }
 }
 
