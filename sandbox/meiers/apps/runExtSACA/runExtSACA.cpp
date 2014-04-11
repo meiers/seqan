@@ -64,6 +64,12 @@ struct Fibre< Index< StringSet<String<Dna5, MMap<> >, Owner<ConcatDirect<> > > c
     typedef StringSet<String<Dna5, MMap<> >, Owner<ConcatDirect<> > > TSet;
     typedef String<typename SAValue<TSet>::Type, MMap<> > Type;
 };
+
+    template <typename TIndexSpec>
+    struct Fibre< Index< String<Dna5, MMap<> > const, TIndexSpec>, FibreSA>
+    {
+        typedef String<typename SAValue<String<Dna5, MMap<> > >::Type, MMap<> > Type;
+    };
 }
 
 // --------------------------------------------------------------------------
@@ -83,6 +89,7 @@ struct RunExtSACAOptions
     CharString file;
     CharString outfile;
     int shape;
+    bool concatenation;
     
     void print()
     {
@@ -128,7 +135,7 @@ parseCommandLine(RunExtSACAOptions & options, int argc, char const ** argv)
     
     addArgument(parser, ArgParseArgument(ArgParseArgument::INPUTFILE, "FASTA FILE"));
     addArgument(parser, ArgParseArgument(ArgParseArgument::OUTPUTFILE, "OUTPUTFILE"));
-
+    addOption(parser, seqan::ArgParseOption("c", "concat", "Force text to be read as a single string by concatenating entries. If not set a string set will be used"));
     addOption(parser, seqan::ArgParseOption("s", "shape", "Specify the cyclic shape.", ArgParseArgument::INTEGER, "[0..7]"));
     setMinValue(parser, "shape", "0");
     setMaxValue(parser, "shape", "7");
@@ -146,6 +153,7 @@ parseCommandLine(RunExtSACAOptions & options, int argc, char const ** argv)
     getOptionValue(options.shape, parser, "shape");
     getArgumentValue(options.file, parser, 0);
     getArgumentValue(options.outfile, parser, 1);
+    options.concatenation = isSet(parser, "concat");
 
     return ArgumentParser::PARSE_OK;
 }
@@ -224,7 +232,6 @@ int main(int argc, char const ** argv)
     // Create RecordReader.
     seqan::RecordReader<seqan::String<char, seqan::MMap<> >,
                         seqan::DoublePass<seqan::StringReader> > reader(mmapString);
-    
 
     // Read file in one pass.
     StringSet<String<char, MMap<> >, Owner<ConcatDirect<> > > ids;
@@ -237,9 +244,19 @@ int main(int argc, char const ** argv)
         return 1;
     }
     clear(ids);
-    std::cout << "Time for reading MMap Strings: " << sysTime() - teim << " (" << length(seqs) << "x, " << lengthSum(seqs) << ")" << std::endl;
+    std::cout << "Time for reading MMap String: " << sysTime() - teim << " (" << length(seqs) << "x, " << lengthSum(seqs) << ")" << std::endl;
 
-    std::cout << prefix(seqs.concat,80) << "..." << std::endl;
-    call(seqs, options);
+
+    if (!options.concatenation)
+    {
+        std::cout <<"String Set" << std::endl;
+        call(seqs, options);
+    }
+    else {
+        std::cout <<"String" << std::endl;
+        call(seqs.concat, options);
+    }
+
+
     return 0;
 }
