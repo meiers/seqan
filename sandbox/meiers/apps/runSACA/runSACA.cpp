@@ -46,6 +46,45 @@ using namespace seqan;
 // Classes
 // ==========================================================================
 
+namespace seqan {
+template<> struct SAValue<DnaString>
+{
+    typedef unsigned Type;
+};
+template<> struct SAValue<Dna5String>
+{
+    typedef unsigned Type;
+};
+template<> struct SAValue<Peptide>
+{
+    typedef unsigned Type;
+};
+template<> struct SAValue<CharString>
+{
+    typedef unsigned Type;
+};
+
+template<> struct SAValue<StringSet<DnaString> >
+{
+    typedef Pair<unsigned, unsigned, Pack> Type;
+}; 
+template<> struct SAValue<StringSet<Dna5String> >
+{
+    typedef Pair<unsigned, unsigned, Pack> Type;
+}; 
+template<> struct SAValue<StringSet<Peptide> >
+{
+    typedef Pair<unsigned, unsigned, Pack> Type;
+}; 
+template<> struct SAValue<StringSet<CharString> >
+{
+    typedef Pair<unsigned, unsigned, Pack> Type;
+}; 
+
+
+}
+
+
 // --------------------------------------------------------------------------
 // Class RunSACAOptions
 // --------------------------------------------------------------------------
@@ -249,7 +288,6 @@ void cast_and_run(StringSet<T, TSpec> & text, RunSACAOptions const & options)
     for (unsigned i = 0; i< 256; ++i)
         if (arr[i]) ++sigma;
     
-    std::cout << ordValue('N') << "," << ordValue('n') << "," << ordValue('A') << std::endl;
     std::cout << "StringSet " << length(text) << " with length sum " << lengthSum(text) << std::endl;
     std::cout << "alphabet size: " << sigma << " (assuming 4: DNA, 5: DNA5, <=24: AminoAcid, >24: char)" << std::endl;
     
