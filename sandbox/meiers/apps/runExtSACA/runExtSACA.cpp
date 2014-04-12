@@ -48,28 +48,45 @@ using namespace seqan;
 // ==========================================================================
 
 namespace seqan {
-template<> struct SAValue<String<Dna5, MMap<> > >
+    
+    typedef unsigned        TSingle;
+    typedef Pair<unsigned, unsigned, Pack>  TPair;
+    typedef unsigned        TPairSize;
+    
+    
+// define SAValue, Size and FibreSA
+template <typename TSpec> struct SAValue<String<Dna5, TSpec> >
 {
-    typedef unsigned Type;
+    typedef TSingle Type;
+};
+template <typename TSpec> struct SAValue<StringSet<String<Dna5, TSpec>, Owner<ConcatDirect<> > > >
+{
+    typedef TPair Type;
+};
+template <typename TSpec> struct Size<String<Dna5, TSpec> >
+{
+    typedef TSingle Type;
+};
+template <typename TConfig> struct Size<String<Dna5, External<TConfig> > >
+{
+    typedef TSingle Type;
+};
+template <typename TSpec> struct Size<StringSet<String<Dna5, TSpec>, Owner<ConcatDirect<> > > >
+{
+    typedef TPairSize Type;
+};
+template <typename TSpec, typename TIndexSpec> 
+struct Fibre< Index< StringSet<String<Dna5, TSpec>, Owner<ConcatDirect<> > > const, TIndexSpec>, FibreSA> 
+{
+    typedef StringSet<String<Dna5, TSpec>, Owner<ConcatDirect<> > > TSet;
+    typedef String<typename SAValue<TSet>::Type, TSpec> Type;
+};
+template <typename TSpec, typename TIndexSpec>
+struct Fibre< Index< String<Dna5, TSpec> const, TIndexSpec>, FibreSA>
+{
+    typedef String<typename SAValue<String<Dna5, TSpec> >::Type, TSpec> Type;
 };
 
-template<> struct SAValue<StringSet<String<Dna5, MMap<> >, Owner<ConcatDirect<> > > >
-{
-    typedef Pair<unsigned, unsigned, Pack> Type;
-};
-
-template <typename TIndexSpec> 
-struct Fibre< Index< StringSet<String<Dna5, MMap<> >, Owner<ConcatDirect<> > > const, TIndexSpec>, FibreSA> 
-{
-    typedef StringSet<String<Dna5, MMap<> >, Owner<ConcatDirect<> > > TSet;
-    typedef String<typename SAValue<TSet>::Type, MMap<> > Type;
-};
-
-    template <typename TIndexSpec>
-    struct Fibre< Index< String<Dna5, MMap<> > const, TIndexSpec>, FibreSA>
-    {
-        typedef String<typename SAValue<String<Dna5, MMap<> > >::Type, MMap<> > Type;
-    };
 }
 
 // --------------------------------------------------------------------------
@@ -90,6 +107,7 @@ struct RunExtSACAOptions
     CharString outfile;
     int shape;
     bool concatenation;
+    bool dump;
     
     void print()
     {
@@ -141,6 +159,8 @@ parseCommandLine(RunExtSACAOptions & options, int argc, char const ** argv)
     setMaxValue(parser, "shape", "7");
     setDefaultValue(parser, "shape", "0");
     
+    addOption(parser, seqan::ArgParseOption("d", "dump", "Read Fasta file and dump it as binary"));
+    
     // Parse command line.
     seqan::ArgumentParser::ParseResult res = seqan::parse(parser, argc, argv);
 
@@ -154,6 +174,7 @@ parseCommandLine(RunExtSACAOptions & options, int argc, char const ** argv)
     getArgumentValue(options.file, parser, 0);
     getArgumentValue(options.outfile, parser, 1);
     options.concatenation = isSet(parser, "concat");
+    options.dump = isSet(parser, "dump");
 
     return ArgumentParser::PARSE_OK;
 }
@@ -167,7 +188,7 @@ void build_Index(TText const & text, TShape const &, RunExtSACAOptions const & o
 {
     Index<TText const, IndexSa<Gapped<ModCyclicShape<TShape> > > > index(text);
     std::cout << "Open " << options.outfile << " for the SA" << std::endl;
-    
+
     if (!open(indexSA(index), toCString(options.outfile), OPEN_CREATE | OPEN_RDWR)) std::cout << "cannot open " << options.outfile << " to store SA" << std::endl;
     
     indexCreate(index, FibreSA(), DislexExternal<TShape>());
@@ -208,6 +229,40 @@ void call(T const & text, RunExtSACAOptions const & options)
    }
 }
 
+
+// --------------------------------------------------------------------------
+// Function dump()
+// --------------------------------------------------------------------------
+void dump(RunExtSACAOptions & options) 
+{
+    String<char, MMap<> > mmapString;
+    if (!open(mmapString, toCString(options.file), OPEN_RDONLY))
+    {
+        std::cout << "Cannot open mmap string" << std::endl;
+        return;
+    }
+        
+    // Read into Alloc StringSets
+    RecordReader<String<char, MMap<> >, DoublePass<StringReader> > reader(mmapString);
+    StringSet<String<char>, Owner<ConcatDirect<> > > ids;
+    StringSet<String<Dna5>, Owner<ConcatDirect<> > > seqs;
+
+    double teim=sysTime();
+    if (!read2(ids, seqs, reader, Fasta()) != 0)
+        std::cout << "Read Alloc string in " << sysTime() - teim << "s. #seqs=" << length(seqs) << ", total=" << lengthSum(seqs) << std::endl;
+    else
+    {
+        std::cout << "Could not read Fasta from " << options.file << std::endl;
+        return;
+    }
+    
+    clear(ids);
+    if (save(seqs, toCString(options.outfile)))
+        std::cout << "Saved string set to " << options.outfile << std::endl;
+    else
+        std::cout << "Problem saving the string. " << std::endl;
+}
+
 // --------------------------------------------------------------------------
 // Function main()
 // --------------------------------------------------------------------------
@@ -223,38 +278,28 @@ int main(int argc, char const ** argv)
 
     options.print();
     
-    
-    // Open memory mapped string.
-    seqan::String<char, seqan::MMap<> > mmapString;
-    if (!open(mmapString, toCString(options.file), seqan::OPEN_RDONLY))
-        return 1;
-
-    // Create RecordReader.
-    seqan::RecordReader<seqan::String<char, seqan::MMap<> >,
-                        seqan::DoublePass<seqan::StringReader> > reader(mmapString);
-
-    // Read file in one pass.
-    StringSet<String<char, MMap<> >, Owner<ConcatDirect<> > > ids;
-    StringSet<String<Dna5, MMap<> >, Owner<ConcatDirect<> > > seqs;
-
-    double teim=sysTime();
-
-    if (read2(ids, seqs, reader, Fasta()) != 0) {
-        std::cout << "cannot read file" << std::endl;
-        return 1;
+    if (options.dump)
+    {
+        dump(options);
+        return 0;
     }
-    clear(ids);
-    std::cout << "Time for reading MMap String: " << sysTime() - teim << " (" << length(seqs) << "x, " << lengthSum(seqs) << ")" << std::endl;
-
 
     if (!options.concatenation)
     {
-        std::cout <<"String Set" << std::endl;
-        call(seqs, options);
+        // Open as External String Set
+        StringSet<String<Dna5, External<> >, Owner<ConcatDirect<> > > set;
+        open(set, toCString(options.file));
+        std::cout <<"Load external String Set with length" << length(set) << " sequences and a total length of " << lengthSum(set) << std::endl;
+        call(set, options);
     }
-    else {
-        std::cout <<"String" << std::endl;
-        call(seqs.concat, options);
+    else 
+    {
+        // Open as External String.
+        CharString fileName = options.file; fileName += ".concat";
+        String<Dna5, External<> > str;
+        open(str, toCString(fileName));
+        std::cout <<"Load external String of length" << length(str) << std::endl;
+        call(str, options);
     }
 
 
