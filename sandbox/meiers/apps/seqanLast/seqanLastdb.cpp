@@ -83,6 +83,7 @@ void printTables(TSA const & sa, TDir const & dir, TSeqSet const & seqs)
 template <typename TRealShape, typename TCyclicShape, typename TSize>
 void _getKmerShape(TRealShape & shape, TCyclicShape const & cycShape, TSize k)
 {
+    // Note(meiers): This would be more efficient when HardwiredShape is derived from FixedShape<>
     CharString shapeStr;
     cyclicShapeToString(shapeStr, cycShape);
 

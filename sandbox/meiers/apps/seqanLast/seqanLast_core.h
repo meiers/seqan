@@ -46,6 +46,7 @@ typedef StringSet<String<Dna5>,          Owner<ConcatDirect<> > >         TNorma
 // Shapes
 typedef CyclicShape<FixedShape<0, GappedShape<HardwiredShape<1> >, 1> >       Shape1;   // 110
 typedef CyclicShape<FixedShape<0, GappedShape<HardwiredShape<1,1> >, 1> >     Shape2;   // 1110
+// TODO(meiers): Define more shapes!
 
 namespace SEQAN_NAMESPACE_MAIN
 {
@@ -226,7 +227,7 @@ void adaptedCreateQGramIndexDirOnly(TDir &dir,
 }
 
 // -----------------------------------------------------------------------------
-// Function adaptiveSeeds()
+// Function adaptiveSeeds()                                           [ungapped]
 // -----------------------------------------------------------------------------
 
 template <
@@ -244,7 +245,6 @@ adaptiveSeeds(TTrieIndex &index,
     // NOTE: query and database modifiers are expected to match
     //       (i.e. be of the same subset/shape type)
     // NOTE: Does only return the SA range, not the seed length
-
     typedef typename Iterator<TTrieIndex, TopDown<> >::Type   TTreeIter;
     typedef typename Size<TTrieIndex>::Type                   TSize;
     typedef typename Iterator<TQuery const, Standard>::Type   TQueryIter;
@@ -289,15 +289,65 @@ adaptiveSeeds(TTrieIndex &index,
     return range(treeIter);
 }
 
+
+// -----------------------------------------------------------------------------
+// Function adaptiveSeeds()                                             [Gapped]
+// -----------------------------------------------------------------------------
+
+template <typename TIndexText,
+    typename TMod,
+    typename TLookupIndex,
+    typename TQuery,
+    typename TSize2 >
+inline Pair<typename Size<Index<TIndexText, IndexSa<Gapped<TMod> > > >::Type>
+adaptiveSeeds(Index<TIndexText, IndexSa<Gapped<TMod> > > &index,
+              TLookupIndex & table,
+              TQuery const &query,
+              TSize2 maxFreq,
+              int verbosity)
+{
+    typedef Index<TIndexText, IndexSa<Gapped<TMod> > >          TTrieIndex;
+    typedef typename Iterator<TTrieIndex, TopDown<> >::Type     TTreeIter;
+    typedef typename Size<TTrieIndex>::Type                     TSize;
+    typedef typename Fibre<TLookupIndex, QGramShape>::Type      TShape;
+    // TODO: Here Shape is always ungapped, but in the index it can be gapped !!
+    typedef typename Value<TShape>::Type                        THash;
+    typedef typename Host<TShape>::Type                         TShapeAlph;
+
+
+    typedef ModifiedString<TQuery const, TMod>                  TModStr;
+    typedef typename Iterator<TModStr, Standard>::Type          TQueryIter;
+
+    TShape qryHash;
+    TModStr modQuery(query);
+    TQueryIter qry = begin(modQuery, Standard());
+    TQueryIter qryEnd = end(modQuery, Standard());
+    TTreeIter treeIter(index); // root
+
+    // 2.
+    // Continue or restart search in the Suffix array.
+    while(qry < qryEnd)
+    {
+        if(!goDown(treeIter, *(qry++)))
+            break;
+
+        if(countOccurrences(treeIter) <= maxFreq)
+            break;
+    }
+
+    return range(treeIter);
+}
+
+
 // --------------------------------------------------------------------------
 // Function myUngapedExtendSeed()
 // --------------------------------------------------------------------------
 
 template <typename TConfig,
-typename TDatabase,
-typename TQuery,
-typename TScoreValue,
-typename TScoreSpec>
+    typename TDatabase,
+    typename TQuery,
+    typename TScoreValue,
+    typename TScoreSpec>
 inline void
 myUngapedExtendSeed(Seed<Simple, TConfig> & seed,
                     TDatabase const & database,

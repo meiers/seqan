@@ -207,13 +207,13 @@ int main(int argc, char const ** argv)
     if (res != ArgumentParser::PARSE_OK)
         return res;
 
-    // Output Options:
-    if(options.verbosity > 1)
-        options.print();
-
     // Load property file
     if (!_readPropertyFile(options))
         return 1;
+
+    // Output Options:
+    if(options.verbosity > 1)
+        options.print();
 
     return _lastChoice1(options);
 }
