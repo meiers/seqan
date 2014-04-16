@@ -722,7 +722,7 @@ inline void createGappedSuffixArray(
     #endif
 
     // Build Index using Skew7 into the memory of SA
-    createSuffixArray(SA, lexText, TSACA(), sigma, 0);
+    createSuffixArray(SA, lexText, TSACA(), sigma);
 
     #ifdef DISLEX_INTERNAL_RUNNING_TIMES
     std::cout << "   |     saca: " << sysTime() - teim << "s (len = " << length(concat(lexText)) << ")" << std::endl; teim = sysTime();
@@ -781,7 +781,7 @@ inline void createGappedSuffixArray(
     // Build Index using Skew7
     TLexText innerSa;
     resize(innerSa, length(SA), Exact());
-    createSuffixArray(innerSa, lexText, TSACA(), sigma, 0);
+    createSuffixArray(innerSa, lexText, TSACA(), sigma);
 
     #ifdef DISLEX_INTERNAL_RUNNING_TIMES
     std::cout << "   |     saca: " << sysTime() - teim << "s (len = " << length(concat(lexText)) << ")" << std::endl; teim = sysTime();
