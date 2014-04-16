@@ -288,7 +288,7 @@ int main(int argc, char const ** argv)
     {
         // Open as External String Set
         StringSet<String<Dna5, External<> >, Owner<ConcatDirect<> > > set;
-        open(set, toCString(options.file));
+        open(set, toCString(options.file), OPEN_RDONLY);
         std::cout <<"Load external String Set with length" << length(set) << " sequences and a total length of " << lengthSum(set) << std::endl;
         call(set, options);
     }
@@ -297,7 +297,7 @@ int main(int argc, char const ** argv)
         // Open as External String.
         CharString fileName = options.file; fileName += ".concat";
         String<Dna5, External<> > str;
-        open(str, toCString(fileName));
+        open(str, toCString(fileName), OPEN_RDONLY);
         std::cout <<"Load external String of length" << length(str) << std::endl;
         call(str, options);
     }
