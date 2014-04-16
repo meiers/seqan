@@ -121,7 +121,7 @@ struct Lastdb
             if (options.algorithm == "radix")
                 indexCreate(index, FibreSA(), InplaceRadixSort() );
             if (options.algorithm == "dislex")
-                indexCreate(index, FibreSA(), Dislex<Skew7>() );
+                indexCreate(index, FibreSA(), Dislex<LarssonSadakane>() );
             if (options.algorithm == "external")
                 indexCreate(index, FibreSA(), DislexExternal<TShape>() );
             save(index, toCString(options.outputName));
@@ -162,7 +162,7 @@ struct Lastdb
         }
         else
         {
-            std::cerr << "Cannot write sequence Ids to " << fileName << std::endl;
+            std::cout << "Cannot write sequence Ids to " << fileName << std::endl;
             return 4;
         }
 
@@ -209,7 +209,7 @@ int _lastDbChoice2(TSeqSet const &databases, TIdSet const &ids, SeqanLastDbOptio
         case 11: return _lastDbChoice3 <11>(databases, ids, options, TShape());
         case 12: return _lastDbChoice3 <12>(databases, ids, options, TShape());
         default:
-            std::cerr << "No valid k-mer size chosen. Exit" << std::endl;
+            std::cout << "No valid k-mer size chosen. Exit" << std::endl;
             return 2;
     }
 }
@@ -223,7 +223,7 @@ int _lastDbChoice1(TSeqSet const &databases, TIdSet const &ids, SeqanLastDbOptio
         case 1: return _lastDbChoice2(databases, ids, options, Shape1());
         case 2: return _lastDbChoice2(databases, ids, options, Shape2());
         default:
-            std::cerr << "No valid shape chosen. Exit" << std::endl;
+            std::cout << "No valid shape chosen. Exit" << std::endl;
             return 1;
     }
 }
@@ -302,7 +302,7 @@ int main(int argc, char const ** argv)
 
     if(length(databases) > 255)
     {
-        std::cerr << "Attention: currently only up to 256 sequences (usually chromosomes) can be indexed!"
+        std::cout << "Attention: currently only up to 256 sequences (usually chromosomes) can be indexed!"
         " STOP HERE." << std::endl;
         return 99;
     }

@@ -128,7 +128,7 @@ int _writePropertyFile(CharString const & fileName, TSize k, TType shapeChoice, 
 {
     std::fstream file(toCString(fileName), std::ios::binary | std::ios::out);
     if (!file.good()) {
-        std::cerr << "Could not open " << fileName << " to write the propoerty file" << std::endl;
+        std::cout << "Could not open " << fileName << " to write the propoerty file" << std::endl;
         return 3;
     }
     file << "k=" << k << std::endl;
@@ -295,7 +295,7 @@ _importSequences(TSeqSet & seqs, TIdSet & ids, CharString const & fileName, int 
     if (!open(multiSeqFile.concat, toCString(fileName), OPEN_RDONLY))
     {
         if(verbosity)
-            std::cerr << "Failed to open " << fileName << "." << std::endl;
+            std::cout << "Failed to open " << fileName << "." << std::endl;
         return false;
     }
 
@@ -327,7 +327,7 @@ _importSequences(TSeqSet & seqs, TIdSet & ids, CharString const & fileName, int 
         ((seqCount > 1) ? "s" : "") << " with total length " <<
         lengthSum(seqs) << " from " << fileName << std::endl;
     if (!idsUnique)
-        if(verbosity) std::cerr << "WARNING: Non-unique IDs in " <<
+        if(verbosity) std::cout << "WARNING: Non-unique IDs in " <<
             fileName << " ids. Output can be ambigous.\n";
     return true;
 }
@@ -527,7 +527,7 @@ bool _readPropertyFile(SeqanLastOptions & options)
             if (key == "shape")
             {
                 if (b_shape) {
-                    if(options.verbosity>0) std::cerr << "Double definition of shape in property file. Use the first one." << std::endl;
+                    if(options.verbosity>0) std::cout << "Double definition of shape in property file. Use the first one." << std::endl;
                     continue;
                 }
                 b_shape = true;
@@ -542,21 +542,21 @@ bool _readPropertyFile(SeqanLastOptions & options)
             else if (key == "k")
             {
                 if (b_k) {
-                    if(options.verbosity>0) std::cerr << "Double definition of k-mer size in property file. Use the first one." << std::endl;
+                    if(options.verbosity>0) std::cout << "Double definition of k-mer size in property file. Use the first one." << std::endl;
                     continue;
                 }
                 b_k = true;
                 int v = std::atoi(value.c_str());
                 if (v <=0 || v >12)
                 {
-                    if(options.verbosity>0) std::cerr << "Strange k-mer size in property file: " << line << std::endl;
+                    if(options.verbosity>0) std::cout << "Strange k-mer size in property file: " << line << std::endl;
                     return false;
                 } else {
                     options.k = v;
                 }
             }
             else {
-                if(options.verbosity>0) std::cerr << "Unknown key \"" << key << "\" in property file. Ignore it." << std::endl;
+                if(options.verbosity>0) std::cout << "Unknown key \"" << key << "\" in property file. Ignore it." << std::endl;
                 continue;
             }
         }
@@ -566,7 +566,7 @@ bool _readPropertyFile(SeqanLastOptions & options)
     }
     else
     {
-        if(options.verbosity>0) std::cerr << "Cannot read property file \"" << fileName << "\" of the database." << std::endl;
+        if(options.verbosity>0) std::cout << "Cannot read property file \"" << fileName << "\" of the database." << std::endl;
         return false;
     }
 }
@@ -587,7 +587,7 @@ bool _readIdFile(TIdSet & set, SeqanLastOptions & options)
     }
     else
     {
-        if(options.verbosity>0) std::cerr << "Cannot read ID file \"" << f << "\" of the database." << std::endl;
+        if(options.verbosity>0) std::cout << "Cannot read ID file \"" << f << "\" of the database." << std::endl;
         return false;
     }
 }

@@ -176,7 +176,7 @@ int _lastChoice2(SeqanLastOptions &options,
         case 11: return importAndRun <11>(options, TShape());
         case 12: return importAndRun <12>(options, TShape());
         default:
-            std::cerr << "No valid k-mer size chosen. Exit" << std::endl;
+            std::cout << "No valid k-mer size chosen. Exit" << std::endl;
             return 2;
     }
 }
@@ -189,7 +189,7 @@ int _lastChoice1(SeqanLastOptions &options)
         case 1: return _lastChoice2(options, Shape1() );
         case 2: return _lastChoice2(options, Shape2() );
         default:
-            std::cerr << "No valid shape chosen. Exit" << std::endl;
+            std::cout << "No valid shape chosen. Exit" << std::endl;
             return 1;
     }
 }
