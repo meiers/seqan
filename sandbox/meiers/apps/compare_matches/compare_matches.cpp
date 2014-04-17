@@ -67,6 +67,7 @@ struct _Match
 
 	CharString seq1;
 	CharString seq2;
+    int score;                  // new
 
 	TPos begin1;
 	TPos begin2;
@@ -81,6 +82,24 @@ struct _Match
 		strand = true;
 	}
 };
+
+struct _Distance
+{
+
+};
+
+template <typename TPos>
+int distance(_Match<TPos> const & a, _Match<TPos> const & b)
+{
+    // completely incomparable
+    if (a.seq1 != b.seq1 || a.seq2 != b.seq2) return 1000000;
+    return 0;
+
+
+    @ work here
+
+
+}
 
 template<typename TPos>
 void
@@ -147,8 +166,58 @@ readRecord(TReader & reader, TMatch & match, Gff) {
     res = readUntilChar(match.seq2, reader, ';');
     if (res) return res;
 
-	// skip until key "seq2Range" or "length"
-    while (!atEnd(reader) && buffer != "seq2Range" && buffer != "length") {
+
+    bool found_seq2Range = false;
+    bool found_score = false;
+    match.score = -999;
+
+    // skip until key "seq2Range" or "length"
+    while (!atEnd(reader) )
+    {
+        if (buffer == "seq2Range")
+        {
+            clear(buffer);
+            res = readDigits(buffer, reader);
+            if (res) return res;
+            match.begin2 = lexicalCast<unsigned>(buffer);
+
+            // skip ','
+            skipChar(reader, ',');
+
+            // read end position 2
+            clear(buffer);
+            res = readDigits(buffer, reader);
+            if (res) return res;
+            match.end2 = lexicalCast<unsigned>(buffer);
+
+            found_seq2Range = true;
+        }
+        else if (buffer == "length" && !found_seq2Range)
+        {
+            match.begin2 = 0;
+
+            // read end position 2
+            clear(buffer);
+            res = readDigits(buffer, reader);
+            if (res) return res;
+            match.end2 = lexicalCast<unsigned>(buffer);
+        }
+        else if (buffer == "score" && !found_score)
+        {
+            clear(buffer);
+            res = readDigits(buffer, reader);
+            if (res) return res;
+            match.score = lexicalCast<unsigned>(buffer);
+
+            found_score = true;
+        }
+        // if both was found, leave
+        if (found_seq2Range && found_score)
+        {
+            skipLine(reader);
+            return 0;
+        }
+
         skipUntilChar(reader, ';');
         skipChar(reader, ';');
 
@@ -159,38 +228,7 @@ readRecord(TReader & reader, TMatch & match, Gff) {
         res = skipChar(reader, '=');
         if (res) return res;
     }
-
-	if (buffer == "seq2Range") {
-        clear(buffer);
-        res = readDigits(buffer, reader);
-        if (res) return res;
-        match.begin2 = lexicalCast<unsigned>(buffer);
-
-        // skip ','
-        skipChar(reader, ',');
-		
-		// read end position 2
-        clear(buffer);
-        res = readDigits(buffer, reader);
-        if (res) return res;
-        match.end2 = lexicalCast<unsigned>(buffer);
-	}
-    else if (buffer == "length") {
-		match.begin2 = 0;
-
-		// read end position 2
-        clear(buffer);
-        res = readDigits(buffer, reader);
-        if (res) return res;
-        match.end2 = lexicalCast<unsigned>(buffer);
-	}
-    else {
-		skipLine(reader);
-		return 1;
-	}
-
-	skipLine(reader);
-	return 0;
+	return 1;
 }
 
 template<typename TReader, typename TMatch>
@@ -199,6 +237,7 @@ readRecord(TReader & reader, TMatch & match, Blast) {
     CharString buffer;
     int res;
 
+    match.score = -999;
     skipWhitespaces(reader);
 
     // skip comment lines and read query sequence identifier
@@ -293,6 +332,7 @@ readRecord(TReader & reader, TMatch & match, Blat) {
     CharString buffer;
     int res;
 
+    match.score = -999;
     skipWhitespaces(reader);
 
 	// read column: subject sequence identifier
@@ -369,6 +409,7 @@ readRecord(TReader & reader, TMatch & match, LastZ) {
     CharString buffer;
     int res;
 
+    match.score = -999;
     skipWhitespaces(reader);
 
     // read column: subject sequence identifier
@@ -445,8 +486,11 @@ readRecord(TReader & reader, TMatch & match, Last) {
 
     skipWhitespaces(reader);
 
-    // skip first column
-    skipUntilWhitespace(reader);
+    // read first column: score
+    res = readDigits(buffer, reader);
+    if (res) return res;
+    match.score = lexicalCast<unsigned>(buffer);
+
     skipWhitespaces(reader);
 
     // read column: subject sequence identifier
@@ -761,8 +805,8 @@ int main(int argc, const char *argv[]) {
         return res == ArgumentParser::PARSE_ERROR; // 1 - error, 0 - otherwise
     }
 
-    //std::cout << "Reference file: " << refFile << std::endl;
-    //std::cout << "Compared file : " << compFile << std::endl;
+    std::cout << "Reference file: " << refFile << std::endl;
+    std::cout << "Compared file : " << compFile << std::endl;
 
     // read subject-matches file
     if (refFormat == "gff")
