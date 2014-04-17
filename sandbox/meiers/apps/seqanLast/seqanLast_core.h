@@ -226,117 +226,111 @@ void adaptedCreateQGramIndexDirOnly(TDir &dir,
     _qgramCummulativeSumAlt(dir, False());
 }
 
+
+// =============================================================================
+// Functions of Last
+// =============================================================================
+
+// -----------------------------------------------------------------------------
+// Function _goDownTrie()
+// -----------------------------------------------------------------------------
+
+template <typename TTrieIt, typename TQueryIt, typename TSize>
+inline void _goDownTrie(TTrieIt & trieIt,
+                        TQueryIt qryIt,
+                        TQueryIt qryEnd,
+                        TSize maxFreq)
+{
+    while(qryIt < qryEnd)
+    {
+        if(!goDown(trieIt, *(qryIt++)))
+            break;
+        if(countOccurrences(trieIt) <= maxFreq)
+            break;
+    }
+}
+
+// -----------------------------------------------------------------------------
+// Function _lookUp()
+// -----------------------------------------------------------------------------
+
+template <typename TLookupIndex, typename TTrieIt, typename TQueryIt, typename TSize>
+inline void _lookUp(TLookupIndex  & table,
+                    TTrieIt & trieIt,
+                    TQueryIt qryIt,
+                    TQueryIt qryEnd,
+                    TSize maxFreq)
+{
+    // TODO
+}
+
+
 // -----------------------------------------------------------------------------
 // Function adaptiveSeeds()                                           [ungapped]
 // -----------------------------------------------------------------------------
 
-template <
-    typename TTrieIndex,
-    typename TLookupIndex,
-    typename TQuery,
-    typename TSize2 >
+template <typename TTrieIndex, typename TLookupIndex, typename TQuery, typename TSize>
 inline Pair<typename Size<TTrieIndex>::Type>
 adaptiveSeeds(TTrieIndex &index,
               TLookupIndex & table,
-              TQuery const &query,
-              TSize2 maxFreq,
-              int verbosity)
+              TQuery const & query,
+              TSize maxFreq)
 {
-    // NOTE: query and database modifiers are expected to match
-    //       (i.e. be of the same subset/shape type)
-    // NOTE: Does only return the SA range, not the seed length
     typedef typename Iterator<TTrieIndex, TopDown<> >::Type   TTreeIter;
-    typedef typename Size<TTrieIndex>::Type                   TSize;
     typedef typename Iterator<TQuery const, Standard>::Type   TQueryIter;
-    typedef typename Fibre<TLookupIndex, QGramShape>::Type    TShape;
-    // TODO: Here Shape is always ungapped, but in the index it can be gapped !!
-    typedef typename Value<TShape>::Type                      THash;
-    typedef typename Host<TShape>::Type                       TShapeAlph;
 
-    TShape qryHash;
-    TQueryIter qry = begin(query, Standard());
-    TQueryIter qryEnd = end(query, Standard());
-    TTreeIter treeIter(index); // root
+    TTreeIter   trieIt(index);
+    TQueryIter  qryIt  = begin(query, Standard());
+    TQueryIter  qryEnd = end(query, Standard());
 
-    // 1.
-    // Lookup the hash table only for full length Shapes to avoid
-    // possible problems with Open Adressing indiex.
-/*    if(static_cast<TSize>(qryEnd - qry) >= weight(qryHash) )
-    {
-        hash(qryHash, qry);
-        Pair<TSize> initialRange = range(table, qryHash);
-
-        if(initialRange.i2 - initialRange.i1 > maxFreq)
-        {
-            treeIter.vDesc.range = initialRange;
-            treeIter.vDesc.repLen = weight(qryHash);
-            qry += weight(qryHash);
-            treeIter.vDesc.lastChar = *qry;
-        }
-    }
-*/
-    // 2.
-    // Continue or restart search in the Suffix array.
-    while(qry < qryEnd)
-    {
-        if(!goDown(treeIter, *(qry++)))
-            break;
-
-        if(countOccurrences(treeIter) <= maxFreq)
-            break;
-    }
-
-    return range(treeIter);
+    _lookUp(table, trieIt, qryIt, qryEnd, maxFreq);
+    _goDownTrie(trieIt, qryIt, qryEnd, maxFreq);
+    return range(trieIt);
 }
-
 
 // -----------------------------------------------------------------------------
 // Function adaptiveSeeds()                                             [Gapped]
 // -----------------------------------------------------------------------------
 
-template <typename TIndexText,
-    typename TMod,
-    typename TLookupIndex,
-    typename TQuery,
-    typename TSize2 >
+template <typename TIndexText, typename TMod, typename TLookupIndex, typename TQuery, typename TSize>
 inline Pair<typename Size<Index<TIndexText, IndexSa<Gapped<TMod> > > >::Type>
 adaptiveSeeds(Index<TIndexText, IndexSa<Gapped<TMod> > > &index,
               TLookupIndex & table,
-              TQuery const &query,
-              TSize2 maxFreq,
-              int verbosity)
+              TQuery const & query,
+              TSize maxFreq)
 {
     typedef Index<TIndexText, IndexSa<Gapped<TMod> > >          TTrieIndex;
     typedef typename Iterator<TTrieIndex, TopDown<> >::Type     TTreeIter;
-    typedef typename Size<TTrieIndex>::Type                     TSize;
-    typedef typename Fibre<TLookupIndex, QGramShape>::Type      TShape;
-    // TODO: Here Shape is always ungapped, but in the index it can be gapped !!
-    typedef typename Value<TShape>::Type                        THash;
-    typedef typename Host<TShape>::Type                         TShapeAlph;
-
-
     typedef ModifiedString<TQuery const, TMod>                  TModStr;
     typedef typename Iterator<TModStr, Standard>::Type          TQueryIter;
 
-    TShape qryHash;
-    TModStr modQuery(query);
-    TQueryIter qry = begin(modQuery, Standard());
-    TQueryIter qryEnd = end(modQuery, Standard());
-    TTreeIter treeIter(index); // root
+    TTreeIter   trieIt(index);
+    TModStr     modQuery(query);
+    TQueryIter  qryIt  = begin(modQuery, Standard());
+    TQueryIter  qryEnd = end(modQuery, Standard());
 
-    // 2.
-    // Continue or restart search in the Suffix array.
-    while(qry < qryEnd)
-    {
-        if(!goDown(treeIter, *(qry++)))
-            break;
-
-        if(countOccurrences(treeIter) <= maxFreq)
-            break;
-    }
-
-    return range(treeIter);
+    _lookUp(table, trieIt, qryIt, qryEnd, maxFreq);
+    _goDownTrie(trieIt, qryIt, qryEnd, maxFreq);
+    return range(trieIt);
 }
+
+
+/*
+ if(static_cast<TSize>(qryEnd - qry) >= weight(qryHash) )
+ {
+ hash(qryHash, qry);
+ Pair<TSize> initialRange = range(table, qryHash);
+
+ if(initialRange.i2 - initialRange.i1 > maxFreq)
+ {
+ treeIter.vDesc.range = initialRange;
+ treeIter.vDesc.repLen = weight(qryHash);
+ qry += weight(qryHash);
+ treeIter.vDesc.lastChar = *qry;
+ }
+ }
+ */
+
 
 
 // --------------------------------------------------------------------------
@@ -521,7 +515,7 @@ void linearLastal(
         {
             // Lookup adaptive Seed
             double xxx = cpuTime();
-            Pair<TDbSize> range = adaptiveSeeds(index, table, suffix(query, queryPos), maxFreq, verbosity);
+            Pair<TDbSize> range = adaptiveSeeds(index, table, suffix(query, queryPos), maxFreq);
             _tASCalls += cpuTime() - xxx;
             ++_cASCalls;
 
