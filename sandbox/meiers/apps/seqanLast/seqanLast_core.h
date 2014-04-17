@@ -145,6 +145,19 @@ struct SeqanLastMatch
     TScore score;
 };
 
+// -----------------------------------------------------------------------------
+// Struct MatchScoreLess
+// -----------------------------------------------------------------------------
+
+template <typename TMatch>
+struct MatchScoreLess : std::binary_function<TMatch const &, TMatch const &, bool>
+{
+    inline bool operator()(TMatch const & a, TMatch const & b)
+    {
+        return a.score < b.score;
+    }
+};
+
 // =============================================================================
 // Metafunctions
 // =============================================================================
@@ -271,7 +284,7 @@ inline void _lookUp(TLookupIndex  & table,
 
 template <typename TTrieIndex, typename TLookupIndex, typename TQuery, typename TSize>
 inline Pair<typename Size<TTrieIndex>::Type>
-adaptiveSeeds(TTrieIndex &index,
+adaptiveSeeds(TTrieIndex   & index,
               TLookupIndex & table,
               TQuery const & query,
               TSize maxFreq)
@@ -294,7 +307,7 @@ adaptiveSeeds(TTrieIndex &index,
 
 template <typename TIndexText, typename TMod, typename TLookupIndex, typename TQuery, typename TSize>
 inline Pair<typename Size<Index<TIndexText, IndexSa<Gapped<TMod> > > >::Type>
-adaptiveSeeds(Index<TIndexText, IndexSa<Gapped<TMod> > > &index,
+adaptiveSeeds(Index<TIndexText, IndexSa<Gapped<TMod> > > & index,
               TLookupIndex & table,
               TQuery const & query,
               TSize maxFreq)

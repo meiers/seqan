@@ -134,6 +134,9 @@ int importAndRun(SeqanLastOptions &options,
                  options.gappedThreshold,
                  options.verbosity);
 
+    MatchScoreLess<TMatch> scoreLess;
+    std::sort(begin(matchContainer, Standard()), end(matchContainer, Standard()), scoreLess);
+
 
     // Output
     std::ofstream file;
