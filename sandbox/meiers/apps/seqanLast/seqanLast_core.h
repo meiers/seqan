@@ -154,7 +154,7 @@ struct MatchScoreLess : std::binary_function<TMatch const &, TMatch const &, boo
 {
     inline bool operator()(TMatch const & a, TMatch const & b)
     {
-        return a.score < b.score;
+        return b.score > a.score;
     }
 };
 
