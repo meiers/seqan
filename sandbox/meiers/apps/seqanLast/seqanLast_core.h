@@ -570,6 +570,19 @@ void linearLastal(
                 // gapLess alignment too weak
                 if (score(seed) < glThr) continue;
 
+
+// special task:
+if ( beginPositionH(seed) > 10 && beginPositionV(seed) > 10  &&  endPositionH(seed) < length(database)-10 && endPositionV(seed) < length(query)- 10 )
+{
+    std::cout << "begin:    V" << std::endl;
+    std::cout << infix(database, beginPositionH(seed)-10, beginPositionH(seed)+30) << " database: " <<  beginPositionH(seed)-10 << " - " << beginPositionH(seed)+30 << std::endl;
+    std::cout << infix(query, beginPositionV(seed)-10, beginPositionV(seed)+30) << " query:    " <<  beginPositionV(seed)-10 << " - " << beginPositionV(seed)+30 << std::endl;
+    std::cout << "end:                          V" << std::endl;
+    std::cout << infix(database, endPositionH(seed)-30, endPositionH(seed)+10) << " database: " <<  endPositionH(seed)-30 << " - " << endPositionH(seed)+10 << std::endl;
+    std::cout << infix(query, endPositionV(seed)-30, endPositionV(seed)+10) << " query:    " <<  endPositionV(seed)-30 << " - " << endPositionV(seed)+10 << std::endl;
+}
+
+
                 typename TMatch::Type alignObj;
 
 #ifdef SEQANLAST_ONLY_UNGAPPED_EXTENSION
@@ -591,13 +604,6 @@ void linearLastal(
                 TScore finalScore = myExtendAlignment(alignObj, seed, database, query, scoreMatrix, gpXdrop);
                 _tgpAlsCalls += cpuTime() - xxxxx;
                 ++_cgpAls;
-
-                if (verbosity > 2)
-                    std::cout << "      * aligned    database [" << int(getSeqNo(*saFrom)) << "," <<
-                    beginPosition(row(alignObj,0)) << "-" << endPosition(row(alignObj,0)) << "]\tquery [" <<
-                    queryPos << "," << beginPosition(row(alignObj,1)) << "-" <<
-                    endPosition(row(alignObj,1)) << "]\tscore: " << finalScore << std::endl;
-
 
                 if (finalScore > gpThr)
                 {
