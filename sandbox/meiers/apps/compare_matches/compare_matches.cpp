@@ -83,29 +83,26 @@ struct _Match
 	}
 };
 
-struct _Distance
+template <typename TPos>
+int scoreDiff(_Match<TPos> const & a, _Match<TPos> const & b)
 {
-
-};
+    return abs(a.score - b.score);
+}
 
 template <typename TPos>
 int distance(_Match<TPos> const & a, _Match<TPos> const & b)
 {
-    // completely incomparable
-    if (a.seq1 != b.seq1 || a.seq2 != b.seq2) return 1000000;
-    return 0;
-
-
-    @ work here
-
-
+    return abs(a.begin1 - b.begin1) + abs(a.begin2 - b.begin2) + abs(a.end1 - b.end1) + abs(a.end2 - b.end2);
 }
 
 template<typename TPos>
 void
 write(_Match<TPos> & match) {
 	std::cout << match.seq1 << " < " << match.begin1 << " , " << match.end1 << " > ";
-	std::cout << match.seq2 << " < " << match.begin2 << " , " << match.end2 << " >\n";
+	std::cout << match.seq2 << " < " << match.begin2 << " , " << match.end2 << " >";
+    if (match.score >0)
+        std::cout << "  score: " << match.score;
+    std::cout << std::endl;
 }
 
 template<typename TReader, typename TMatch>
@@ -717,6 +714,7 @@ computeCoverage(TMatch & subjectMatch, String<TPos> & map, String<TMatch> & othe
 	return double(subjectLength - uncoveredPosSeq1) * 100.0 / (double)subjectLength;
 }
 
+
 template<typename TMatch, typename TMapping, typename TBins>
 void
 binMatches(String<TMatch> & epsMatches, String<TMatch> & otherMatches, TMapping & mapping, TBins & bins) {
@@ -757,6 +755,78 @@ binMatches(String<TMatch> & epsMatches, String<TMatch> & otherMatches, TMapping 
 }
 
 
+
+template<typename TPos, typename TMatch>
+Tuple<int, 5>
+analyze(TMatch & subjectMatch, String<TPos> & map, String<TMatch> & otherMatches) \
+{
+    Tuple<int, 5> result;
+    int & exactHits = result.i[0];
+    int & scoreDist = result.i[1];
+    int & sameStart = result.i[2];
+    int & sameEnd   = result.i[3];
+    int & overlap   = result.i[4];
+
+    exactHits = 0;
+    scoreDist = 0;
+    sameStart = 0;
+    sameEnd   = 0;
+    overlap   = 0;
+
+
+	typename Iterator<String<TPos> >::Type oIt = begin(map);
+	while (oIt != end(map))
+    {
+		if (distance(subjectMatch, otherMatches[*oIt]) == 0)
+        {
+            if (scoreDiff(subjectMatch, otherMatches[*oIt]) == 0)
+                ++exactHits;
+            else
+                ++scoreDist;
+        }
+        else
+        {
+            if ( subjectMatch.begin1 == otherMatches[*oIt].begin1 && subjectMatch.begin2 == otherMatches[*oIt].begin2)
+                ++sameStart;
+            else if ( subjectMatch.end1 == otherMatches[*oIt].end1 && subjectMatch.end2 == otherMatches[*oIt].end2)
+                ++sameEnd;
+        }
+        ++oIt;
+	}
+    return result;
+}
+
+
+template<typename TMatch, typename TMapping>
+void
+exactAnalysis(String<TMatch> & epsMatches, String<TMatch> & otherMatches, TMapping & mapping) {
+	// iterate over eps-matches
+	typedef typename Iterator<TMapping>::Type TIterator;
+	TIterator mapIt = begin(mapping);
+	TIterator mapEnd = end(mapping);
+
+    Tuple<int, 5> r;
+	while (mapIt != mapEnd) {
+		// compute coverage of epsilon-match
+		TMatch epsMatch = epsMatches[position(mapIt, mapping)];
+		Tuple<int, 5> p = analyze(epsMatch, *mapIt, otherMatches);
+        r.i[0] += p.i[0];
+        r.i[1] += p.i[1];
+        r.i[2] += p.i[2];
+        r.i[3] += p.i[3];
+        r.i[4] += p.i[4];
+        ++mapIt;
+	}
+    std::cout << "exactHits: " << r.i[0] << std::endl;
+    std::cout << "scoreDiff: " << r.i[1] << std::endl;
+    std::cout << "sameStart: " << r.i[2] << std::endl;
+    std::cout << "sameEnd:   " << r.i[3] << std::endl;
+    std::cout << "overlap:   " << r.i[4] << std::endl;
+
+}
+
+
+
 void
 _setupParser(ArgumentParser & parser) {
 
@@ -779,6 +849,8 @@ _setupParser(ArgumentParser & parser) {
     addOption(parser, ArgParseOption("fc", "file_format2", "format of file containing comparison matches", ArgParseArgument::STRING));
     setValidValues(parser, "fr", "gff last lastz blat blast");
     setValidValues(parser, "fc", "gff last lastz blat blast");
+
+    addOption(parser, ArgParseOption("e", "extra", "Count how many matches are exactly equal"));
 }
 
 int main(int argc, const char *argv[]) {
@@ -787,6 +859,7 @@ int main(int argc, const char *argv[]) {
     CharString refFile, compFile;
     CharString refFormat, compFormat;
     String<TMatch> refMatches, compMatches;
+    bool       extraAnalysis = false;
 
     ArgumentParser parser("compare_matches");
     _setupParser(parser);
@@ -799,14 +872,16 @@ int main(int argc, const char *argv[]) {
         getArgumentValue(compFile, parser, 1);
         getOptionValue(refFormat, parser, "fr");
         getOptionValue(compFormat, parser, "fc");
+        if (isSet(parser, "extra"))
+            extraAnalysis = true;
     }
 
     if (res != ArgumentParser::PARSE_OK) {
         return res == ArgumentParser::PARSE_ERROR; // 1 - error, 0 - otherwise
     }
 
-    std::cout << "Reference file: " << refFile << std::endl;
-    std::cout << "Compared file : " << compFile << std::endl;
+    //std::cout << "Reference file: " << refFile << std::endl;
+    //std::cout << "Compared file : " << compFile << std::endl;
 
     // read subject-matches file
     if (refFormat == "gff")
@@ -884,6 +959,10 @@ int main(int argc, const char *argv[]) {
     for (TSize i = 0; i < length(bins); ++i) {
         std::cout << "bin " << i << ": " << value(bins, i) << " matches" << std::endl;
     }
+
+    // new analysis
+    if (extraAnalysis)
+        exactAnalysis(refMatches, compMatches, mapping);
 
     return 0;
 }
