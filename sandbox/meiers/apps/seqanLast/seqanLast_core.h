@@ -35,6 +35,10 @@
 #ifndef SANDBOX_MEIERS_APPS_SEQANLAST_SEQANLAST_CORE_H_
 #define SANDBOX_MEIERS_APPS_SEQANLAST_SEQANLAST_CORE_H_
 
+
+// only output the ungapped extension!
+#define SEQANLAST_ONLY_UNGAPPED_EXTENSION
+
 // =============================================================================
 // Global Definitions
 // =============================================================================
@@ -157,10 +161,6 @@ struct MatchScoreLess : std::binary_function<TMatch const &, TMatch const &, boo
         return a.score > b.score;
     }
 };
-
-// =============================================================================
-// Metafunctions
-// =============================================================================
 
 // =============================================================================
 // Functions
@@ -557,34 +557,36 @@ void linearLastal(
                 if (diagTable.redundant(beginPositionH(seed), beginPositionV(seed)))
                     continue;
 
-                // DEBUG
-                if (verbosity > 2)
-                    std::cout << "      seed adaptive   database [" << int(getSeqNo(*saFrom)) << "," << beginPositionH(seed) <<
-                    "-" << endPositionH(seed) << "]\tquery [" << int(queryId) << "," << beginPositionV(seed)
-                    << "-" << endPositionV(seed) << "]"   << std::endl;
-
                 // Gapless Alignment in both directions with a XDrop
-                double xxxx = cpuTime();
+                        double xxxx = cpuTime();
                 myUngapedExtendSeed(seed, database, query, scoreMatrix, glXdrop);
-                _tglAlsCalls += cpuTime() - xxxx;
-                ++_cglAls;
+                        _tglAlsCalls += cpuTime() - xxxx;
+                        ++_cglAls;
 
 
                 // Mark diagonal as already
                 diagTable.add(endPositionH(seed), endPositionV(seed));
 
-                // DEBUG
-                if (verbosity > 2)
-                    std::cout << "           extended   database [" << int(getSeqNo(*saFrom)) << "," <<
-                    beginPositionH(seed) << "-" << endPositionH(seed) << "]\tquery [" << queryPos <<
-                    "," << beginPositionV(seed) << "-" << endPositionV(seed) << "]\tscore: " <<
-                    score(seed) << std::endl;
-
                 // gapLess alignment too weak
                 if (score(seed) < glThr) continue;
 
-                // Gapped alignment:
                 typename TMatch::Type alignObj;
+
+#ifdef SEQANLAST_ONLY_UNGAPPED_EXTENSION
+                resize(rows(alignObj), 2);
+                assignSource(row(alignObj, 0), infix(database, beginPositionH(seed), endPositionH(seed)));
+                assignSource(row(alignObj, 1), infix(query, beginPositionV(seed), endPositionV(seed)));
+                TMatch matchObj;
+                matchObj.quId = queryId;
+                matchObj.dbId = getSeqNo(*saFrom);
+                matchObj.align = alignObj;
+                matchObj.score = score(seed);
+                appendValue(finalMatches, matchObj);
+                continue;
+#endif
+
+                // Gapped alignment:
+
                 double xxxxx = cpuTime();
                 TScore finalScore = myExtendAlignment(alignObj, seed, database, query, scoreMatrix, gpXdrop);
                 _tgpAlsCalls += cpuTime() - xxxxx;
