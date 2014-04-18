@@ -806,6 +806,7 @@ exactAnalysis(String<TMatch> & epsMatches, String<TMatch> & otherMatches, TMappi
 	TIterator mapEnd = end(mapping);
 
     Tuple<int, 5> r;
+    std::fill(&(r.i[0]), &(r.i[0])+5, 0);
 	while (mapIt != mapEnd) {
 		// compute coverage of epsilon-match
 		TMatch epsMatch = epsMatches[position(mapIt, mapping)];
