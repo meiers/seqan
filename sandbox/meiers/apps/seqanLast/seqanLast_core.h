@@ -491,12 +491,11 @@ inline TScoreValue myExtendAlignment(
 
 
 // TODO:
-//      - handle diagTables only per query, not M x N many
 //      - make sort outside only sort references, not objects
 //      - use iterators in ungapped Extension
-//      - make a switch between my ungapped extension and the seqan version
 //      - enable hashTable
 //      - write a bit of documentation
+//      - search backward strand, too
 
 
 // -----------------------------------------------------------------------------
@@ -521,9 +520,6 @@ inline void _prepareMatchObject(TMatch & match,
     match.dbId = dbId;
     match.quId = quId;
 }
-
-
-
 
 // -----------------------------------------------------------------------------
 // Function linearLastal()
