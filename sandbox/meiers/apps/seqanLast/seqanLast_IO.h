@@ -443,10 +443,10 @@ _writeMatchGff(TId const & databaseID,
     file << "\tseqanLast_match";
 
     if (databaseStrand) {
-        file << "\t" << beginPosition(row0) + beginPosition(source(row0)) + 1;
+        file << "\t" << beginPosition(row0) + beginPosition(source(row0));
         file << "\t" << endPosition(row0) + beginPosition(source(row0));
     } else {
-        file << "\t" << length(source(row0)) - (endPosition(row0) + beginPosition(source(row0))) + 1;
+        file << "\t" << length(source(row0)) - (endPosition(row0) + beginPosition(source(row0)));
         file << "\t" << length(source(row0)) - (beginPosition(row0) + beginPosition(source(row0)));
     }
 
@@ -461,7 +461,7 @@ _writeMatchGff(TId const & databaseID,
 
     file << ";score=" << score;
 
-    file << ";seq2Range=" << beginPosition(row1) + beginPosition(source(row1)) + 1;
+    file << ";seq2Range=" << beginPosition(row1) + beginPosition(source(row1));
     file << "," << endPosition(row1) + beginPosition(source(row1));
 
     //    if (IsSameType<TAlphabet, Dna5>::VALUE || IsSameType<TAlphabet, Rna5>::VALUE)
