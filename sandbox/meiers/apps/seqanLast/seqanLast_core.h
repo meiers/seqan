@@ -304,8 +304,8 @@ inline void _goDownTrie(TTrieIt & trieIt,
     {
         trieIt.vDesc.range.i1 = from;
         trieIt.vDesc.range.i2 = to;
-        goFurther(qryIt, static_cast<unsigned>(WEIGHT<TShape>::VALUE));
-        std::cout << "USE HASHTAB: " << from << "," << to << std::endl;
+        goFurther(qryIt, weight(indexShape(table)));
+//        std::cout << "USE HASHTAB: " << from << "," << to << std::endl;
     }
 
     // OR: make seed shorter
