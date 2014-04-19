@@ -81,7 +81,7 @@ namespace SEQAN_NAMESPACE_MAIN
 // Struct DiagonalTable
 // -----------------------------------------------------------------------------
 
-template <typename TSigned, typename TSize, unsigned Q=64>
+template <typename TSigned, typename TSize, unsigned Q=256>
 struct DiagonalTable
 {
     typedef typename Iterator<String<Pair<TSigned,TSize> > >::Type TIter;
@@ -298,7 +298,7 @@ inline void _goDownTrie(TTrieIt & trieIt,
     // determine hash values
     THashValue x = hash(indexShape(table), qryIt, qryEnd - qryIt);
     THashValue y = x+1;
-    if (qryEnd - qryIt < length(indexShape(table)))
+    if (static_cast<TSaPos>(qryEnd - qryIt) < length(indexShape(table)))
         y = hashUpper(indexShape(table), qryIt, qryEnd - qryIt);
 
     // get range in SA
