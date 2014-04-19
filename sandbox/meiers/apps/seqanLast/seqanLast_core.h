@@ -415,7 +415,7 @@ myUngapedExtendSeed(Seed<Simple, TConfig> & seed,
     quIt = quBeg + beginPositionV(seed);
     tmpScore = maxScoreLeft = score(seed);
     len = optLenLeft = 0;
-    while (dbIt > dbBeg && quIt > quIt && tmpScore > maxScoreLeft - scoreDropOff)
+    while (dbIt > dbBeg && quIt > quBeg && tmpScore > maxScoreLeft - scoreDropOff)
     {
         --dbIt; --quIt; ++len;
         tmpScore += score(scoringScheme, *dbIt, *quIt);
