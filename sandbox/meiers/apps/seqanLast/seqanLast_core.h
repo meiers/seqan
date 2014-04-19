@@ -283,12 +283,37 @@ void adaptedCreateQGramIndexDirOnly(TDir &dir,
 // Function _goDownTrie()
 // -----------------------------------------------------------------------------
 
-template <typename TTrieIt, typename TQueryIt, typename TSize>
+template <typename TTrieIt, typename TLookupIndex, typename TQueryIt, typename TSize>
 inline void _goDownTrie(TTrieIt & trieIt,
+                        TLookupIndex  & table,
                         TQueryIt qryIt,
                         TQueryIt qryEnd,
                         TSize maxFreq)
 {
+
+    typedef typename Fibre<TLookupIndex, FibreShape>::Type TShape;
+    typedef typename Value<TShape>::Type THashValue;
+    typedef typename Size<TLookupIndex>::Type TSaPos;
+
+    THashValue x = hash(indexShape(table), qryIt, qryEnd - qryIt);
+    TSaPos from  = indexDir(table)[x];
+    TSaPos to    = indexDir(table)[x+1];
+
+    // EITHER: make seed longer
+    if ( to - from > maxFreq)
+    {
+        trieIt.vDesc.range.i1 = from;
+        trieIt.vDesc.range.i2 = to;
+        goFurther(qryIt, static_cast<unsigned>(WEIGHT<TShape>::VALUE));
+        std::cout << "USE HASHTAB: " << from << "," << to << std::endl;
+    }
+
+    // OR: make seed shorter
+    else
+    {
+        // TODO
+    }
+
     while(qryIt < qryEnd)
     {
         if(!goDown(trieIt, *(qryIt++)))
@@ -296,22 +321,9 @@ inline void _goDownTrie(TTrieIt & trieIt,
         if(countOccurrences(trieIt) <= maxFreq)
             break;
     }
+
+
 }
-
-// -----------------------------------------------------------------------------
-// Function _lookUp()
-// -----------------------------------------------------------------------------
-
-template <typename TLookupIndex, typename TTrieIt, typename TQueryIt, typename TSize>
-inline void _lookUp(TLookupIndex  & table,
-                    TTrieIt & trieIt,
-                    TQueryIt qryIt,
-                    TQueryIt qryEnd,
-                    TSize maxFreq)
-{
-    // TODO
-}
-
 
 // -----------------------------------------------------------------------------
 // Function adaptiveSeeds()                                           [ungapped]
@@ -331,8 +343,7 @@ adaptiveSeeds(TTrieIndex   & index,
     TQueryIter  qryIt  = begin(query, Standard());
     TQueryIter  qryEnd = end(query, Standard());
 
-    _lookUp(table, trieIt, qryIt, qryEnd, maxFreq);
-    _goDownTrie(trieIt, qryIt, qryEnd, maxFreq);
+    _goDownTrie(trieIt, table, qryIt, qryEnd, maxFreq);
     return range(trieIt);
 }
 
@@ -357,27 +368,9 @@ adaptiveSeeds(Index<TIndexText, IndexSa<Gapped<TMod> > > & index,
     TQueryIter  qryIt  = begin(modQuery, Standard());
     TQueryIter  qryEnd = end(modQuery, Standard());
 
-    _lookUp(table, trieIt, qryIt, qryEnd, maxFreq);
-    _goDownTrie(trieIt, qryIt, qryEnd, maxFreq);
+    _goDownTrie(trieIt, table, qryIt, qryEnd, maxFreq);
     return range(trieIt);
 }
-
-
-/*
- if(static_cast<TSize>(qryEnd - qry) >= weight(qryHash) )
- {
- hash(qryHash, qry);
- Pair<TSize> initialRange = range(table, qryHash);
-
- if(initialRange.i2 - initialRange.i1 > maxFreq)
- {
- treeIter.vDesc.range = initialRange;
- treeIter.vDesc.repLen = weight(qryHash);
- qry += weight(qryHash);
- treeIter.vDesc.lastChar = *qry;
- }
- }
- */
 
 
 
