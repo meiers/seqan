@@ -295,9 +295,15 @@ inline void _goDownTrie(TTrieIt & trieIt,
     typedef typename Value<TShape>::Type THashValue;
     typedef typename Size<TLookupIndex>::Type TSaPos;
 
+    // determine hash values
     THashValue x = hash(indexShape(table), qryIt, qryEnd - qryIt);
+    THashValue y = x+1;
+    if (qryEnd - qryIt < length(indexShape(table)))
+        y = hashUpper(indexShape(table), qryIt, qryEnd - qryIt);
+
+    // get range in SA
     TSaPos from  = indexDir(table)[x];
-    TSaPos to    = indexDir(table)[x+1];
+    TSaPos to    = indexDir(table)[y];
 
     // EITHER: make seed longer
     if ( to - from > maxFreq)
@@ -312,7 +318,7 @@ inline void _goDownTrie(TTrieIt & trieIt,
     // OR: make seed shorter
     else
     {
-        // TODO
+        std::cout << "make shorter" << std::endl;
     }
 
     while(qryIt < qryEnd)
