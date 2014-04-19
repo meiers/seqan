@@ -112,33 +112,31 @@ int importAndRun(SeqanLastOptions &options,
         return 1;
 
 
-    // Prepare Scores
+    // Prepare Parameter
     Score<int, Simple> scoreMatrix(options.matchScore, options.mismatchScore, options.gapExtendScore,
                                    options.gapExtendScore + options.gapOpenScore);
-
-    
-    
+    LastParameters<unsigned, Score<int, Simple> > params(options.frequency,
+                                                         scoreMatrix,
+                                                         options.gaplessXDrop,
+                                                         options.gappedXDrop,
+                                                         options.gaplessThreshold,
+                                                         options.gappedThreshold,
+                                                         true,                  // only ungapped
+                                                         options.verbosity);
 
     // Do the main work: alignments
     if (options.verbosity) std::cout << "Start searching..." << std::endl;
     String<TMatch> matchContainer;
-    linearLastal(matchContainer,
-                 suffixArray,
-                 hashTab,
-                 querySet,
-                 options.frequency,
-                 scoreMatrix,
-                 options.gaplessXDrop,
-                 options.gappedXDrop,
-                 options.gaplessThreshold,
-                 options.gappedThreshold,
-                 options.verbosity);
+    linearLastal(matchContainer, suffixArray, hashTab, querySet, params);
 
+    double teim = sysTime();
     MatchScoreLess<TMatch> scoreLess;
     std::sort(begin(matchContainer, Standard()), end(matchContainer, Standard()), scoreLess);
+    std::cout << "Sorting results " << sysTime() - teim << std::endl;
 
 
     // Output
+    teim = sysTime();
     std::ofstream file;
 	file.open(toCString(options.outputFile), ::std::ios_base::out);
 	if (options.outputFile == "stdout" || !file.is_open()) {
@@ -152,7 +150,7 @@ int importAndRun(SeqanLastOptions &options,
     }
     file.close();
 
-    std::cout << "ENDE" << std::endl;
+    std::cout << "Wrting took: "<< sysTime() - teim << std::endl;
     return 0;
 }
 

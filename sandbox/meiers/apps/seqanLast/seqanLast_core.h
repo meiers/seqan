@@ -162,6 +162,34 @@ struct MatchScoreLess : std::binary_function<TMatch const &, TMatch const &, boo
     }
 };
 
+// -----------------------------------------------------------------------------
+// Struct LastParameters
+// -----------------------------------------------------------------------------
+
+template <typename TSize, typename TScoreMatrix>
+struct LastParameters
+{
+    typedef typename Value<TScoreMatrix>::Type TScore;
+
+    TSize                   maxFreq;
+    TScoreMatrix const &    scoreMatrix;
+    TScore                  Xgapless;
+    TScore                  Xgapped;
+    TScore                  Tgapless;
+    TScore                  Tgapped;
+    bool onlyUngappedAlignments;
+    int verbosity;
+
+    LastParameters(TSize f, TScoreMatrix const & scoreMatrix, TScore Xgapless,
+                   TScore Xgapped, TScore Tgapless, TScore Tgapped, bool ungAl, int v) :
+        maxFreq(f), scoreMatrix(scoreMatrix), Xgapless(Xgapless), Xgapped(Xgapped),
+        Tgapless(Tgapless), Tgapped(Tgapped), onlyUngappedAlignments(ungAl),
+        verbosity(v)
+    {}
+};
+
+
+
 // =============================================================================
 // Functions
 // =============================================================================
@@ -470,20 +498,12 @@ template <typename TMatches,
     typename TShape,
     typename TQuerySet,
     typename TSize2,
-    typename TScoreMatrix,
-    typename TScore>
-void linearLastal(
-                  TMatches & finalMatches,
+    typename TScoreMatrix>
+void linearLastal(TMatches & finalMatches,
                   Index<TDbSet, IndexSa<TIndexSpec> > & index,
-                  Index<TDbSet, IndexQGram<TShape> > & table,
-                  TQuerySet const & querySet,
-                  TSize2 maxFreq,
-                  TScoreMatrix const & scoreMatrix,
-                  TScore glXdrop,
-                  TScore gpXdrop,
-                  TScore glThr,
-                  TScore gpThr,
-                  int verbosity)
+                  Index<TDbSet, IndexQGram<TShape> >  & table,
+                  TQuerySet      const & querySet,
+                  LastParameters<TSize2, TScoreMatrix> const & params)
 {
     typedef Index<TDbSet, IndexSa<TIndexSpec> >                     TIndex;
     typedef typename Size<TIndex>::Type                             TDbSize;
@@ -500,6 +520,7 @@ void linearLastal(
     typedef DiagonalTable<typename Difference<TDbString>::Type,
                           typename Size<TDbString>::Type>           TDiagTable;
     typedef typename Value<TMatches>::Type                          TMatch;
+    typedef typename Value<TScoreMatrix>::Type                      TScore;
 
 
     // Self-measurements
@@ -512,11 +533,12 @@ void linearLastal(
     unsigned    _cgpAls = 0;
 
 
+    // TODO(meiers): Only need |db| many diag tables, since only one query is passed at a time !!
     TDbSize L = length(indexText(index));
     String<TDiagTable> diagTables;
     resize(diagTables, L * length(querySet));
 
-    // Linear search on query
+    // Sequential search over queries
     for(TQuSize queryId=0; queryId < length(querySet); ++queryId)
     {
         TQueryString const &    query = querySet[queryId];
@@ -527,20 +549,13 @@ void linearLastal(
         for(TQueryIter queryIt = queryBeg; queryIt != queryEnd; ++queryIt, ++queryPos)
         {
             // Lookup adaptive Seed
-            double xxx = cpuTime();
-            Pair<TDbSize> range = adaptiveSeeds(index, table, suffix(query, queryPos), maxFreq);
-            _tASCalls += cpuTime() - xxx;
-            ++_cASCalls;
-
-            // DEBUG
-            if (verbosity > 2)
-                std::cout << "query [" << int(queryId) << "," << queryPos << "] : \t\"" <<
-                infix(query, queryPos, std::min(static_cast<TDbSize>(queryPos + 30),
-                                                static_cast<TDbSize>(queryEnd-queryBeg))) << "...\", SA range: " << range <<
-                (range.i2 > range.i1 && range.i2 <= range.i1 + maxFreq ? " good" : " BAD") << std::endl;
+                    double xxx = cpuTime();
+            Pair<TDbSize> range = adaptiveSeeds(index, table, suffix(query, queryPos), params.maxFreq);
+                    _tASCalls += cpuTime() - xxx;
+                    ++_cASCalls;
 
             if(range.i2 <= range.i1) continue; // seed doesn't hit at all
-            if(range.i2 - range.i1 > maxFreq) continue; // seed hits too often
+            if(range.i2 - range.i1 > params.maxFreq) continue; // seed hits too often
 
             // Enumerate adaptive seeds
             TSAIter saFrom = begin(indexSA(index), Standard()) + range.i1;
@@ -559,7 +574,7 @@ void linearLastal(
 
                 // Gapless Alignment in both directions with a XDrop
                         double xxxx = cpuTime();
-                myUngapedExtendSeed(seed, database, query, scoreMatrix, glXdrop);
+                myUngapedExtendSeed(seed, database, query, params.scoreMatrix, params.Xgapless);
                         _tglAlsCalls += cpuTime() - xxxx;
                         ++_cglAls;
 
@@ -568,8 +583,7 @@ void linearLastal(
                 diagTable.add(endPositionH(seed), endPositionV(seed));
 
                 // gapLess alignment too weak
-                if (score(seed) < glThr) continue;
-
+                if (score(seed) < params.Tgapless) continue;
 
 // special task:
 if ( beginPositionH(seed) > 10 && beginPositionV(seed) > 10  &&  endPositionH(seed) < length(database)-10 && endPositionV(seed) < length(query)- 10 )
@@ -582,9 +596,16 @@ if ( beginPositionH(seed) > 10 && beginPositionV(seed) > 10  &&  endPositionH(se
     std::cout << infix(query, endPositionV(seed)-30, endPositionV(seed)+10) << " query:    " <<  endPositionV(seed)-30 << " - " << endPositionV(seed)+10 << std::endl;
 }
 
-
                 typename TMatch::Type alignObj;
 
+                // TODO: make a switch for ungapped extension based on params
+                //      - wrap function to prepare matchObject
+                //      - handle diagTables only per query, not M x N many
+                //      - make sort outside only sort references, not objects
+                //      - use iterators in ungapped Extension
+                //      - make a switch between my ungapped extension and the seqan version
+                //      - enable hashTable
+                //      - write a bit of documentation
 #ifdef SEQANLAST_ONLY_UNGAPPED_EXTENSION
                 resize(rows(alignObj), 2);
                 assignSource(row(alignObj, 0), infix(database, beginPositionH(seed), endPositionH(seed)));
@@ -600,12 +621,12 @@ if ( beginPositionH(seed) > 10 && beginPositionV(seed) > 10  &&  endPositionH(se
 
                 // Gapped alignment:
 
-                double xxxxx = cpuTime();
-                TScore finalScore = myExtendAlignment(alignObj, seed, database, query, scoreMatrix, gpXdrop);
-                _tgpAlsCalls += cpuTime() - xxxxx;
-                ++_cgpAls;
+                        double xxxxx = cpuTime();
+                TScore finalScore = myExtendAlignment(alignObj, seed, database, query, params.scoreMatrix, params.Xgapped);
+                        _tgpAlsCalls += cpuTime() - xxxxx;
+                        ++_cgpAls;
 
-                if (finalScore > gpThr)
+                if (finalScore > params.Tgapped)
                 {
                     TMatch matchObj;
                     matchObj.quId = queryId;
@@ -621,7 +642,7 @@ if ( beginPositionH(seed) > 10 && beginPositionV(seed) > 10  &&  endPositionH(se
         } //for(; queryIt != queryEnd; ++queryIt)
     }
 
-    if (verbosity > 1)
+    if (params.verbosity > 1)
     {
         std::cout << "Time spend in adaptive seeding:  " << _tASCalls <<    "\t(" << _cASCalls << " calls)" << std::endl;
         std::cout << "Time spend in gapless alignment: " << _tglAlsCalls << "\t(" << _cglAls <<   " calls)" << std::endl;
@@ -629,7 +650,7 @@ if ( beginPositionH(seed) > 10 && beginPositionV(seed) > 10  &&  endPositionH(se
         std::cout << std::endl;
         std::cout << " # adaptive seeds:     " << _cSeeds << std::endl;
     }
-    if (verbosity)
+    if (params.verbosity)
         std::cout << " # final matches:      " << length(finalMatches) << std::endl;
 }
 

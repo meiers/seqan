@@ -777,7 +777,7 @@ analyze(TMatch & subjectMatch, String<TPos> & map, String<TMatch> & otherMatches
 	typename Iterator<String<TPos> >::Type oIt = begin(map);
 	while (oIt != end(map))
     {
-		if (distance(subjectMatch, otherMatches[*oIt]) <= 1)
+		if (distance(subjectMatch, otherMatches[*oIt]) == 0)
         {
             if (scoreDiff(subjectMatch, otherMatches[*oIt]) == 0)
                 ++exactHits;
