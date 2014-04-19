@@ -127,9 +127,12 @@ int importAndRun(SeqanLastOptions &options,
     // Do the main work: alignments
     if (options.verbosity) std::cout << "Start searching..." << std::endl;
     String<TMatch> matchContainer;
-    linearLastal(matchContainer, suffixArray, hashTab, querySet, params);
-
     double teim = sysTime();
+    linearLastal(matchContainer, suffixArray, hashTab, querySet, params);
+    std::cout << "Time spend in linearLastal: " << sysTime() - teim << std::endl;
+
+    // TODO: If the sorting takes long, cosider only sorting a string of references instead of the heavy match objects
+    teim = sysTime();
     MatchScoreLess<TMatch> scoreLess;
     std::sort(begin(matchContainer, Standard()), end(matchContainer, Standard()), scoreLess);
     std::cout << "Sorting results " << sysTime() - teim << std::endl;

@@ -90,6 +90,8 @@ struct DiagonalTable
     DiagonalTable()
     {
         resize(table, Q, Exact());
+        for (unsigned i=0; i < Q; ++i)
+            reserve(table[i], 100   );
     }
 
     void clear()
@@ -115,17 +117,20 @@ struct DiagonalTable
     {
         TSigned d = static_cast<TSigned>(pGenome) - static_cast<TSigned>(pQuery);
         TSigned dd =(Q + d%Q)%Q; // hope the modulo is replaced by fast bit operations.
-        String<Pair<TSigned, TSize> > newList;
+
         for(TIter it=begin(table[dd]); it != end(table[dd]); ++it)
         {
-            if(it->i1 != d)
-                appendValue(newList, *it);
-            else
-                if(it->i2 > pQuery) // there is already one further right
-                    pQuery = it->i2;
+            if(it->i1 != d) continue;
+            if(it->i2 < pQuery)
+            {
+                // remove smaller entries
+                typename Size<String<Pair<TSigned, TSize> > >::Type pos = it - begin(table[dd]);
+                erase(table[dd], pos);
+                // restore iterator (seems not even to be neccessary since erase does not realloc memory)
+                it = begin(table[dd]) + (pos-1);
+            }
         }
-        appendValue(newList, Pair<TSigned,TSize>(d,pQuery));
-        table[dd] = newList;
+        appendValue(table[dd], Pair<TSigned,TSize>(d,pQuery));
     }
 
     void ___printSize()
@@ -500,10 +505,8 @@ inline TScoreValue myExtendAlignment(
 
 // TODO:
 //      - make sort outside only sort references, not objects
-//      - use iterators in ungapped Extension
 //      - enable hashTable
 //      - write a bit of documentation
-//      - search backward strand, too
 
 
 // -----------------------------------------------------------------------------
