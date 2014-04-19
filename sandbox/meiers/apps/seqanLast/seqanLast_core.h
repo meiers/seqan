@@ -574,10 +574,10 @@ void linearLastal(
 // special task:
 if ( beginPositionH(seed) > 10 && beginPositionV(seed) > 10  &&  endPositionH(seed) < length(database)-10 && endPositionV(seed) < length(query)- 10 )
 {
-    std::cout << "begin:    V" << std::endl;
+    std::cout << "begin:    V            seqanLast says: " << beginPositionH(seed) << std::endl;
     std::cout << infix(database, beginPositionH(seed)-10, beginPositionH(seed)+30) << " database: " <<  beginPositionH(seed)-10 << " - " << beginPositionH(seed)+30 << std::endl;
     std::cout << infix(query, beginPositionV(seed)-10, beginPositionV(seed)+30) << " query:    " <<  beginPositionV(seed)-10 << " - " << beginPositionV(seed)+30 << std::endl;
-    std::cout << "end:                          V" << std::endl;
+    std::cout << "end:                          V          seqanLast says: " << endPositionH(seed) << std::endl;
     std::cout << infix(database, endPositionH(seed)-30, endPositionH(seed)+10) << " database: " <<  endPositionH(seed)-30 << " - " << endPositionH(seed)+10 << std::endl;
     std::cout << infix(query, endPositionV(seed)-30, endPositionV(seed)+10) << " query:    " <<  endPositionV(seed)-30 << " - " << endPositionV(seed)+10 << std::endl;
 }
