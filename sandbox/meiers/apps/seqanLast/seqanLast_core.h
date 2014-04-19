@@ -302,10 +302,11 @@ inline void _goDownTrie(TTrieIt & trieIt,
     // EITHER: make seed longer
     if ( to - from > maxFreq)
     {
-        trieIt.vDesc.range.i1 = from;
-        trieIt.vDesc.range.i2 = to;
-        goFurther(qryIt, weight(indexShape(table)));
-//        std::cout << "USE HASHTAB: " << from << "," << to << std::endl;
+        value(trieIt).range.i1 = from;
+        value(trieIt).range.i2 = to;
+        value(trieIt).repLen = weight(indexShape(table));
+        goFurther(qryIt, weight(indexShape(table)) - 1);
+        value(trieIt).lastChar = *qryIt++;
     }
 
     // OR: make seed shorter
