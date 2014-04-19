@@ -777,8 +777,6 @@ analyze(TMatch & subjectMatch, String<TPos> & map, String<TMatch> & otherMatches
 	typename Iterator<String<TPos> >::Type oIt = begin(map);
 	while (oIt != end(map))
     {
-        std::cout << "subjectMatch: " << subjectMatch.begin1 << "-" << subjectMatch.end1 << "  :  " << subjectMatch.begin2 << "-" << subjectMatch.end2 << std::endl;
-        std::cout << "otherMatch:   " << otherMatches[*oIt].begin1 << "-" << otherMatches[*oIt].end1 << "  :  "<<  otherMatches[*oIt].begin2 << "-" << otherMatches[*oIt].end2 << std::endl;
 		if (distance(subjectMatch, otherMatches[*oIt]) == 0)
         {
             if (scoreDiff(subjectMatch, otherMatches[*oIt]) == 0)
