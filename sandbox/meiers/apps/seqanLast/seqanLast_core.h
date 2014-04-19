@@ -392,54 +392,62 @@ myUngapedExtendSeed(Seed<Simple, TConfig> & seed,
                     Score<TScoreValue, TScoreSpec> const & scoringScheme,
                     TScoreValue scoreDropOff)
 {
-    // TODO: Use Iterators instead of positional access
-
     // Horizontal = database
     // Vertical   = query
 
-    typedef Seed<ChainedSeed, TConfig>      TSeed;
-    typedef typename Position<TSeed>::Type  TPosition;
-    typedef typename Size<TSeed>::Type      TSize;
+    typedef typename Position<Seed<Simple, TConfig> >::Type     TPosition;
+    typedef typename Size<Seed<Simple, TConfig> >::Type         TSize;
+    typedef typename Iterator<TDatabase const, Standard>::Type  TDbIter;
+    typedef typename Iterator<TQuery const, Standard>::Type     TQuIter;
 
-	// Extension to the left
-    TScoreValue tmpScore = score(seed);
-    TScoreValue maxScore = score(seed);
-    TPosition posH = beginPositionH(seed);
-    TPosition posV = beginPositionV(seed);
+    TDbIter dbBeg = begin(database, Standard());
+    TDbIter dbEnd = end(database, Standard());
+    TDbIter quBeg = begin(query, Standard());
+    TDbIter quEnd = end(query, Standard());
 
-    for (; posH >= 1 && posV >= 1 && tmpScore > maxScore - scoreDropOff; --posH, --posV)
+    TScoreValue tmpScore, maxScoreLeft, maxScoreRight;
+    TPosition len, optLenLeft, optLenRight;
+    TDbIter dbIt;
+    TQuIter quIt;
+
+   	// Extension to the left
+    dbIt = dbBeg + beginPositionH(seed);
+    quIt = quBeg + beginPositionV(seed);
+    tmpScore = maxScoreLeft = score(seed);
+    len = optLenLeft = 0;
+    while (dbIt > dbBeg && quIt > quIt && tmpScore > maxScoreLeft - scoreDropOff)
     {
-        tmpScore += score(scoringScheme, value(database,posH -1), value(query,posV -1));
-        if (tmpScore > maxScore)
+        --dbIt; --quIt; ++len;
+        tmpScore += score(scoringScheme, *dbIt, *quIt);
+        if (tmpScore > maxScoreLeft)
         {
-            maxScore = tmpScore;
-            setBeginPositionH(seed, posH -1);
-            setBeginPositionV(seed, posV -1);
+            maxScoreLeft = tmpScore;
+            optLenLeft = len;
         }
     }
-
-    setScore(seed, maxScore);
 
     // Extension to the right
-    tmpScore = score(seed);
-    maxScore = score(seed);
-    posH = endPositionH(seed);
-    posV = endPositionV(seed);
-    TSize lengthH = length(database);
-    TSize lengthV = length(query);
-
-    for (; posH < lengthH && posV < lengthV && tmpScore > maxScore - scoreDropOff; ++posH, ++posV)
+    dbIt = dbBeg + endPositionH(seed);
+    quIt = quBeg + endPositionV(seed);
+    tmpScore = maxScoreRight = score(seed);
+    len = optLenRight = 0;
+    while (dbIt < dbEnd && quIt < quEnd && tmpScore > maxScoreRight - scoreDropOff)
     {
-        tmpScore += score(scoringScheme, database[posH], query[posV]);
-        if (tmpScore > maxScore)
+        tmpScore += score(scoringScheme, *dbIt, *quIt);
+        if (tmpScore > maxScoreRight)
         {
-            maxScore = tmpScore;
-            setEndPositionH(seed, posH + 1);
-            setEndPositionV(seed, posV + 1);
+            maxScoreRight = tmpScore;
+            optLenLeft = len;
         }
-
+        ++dbIt; ++quIt; ++len;
     }
-    setScore(seed, maxScore);
+
+    // update seed
+    setBeginPositionH(seed, beginPositionH(seed) - optLenLeft);
+    setBeginPositionV(seed, beginPositionV(seed) - optLenLeft);
+    setEndPositionH(seed, endPositionH(seed) + optLenRight);
+    setEndPositionV(seed, endPositionV(seed) + optLenRight);
+    setScore(seed, score(seed) + maxScoreLeft + maxScoreRight);
 }
 
 
