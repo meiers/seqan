@@ -437,7 +437,7 @@ myUngapedExtendSeed(Seed<Simple, TConfig> & seed,
         if (tmpScore > maxScoreRight)
         {
             maxScoreRight = tmpScore;
-            optLenLeft = len;
+            optLenRight = len;
         }
         ++dbIt; ++quIt; ++len;
     }
