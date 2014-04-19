@@ -434,12 +434,12 @@ myUngapedExtendSeed(Seed<Simple, TConfig> & seed,
     while (dbIt < dbEnd && quIt < quEnd && tmpScore > maxScoreRight - scoreDropOff)
     {
         tmpScore += score(scoringScheme, *dbIt, *quIt);
+        ++dbIt; ++quIt; ++len;
         if (tmpScore > maxScoreRight)
         {
             maxScoreRight = tmpScore;
             optLenRight = len;
         }
-        ++dbIt; ++quIt; ++len;
     }
 
     // update seed
