@@ -35,10 +35,6 @@
 #ifndef SANDBOX_MEIERS_APPS_SEQANLAST_SEQANLAST_CORE_H_
 #define SANDBOX_MEIERS_APPS_SEQANLAST_SEQANLAST_CORE_H_
 
-
-// only output the ungapped extension!
-#define SEQANLAST_ONLY_UNGAPPED_EXTENSION
-
 // =============================================================================
 // Global Definitions
 // =============================================================================
@@ -94,6 +90,12 @@ struct DiagonalTable
     DiagonalTable()
     {
         resize(table, Q, Exact());
+    }
+
+    void clear()
+    {
+        for (unsigned i=0; i < Q; ++i)
+            ::seqan::clear(table[i]);
     }
 
     bool redundant(TSize pGenome, TSize pQuery)
@@ -177,8 +179,8 @@ struct LastParameters
     TScore                  Xgapped;
     TScore                  Tgapless;
     TScore                  Tgapped;
-    bool onlyUngappedAlignments;
-    int verbosity;
+    bool                    onlyUngappedAlignments;
+    int                     verbosity;
 
     LastParameters(TSize f, TScoreMatrix const & scoreMatrix, TScore Xgapless,
                    TScore Xgapped, TScore Tgapless, TScore Tgapped, bool ungAl, int v) :
@@ -445,30 +447,24 @@ myUngapedExtendSeed(Seed<Simple, TConfig> & seed,
 // Function myExtendAlignment()
 // -----------------------------------------------------------------------------
 
-template <
-    typename TAlignObject,
-    typename TConfig,
+template <typename TAlignObject,
     typename TDatabase,
     typename TQuery,
     typename TScoreValue,
     typename TScoreSpec>
 inline TScoreValue myExtendAlignment(
                                      TAlignObject &                  alignObj,
-                                     Seed<Simple, TConfig> const &   seed,
                                      TDatabase const &               database,
                                      TQuery const &                  query,
                                      Score<TScoreValue, TScoreSpec> const & scoreMatrix,
                                      TScoreValue                     gappedXDropScore)
 {
     typedef typename Size<TDatabase>::Type                     TSize;
-    
-    resize(rows(alignObj), 2);
-    assignSource(row(alignObj, 0), infix(database, beginPositionH(seed), endPositionH(seed)));
-    assignSource(row(alignObj, 1), infix(query, beginPositionV(seed), endPositionV(seed)));
 
     // Run a local alignment first to get the "core" of the alignment
     TScoreValue localScore = localAlignment(alignObj, scoreMatrix);
 
+    /* TODO
     // Now extend both ends
     Tuple<TSize, 4> positions;
     positions[0] = beginPositionH(seed) + beginPosition(row(alignObj, 0));
@@ -485,8 +481,49 @@ inline TScoreValue myExtendAlignment(
                                              +25,       // upper Diag
                                              gappedXDropScore, scoreMatrix);
 
+
     return finalScore;
+     */
+    return localScore;
 }
+
+
+
+
+// TODO:
+//      - handle diagTables only per query, not M x N many
+//      - make sort outside only sort references, not objects
+//      - use iterators in ungapped Extension
+//      - make a switch between my ungapped extension and the seqan version
+//      - enable hashTable
+//      - write a bit of documentation
+
+
+// -----------------------------------------------------------------------------
+// Function _prepareMatchObject()
+// -----------------------------------------------------------------------------
+
+template <typename TMatch, typename TSeed, typename TString1, typename TString2, typename TSize1, typename TSize2>
+inline void _prepareMatchObject(TMatch & match,
+                                TSeed const & seed,
+                                TString1 const & database,
+                                TString2 const & query,
+                                TSize1 const & dbId,
+                                TSize2 const & quId)
+{
+    // create ungapped align Object from the seed
+    resize(rows(match.align), 2);
+    assignSource(row(match.align, 0), infix(database,   beginPositionH(seed), endPositionH(seed)));
+    assignSource(row(match.align, 1), infix(query,      beginPositionV(seed), endPositionV(seed)));
+
+    // Set other parameters of the match
+    match.score = score(seed);
+    match.dbId = dbId;
+    match.quId = quId;
+}
+
+
+
 
 // -----------------------------------------------------------------------------
 // Function linearLastal()
@@ -499,24 +536,20 @@ template <typename TMatches,
     typename TQuerySet,
     typename TSize2,
     typename TScoreMatrix>
-void linearLastal(TMatches & finalMatches,
-                  Index<TDbSet, IndexSa<TIndexSpec> > & index,
-                  Index<TDbSet, IndexQGram<TShape> >  & table,
-                  TQuerySet      const & querySet,
+void linearLastal(TMatches                                   & finalMatches,
+                  Index<TDbSet, IndexSa<TIndexSpec> >        & index,
+                  Index<TDbSet, IndexQGram<TShape> >         & table,
+                  TQuerySet                            const & querySet,
                   LastParameters<TSize2, TScoreMatrix> const & params)
 {
     typedef Index<TDbSet, IndexSa<TIndexSpec> >                     TIndex;
     typedef typename Size<TIndex>::Type                             TDbSize;
     typedef typename Fibre<TIndex, FibreSA>::Type                   TSA;
     typedef typename Iterator<TSA, Standard>::Type                  TSAIter;
-
     typedef typename Value<TDbSet const>::Type                      TDbString;
-
     typedef typename Value<TQuerySet const>::Type                   TQueryString;
     typedef typename Size<TQuerySet>::Type                          TQuSize;
-    typedef typename Iterator<TQuerySet const, Standard>::Type      TQuerySetIter;
     typedef typename Iterator<TQueryString const, Standard>::Type   TQueryIter;
-
     typedef DiagonalTable<typename Difference<TDbString>::Type,
                           typename Size<TDbString>::Type>           TDiagTable;
     typedef typename Value<TMatches>::Type                          TMatch;
@@ -533,12 +566,10 @@ void linearLastal(TMatches & finalMatches,
     unsigned    _cgpAls = 0;
 
 
-    // TODO(meiers): Only need |db| many diag tables, since only one query is passed at a time !!
-    TDbSize L = length(indexText(index));
+    // diagonal tables for the identification of redundant hits
     String<TDiagTable> diagTables;
-    resize(diagTables, L * length(querySet));
+    resize(diagTables, length(indexText(index)));
 
-    // Sequential search over queries
     for(TQuSize queryId=0; queryId < length(querySet); ++queryId)
     {
         TQueryString const &    query = querySet[queryId];
@@ -546,99 +577,66 @@ void linearLastal(TMatches & finalMatches,
         TQueryIter              queryBeg = begin(query, Standard());
         TQueryIter              queryEnd = end(query, Standard());
 
+        // reset diagonal tables
+        for(unsigned i=0; i<length(indexText(index)); ++i)
+            diagTables[i].clear();
+
+        // Sequential search over queries
         for(TQueryIter queryIt = queryBeg; queryIt != queryEnd; ++queryIt, ++queryPos)
         {
             // Lookup adaptive Seed
-                    double xxx = cpuTime();
+            double xxx = cpuTime();
             Pair<TDbSize> range = adaptiveSeeds(index, table, suffix(query, queryPos), params.maxFreq);
-                    _tASCalls += cpuTime() - xxx;
-                    ++_cASCalls;
+            _tASCalls += cpuTime() - xxx; ++_cASCalls;
 
             if(range.i2 <= range.i1) continue; // seed doesn't hit at all
             if(range.i2 - range.i1 > params.maxFreq) continue; // seed hits too often
 
             // Enumerate adaptive seeds
-            TSAIter saFrom = begin(indexSA(index), Standard()) + range.i1;
+            TSAIter saIt = begin(indexSA(index), Standard()) + range.i1;
             TSAIter saEnd  = begin(indexSA(index), Standard()) + range.i2;
 
-            for(; saFrom != saEnd; ++saFrom)
+            for(; saIt != saEnd; ++saIt)
             {
                 ++_cSeeds;
-                TDiagTable          &diagTable = diagTables[getSeqNo(*saFrom) + L*queryId];
-                TDbString const     &database  = indexText(index)[getSeqNo(*saFrom)];
-                Seed<Simple>        seed( getSeqOffset(*saFrom), queryIt - queryBeg, 0 );
+                TDiagTable        & diagTable = diagTables[getSeqNo(*saIt)];
+                TDbString const   & database  = indexText(index)[getSeqNo(*saIt)];
+                Seed<Simple>        seed( getSeqOffset(*saIt), queryIt - queryBeg, 0 );
 
                 // Check whether seed is redundant
                 if (diagTable.redundant(beginPositionH(seed), beginPositionV(seed)))
                     continue;
 
                 // Gapless Alignment in both directions with a XDrop
-                        double xxxx = cpuTime();
+                double xxxx = cpuTime();
                 myUngapedExtendSeed(seed, database, query, params.scoreMatrix, params.Xgapless);
-                        _tglAlsCalls += cpuTime() - xxxx;
-                        ++_cglAls;
+                _tglAlsCalls += cpuTime() - xxxx; ++_cglAls;
 
-
-                // Mark diagonal as already
+                // Mark diagonal as already visited
                 diagTable.add(endPositionH(seed), endPositionV(seed));
 
                 // gapLess alignment too weak
                 if (score(seed) < params.Tgapless) continue;
 
-// special task:
-if ( beginPositionH(seed) > 10 && beginPositionV(seed) > 10  &&  endPositionH(seed) < length(database)-10 && endPositionV(seed) < length(query)- 10 )
-{
-    std::cout << "begin:    V            seqanLast says: " << beginPositionH(seed) << std::endl;
-    std::cout << infix(database, beginPositionH(seed)-10, beginPositionH(seed)+30) << " database: " <<  beginPositionH(seed)-10 << " - " << beginPositionH(seed)+30 << std::endl;
-    std::cout << infix(query, beginPositionV(seed)-10, beginPositionV(seed)+30) << " query:    " <<  beginPositionV(seed)-10 << " - " << beginPositionV(seed)+30 << std::endl;
-    std::cout << "end:                          V          seqanLast says: " << endPositionH(seed) << std::endl;
-    std::cout << infix(database, endPositionH(seed)-30, endPositionH(seed)+10) << " database: " <<  endPositionH(seed)-30 << " - " << endPositionH(seed)+10 << std::endl;
-    std::cout << infix(query, endPositionV(seed)-30, endPositionV(seed)+10) << " query:    " <<  endPositionV(seed)-30 << " - " << endPositionV(seed)+10 << std::endl;
-}
-
-                typename TMatch::Type alignObj;
-
-                // TODO: make a switch for ungapped extension based on params
-                //      - wrap function to prepare matchObject
-                //      - handle diagTables only per query, not M x N many
-                //      - make sort outside only sort references, not objects
-                //      - use iterators in ungapped Extension
-                //      - make a switch between my ungapped extension and the seqan version
-                //      - enable hashTable
-                //      - write a bit of documentation
-#ifdef SEQANLAST_ONLY_UNGAPPED_EXTENSION
-                resize(rows(alignObj), 2);
-                assignSource(row(alignObj, 0), infix(database, beginPositionH(seed), endPositionH(seed)));
-                assignSource(row(alignObj, 1), infix(query, beginPositionV(seed), endPositionV(seed)));
+                // Prepare a match object with an align object inside
                 TMatch matchObj;
-                matchObj.quId = queryId;
-                matchObj.dbId = getSeqNo(*saFrom);
-                matchObj.align = alignObj;
-                matchObj.score = score(seed);
-                appendValue(finalMatches, matchObj);
-                continue;
-#endif
+                _prepareMatchObject(matchObj, seed, database, query, getSeqNo(*saIt), queryId);
+
+                // If only ungapped matches are wanted
+                if (params.onlyUngappedAlignments)
+                {
+                    appendValue(finalMatches, matchObj);
+                    continue;
+                }
 
                 // Gapped alignment:
+                double xxxxx = cpuTime();
+                TScore finalScore = myExtendAlignment(matchObj.align, database, query, params.scoreMatrix, params.Xgapped);
+                _tgpAlsCalls += cpuTime() - xxxxx; ++_cgpAls;
 
-                        double xxxxx = cpuTime();
-                TScore finalScore = myExtendAlignment(alignObj, seed, database, query, params.scoreMatrix, params.Xgapped);
-                        _tgpAlsCalls += cpuTime() - xxxxx;
-                        ++_cgpAls;
-
-                if (finalScore > params.Tgapped)
-                {
-                    TMatch matchObj;
-                    matchObj.quId = queryId;
-                    matchObj.dbId = getSeqNo(*saFrom);
-                    matchObj.align = alignObj;
-                    matchObj.score = finalScore;
-                    appendValue(finalMatches, matchObj);
-                }
+                if (finalScore > params.Tgapped) appendValue(finalMatches, matchObj);
                 
-            } // for(; saFrom != saEnd; ++saFrom)
-            
-
+            } // for(; saIt != saEnd; ++saIt)
         } //for(; queryIt != queryEnd; ++queryIt)
     }
 

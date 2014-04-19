@@ -112,7 +112,7 @@ int importAndRun(SeqanLastOptions &options,
         return 1;
 
 
-    // Prepare Parameter
+    // Prepare LastParameters
     Score<int, Simple> scoreMatrix(options.matchScore, options.mismatchScore, options.gapExtendScore,
                                    options.gapExtendScore + options.gapOpenScore);
     LastParameters<unsigned, Score<int, Simple> > params(options.frequency,
@@ -121,7 +121,7 @@ int importAndRun(SeqanLastOptions &options,
                                                          options.gappedXDrop,
                                                          options.gaplessThreshold,
                                                          options.gappedThreshold,
-                                                         true,                  // only ungapped
+                                                         options.onlyUngappedAlignments,
                                                          options.verbosity);
 
     // Do the main work: alignments

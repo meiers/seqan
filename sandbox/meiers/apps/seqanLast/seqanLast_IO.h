@@ -57,6 +57,7 @@ struct SeqanLastOptions
     int gaplessXDrop;
     int gaplessThreshold;
     int gappedThreshold;
+    bool onlyUngappedAlignments;
 
     CharString databaseName;
     CharString queryFile;
@@ -72,9 +73,10 @@ struct SeqanLastOptions
     void print() // TODO(meiers): could make an operator<< out of this
     {
         std::cout << "Files:" << std::endl;
-        std::cout << "   database: " << databaseName << std::endl;
-        std::cout << "   query:    " << queryFile << std::endl;
-        std::cout << "   output:   " << outputFile << std::endl;
+        std::cout << "   database:  " << databaseName << std::endl;
+        std::cout << "   query:     " << queryFile << std::endl;
+        std::cout << "   output:    " << outputFile << std::endl;
+        std::cout << "   extension: " << (onlyUngappedAlignments ? "ungapped" : "gapped") << std::endl;
         std::cout << "Options:" << std::endl;
         std::cout << "   frequency:        " << frequency << std::endl;
         std::cout << "   matchScore:       " << matchScore << std::endl;
@@ -148,27 +150,31 @@ void _setLastParser(ArgumentParser & parser)
     setVersion(parser, "0.1");
     setCategory(parser, "Local Alignment");
 
-    addUsageLine(parser, "[\\fIOPTIONS\\fP] <\\fIDATABASE\\fP> <\\fIQUERY FILE\\fP>");
+    addUsageLine(parser, "[\\fIOPTIONS\\fP] <\\fIINDEX PREFIX\\fP> <\\fIQUERY FILE\\fP>");
 
     addDescription(parser,
                    "SeqanLast is a reimplemtation of the core functionality of the LAST aligner "
                    "developed by Martin Frith (last.cbrc.jp, Kielbasa et al 2008: \"Adaptive "
                    "seeds tame genomic sequence comparison\"). It uses adaptive gapped seeds "
-                   "to find local similarities, which are then verified using certain heuristics.");
+                   "to find local similarities, which are then verified using an ungapped and "
+                   "a gapped extension.");
     addDescription(parser,
-                   "TODO: (1) supports ONLY DNA right now. (2) Default values are not chosen with any "
-                   "thought.");
+                   "Note: This is just a draft implementation with several properties that might "
+                   "be unfavorable. Only Dna5 alphabet is allowed (ignoring repeat masking "
+                   "information). A set of sequences is expected both for the database and as "
+                   "query. Moreover, the number of database sequences is limited to 256");
     addDescription(parser, "(c) 2013-2014 by Sascha Meiers");
 
-    addArgument(parser, ArgParseArgument(ArgParseArgument::STRING, "DATABASE"));
+    addArgument(parser, ArgParseArgument(ArgParseArgument::STRING, "INDEX PREFIX"));
     addArgument(parser, ArgParseArgument(ArgParseArgument::INPUTFILE, "QUERY FILE"));
-    setValidValues(parser, 1, "fa fasta");  // allow only fasta files as input
+    setValidValues(parser, 1, "fa fasta");
 
     addSection(parser, "Output Options");
 
     addOption(parser, ArgParseOption("o", "output", "File to write results into (gff format)",
                                      ArgParseArgument::OUTPUTFILE));
     setDefaultValue(parser, "o", "stdout");
+    addOption(parser, ArgParseOption("u", "ungapped", "Ungapped (gapless) extension only. Note that threshold d determines the output rather than e"));
     addOption(parser, ArgParseOption("v", "verbose", "Set verbosity mode."));
     addOption(parser, ArgParseOption("V", "very-verbose", "Set stronger verbosity mode."));
     addOption(parser, ArgParseOption("Q", "quiet", "No output, please."));
@@ -239,6 +245,10 @@ parseCommandLine(SeqanLastOptions & options, int argc, char const ** argv)
     getOptionValue(options.gaplessThreshold, parser, "gaplessThreshold");
     getOptionValue(options.gappedThreshold, parser, "gappedThreshold");
     getOptionValue(options.outputFile, parser, "output");
+    if (isSet(parser, "ungapped"))
+        options.onlyUngappedAlignments = true;
+    else
+        options.onlyUngappedAlignments = false;
 
     // Extract verbosity options.
     if (isSet(parser, "quiet"))
@@ -247,6 +257,7 @@ parseCommandLine(SeqanLastOptions & options, int argc, char const ** argv)
         options.verbosity = 2;
     if (isSet(parser, "very-verbose"))
         options.verbosity = 3;
+
 
     return seqan::ArgumentParser::PARSE_OK;
 }
