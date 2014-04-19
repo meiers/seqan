@@ -176,7 +176,7 @@ readRecord(TReader & reader, TMatch & match, Gff) {
             clear(buffer);
             res = readDigits(buffer, reader);
             if (res) return res;
-            match.begin2 = lexicalCast<unsigned>(buffer);
+            match.begin2 = lexicalCast<unsigned>(buffer) -1;
 
             // skip ','
             skipChar(reader, ',');
@@ -191,9 +191,9 @@ readRecord(TReader & reader, TMatch & match, Gff) {
         }
         else if (buffer == "length" && !found_seq2Range)
         {
-            match.begin2 = 0;
+            match.begin2 = 1;
 
-            // read end position 2
+            // length
             clear(buffer);
             res = readDigits(buffer, reader);
             if (res) return res;
@@ -777,8 +777,8 @@ analyze(TMatch & subjectMatch, String<TPos> & map, String<TMatch> & otherMatches
 	typename Iterator<String<TPos> >::Type oIt = begin(map);
 	while (oIt != end(map))
     {
-        std::cout << "subjectMatch: " << subjectMatch.begin1 << "-" << subjectMatch.end1 << "  :  " << subjectMatch.end1 << "-" << subjectMatch.end2 << std::endl;
-        std::cout << "otherMatch:   " << otherMatches[*oIt].begin1 << "-" << otherMatches[*oIt].end1 << "  :  "<<  otherMatches[*oIt].end1 << "-" << otherMatches[*oIt].end2 << std::endl;
+        std::cout << "subjectMatch: " << subjectMatch.begin1 << "-" << subjectMatch.end1 << "  :  " << subjectMatch.begin2 << "-" << subjectMatch.end2 << std::endl;
+        std::cout << "otherMatch:   " << otherMatches[*oIt].begin1 << "-" << otherMatches[*oIt].end1 << "  :  "<<  otherMatches[*oIt].begin2 << "-" << otherMatches[*oIt].end2 << std::endl;
 		if (distance(subjectMatch, otherMatches[*oIt]) == 0)
         {
             if (scoreDiff(subjectMatch, otherMatches[*oIt]) == 0)

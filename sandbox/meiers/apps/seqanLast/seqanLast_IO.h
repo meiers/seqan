@@ -438,7 +438,7 @@ template<typename TId, typename TScore, typename TRow, typename TFile>
 void
 _writeMatchGff(TId const & databaseID,
                TId const & patternID,
-               bool databaseStrand,
+               bool forwardStrand,
                TScore score, //lenAdjustment
                TRow const & row0,
                TRow const & row1,
@@ -453,13 +453,11 @@ _writeMatchGff(TId const & databaseID,
     file << "\tseqanLast";
     file << "\tseqanLast_match";
 
-    if (databaseStrand) {
-        file << "\t" << beginPosition(row0) + beginPosition(source(row0));
-        file << "\t" << endPosition(row0) + beginPosition(source(row0));
-    } else {
-        file << "\t" << length(source(row0)) - (endPosition(row0) + beginPosition(source(row0)));
-        file << "\t" << length(source(row0)) - (beginPosition(row0) + beginPosition(source(row0)));
-    }
+    // NOTE: Gff files are 1-based, the positions stand for first
+    //       and last match: to - from = length - 1
+    //
+    file << "\t" << beginPosition(row0) + beginPosition(source(row0)) + 1;
+    file << "\t" << endPosition(row0) + beginPosition(source(row0));
 
     file << "\t" << _computeIdentity(row0, row1);
 
@@ -472,11 +470,13 @@ _writeMatchGff(TId const & databaseID,
 
     file << ";score=" << score;
 
-    file << ";seq2Range=" << beginPosition(row1) + beginPosition(source(row1));
-    file << "," << endPosition(row1) + beginPosition(source(row1));
-
-    //    if (IsSameType<TAlphabet, Dna5>::VALUE || IsSameType<TAlphabet, Rna5>::VALUE)
-    //        file << ";eValue=" << _computeEValue(row0, row1, lengthAdjustment);
+    if (forwardStrand)
+    {
+        file << ";seq2Range=" << beginPosition(row1) + beginPosition(source(row1)) +1;
+        file << "," << endPosition(row1) + beginPosition(source(row1));
+    } else {
+        file << "___ERROR:_Write_function_cannot_handle_reverse_strands___";
+    }
 
     std::stringstream cigar, mutations;
     _getCigarLine(row0, row1, cigar, mutations);
