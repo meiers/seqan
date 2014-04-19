@@ -461,7 +461,7 @@ _writeMatchGff(TId const & databaseID,
 
     file << "\t" << _computeIdentity(row0, row1);
 
-    file << "\t" << (databaseStrand ? '+' : '-');
+    file << "\t" << (forwardStrand ? '+' : '-');
 
     file << "\t.\t";
     for (typename Position<TId>::Type i = 0; i < length(patternID) && value(patternID, i) > 32; ++i) {
