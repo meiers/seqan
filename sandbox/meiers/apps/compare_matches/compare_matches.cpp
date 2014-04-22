@@ -786,13 +786,20 @@ analyze(TMatch & subjectMatch, String<TPos> & map, String<TMatch> & otherMatches
         }
         else
         {
-            std::cout << "No exact match: " << std::endl;
-            write(subjectMatch);
-            write(otherMatches[*oIt]);
             if ( subjectMatch.begin1 == otherMatches[*oIt].begin1 && subjectMatch.begin2 == otherMatches[*oIt].begin2)
+            {
+                std::cout << "Same start: " << std::endl;
+                std::cout << "ref:  "; write(subjectMatch);
+                std::cout << "comp: "; write(otherMatches[*oIt]);
                 ++sameStart;
+            }
             else if ( subjectMatch.end1 == otherMatches[*oIt].end1 && subjectMatch.end2 == otherMatches[*oIt].end2)
+            {
+                std::cout << "Same end: " << std::endl;
+                std::cout << "ref:  "; write(subjectMatch);
+                std::cout << "comp: "; write(otherMatches[*oIt]);
                 ++sameEnd;
+            }
         }
         ++oIt;
 	}
@@ -810,7 +817,8 @@ exactAnalysis(String<TMatch> & epsMatches, String<TMatch> & otherMatches, TMappi
 
     Tuple<int, 5> r;
     std::fill(&(r.i[0]), &(r.i[0])+5, 0);
-	while (mapIt != mapEnd) {
+	while (mapIt != mapEnd)
+    {
 		// compute coverage of epsilon-match
 		TMatch epsMatch = epsMatches[position(mapIt, mapping)];
 		Tuple<int, 5> p = analyze(epsMatch, *mapIt, otherMatches);
