@@ -786,6 +786,9 @@ analyze(TMatch & subjectMatch, String<TPos> & map, String<TMatch> & otherMatches
         }
         else
         {
+            std::cout << "No exact match: " << std::endl;
+            write(subjectMatch);
+            write(otherMatches[*oIt]);
             if ( subjectMatch.begin1 == otherMatches[*oIt].begin1 && subjectMatch.begin2 == otherMatches[*oIt].begin2)
                 ++sameStart;
             else if ( subjectMatch.end1 == otherMatches[*oIt].end1 && subjectMatch.end2 == otherMatches[*oIt].end2)
