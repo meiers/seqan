@@ -313,22 +313,43 @@ inline void _goDownTrie(TTrieIt & trieIt,
         value(trieIt).repLen = weight(indexShape(table));
         goFurther(qryIt, weight(indexShape(table)) - 1);
         value(trieIt).lastChar = *qryIt++;
+
+        while(qryIt < qryEnd)
+        {
+            if(!goDown(trieIt, *(qryIt++)))
+                break;
+            if(countOccurrences(trieIt) <= maxFreq)
+                break;
+        }
     }
 
     // OR: make seed shorter
     else
     {
-        std::cout << "TODO: make shorter" << std::endl;
-    }
+        std::cout << "Use new function!!" << std::endl;
+        THashValue sigma, sigmaToQ;
+        sigma = sigmaToQ = static_cast<THashValue>(ValueSize<typename Host<TShape>::Type>::VALUE);
+        unsigned len = std::min(static_cast<TSaPos>(qryEnd - qryIt), weight(indexShape(table)));
 
-    while(qryIt < qryEnd)
-    {
-        if(!goDown(trieIt, *(qryIt++)))
-            break;
-        if(countOccurrences(trieIt) <= maxFreq)
-            break;
-    }
+        // for len = q-1 to 0
+        for(--len; len > 0; --len, sigmaToQ *= sigma)
+        {
+            // hash values of the substring one shorter
+            x = (x/sigmaToQ) * sigmaToQ;
+            y = (x/sigmaToQ + 1) * sigmaToQ;
 
+            // if the range is > maxFreq, the previous range was correct
+            if (indexDir(table)[y] - indexDir(table)[x] > maxFreq)
+            {
+                value(trieIt).range.i1 = from;
+                value(trieIt).range.i2 = to;
+                value(trieIt).repLen = len+1;
+                value(trieIt).lastChar = *(qryIt + len);
+            }
+            from = indexDir(table)[x];
+            to   = indexDir(table)[y];
+        }
+    }
 
 }
 
