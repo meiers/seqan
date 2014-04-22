@@ -318,7 +318,7 @@ inline void _goDownTrie(TTrieIt & trieIt,
     // OR: make seed shorter
     else
     {
-        std::cout << "make shorter" << std::endl;
+        std::cout << "TODO: make shorter" << std::endl;
     }
 
     while(qryIt < qryEnd)
@@ -592,9 +592,9 @@ void linearLastal(TMatches                                   & finalMatches,
         for(TQueryIter queryIt = queryBeg; queryIt != queryEnd; ++queryIt, ++queryPos)
         {
             // Lookup adaptive Seed
-            double xxx = cpuTime();
+            //double xxx = cpuTime();
             Pair<TDbSize> range = adaptiveSeeds(index, table, suffix(query, queryPos), params.maxFreq);
-            _tASCalls += cpuTime() - xxx; ++_cASCalls;
+            //_tASCalls += cpuTime() - xxx; ++_cASCalls;
 
             if(range.i2 <= range.i1) continue; // seed doesn't hit at all
             if(range.i2 - range.i1 > params.maxFreq) continue; // seed hits too often
@@ -615,9 +615,9 @@ void linearLastal(TMatches                                   & finalMatches,
                     continue;
 
                 // Gapless Alignment in both directions with a XDrop
-                double xxxx = cpuTime();
+                //double xxxx = cpuTime();
                 myUngapedExtendSeed(seed, database, query, params.scoreMatrix, params.Xgapless);
-                _tglAlsCalls += cpuTime() - xxxx; ++_cglAls;
+                //_tglAlsCalls += cpuTime() - xxxx; ++_cglAls;
 
                 // Mark diagonal as already visited
                 diagTable.add(endPositionH(seed), endPositionV(seed));
@@ -637,9 +637,9 @@ void linearLastal(TMatches                                   & finalMatches,
                 }
 
                 // Gapped alignment:
-                double xxxxx = cpuTime();
+                //double xxxxx = cpuTime();
                 TScore finalScore = myExtendAlignment(matchObj.align, database, query, params.scoreMatrix, params.Xgapped);
-                _tgpAlsCalls += cpuTime() - xxxxx; ++_cgpAls;
+                //_tgpAlsCalls += cpuTime() - xxxxx; ++_cgpAls;
 
                 if (finalScore > params.Tgapped) appendValue(finalMatches, matchObj);
                 
