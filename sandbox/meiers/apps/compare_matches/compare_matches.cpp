@@ -730,7 +730,7 @@ binMatches(String<TMatch> & epsMatches, String<TMatch> & otherMatches, TMapping 
 
 		// increment corresponding bin counter
 		if (coverageSeq1 == 0.0) {
-			write(epsMatch);
+			//write(epsMatch);
 			++bins[0];
 		}
 		else if (coverageSeq1 < 10.0) {
