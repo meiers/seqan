@@ -204,14 +204,15 @@ struct LastParameters
     TScore                  Tgapped;
     bool                    onlyUngappedAlignments;
     bool                    useHashTable;
+    bool                    myUngappedExtend;
     int                     verbosity;
 
     LastParameters(TSize f, TScoreMatrix const & scoreMatrix, TScore Xgapless,
                    TScore Xgapped, TScore Tgapless, TScore Tgapped, bool ungAl,
-                   bool useHash, int v) :
+                   bool useHash, bool myExtend, int v) :
         maxFreq(f), scoreMatrix(scoreMatrix), Xgapless(Xgapless), Xgapped(Xgapped),
         Tgapless(Tgapless), Tgapped(Tgapped), onlyUngappedAlignments(ungAl),
-        useHashTable(useHash), verbosity(v)
+        useHashTable(useHash), myUngappedExtend(myExtend), verbosity(v)
     {}
 };
 
@@ -506,7 +507,7 @@ adaptiveSeeds(Index<TIndexText, IndexSa<Gapped<TMod> > > & index,
 
 
 // --------------------------------------------------------------------------
-// Function myUngapedExtendSeed()
+// Function _myUngapedExtendSeed()
 // --------------------------------------------------------------------------
 
 template <typename TConfig,
@@ -515,7 +516,7 @@ template <typename TConfig,
     typename TScoreValue,
     typename TScoreSpec>
 inline void
-myUngapedExtendSeed(Seed<Simple, TConfig> & seed,
+_myUngapedExtendSeed(Seed<Simple, TConfig> & seed,
                     TDatabase const & database,
                     TQuery const & query,
                     Score<TScoreValue, TScoreSpec> const & scoringScheme,
@@ -579,6 +580,43 @@ myUngapedExtendSeed(Seed<Simple, TConfig> & seed,
     setScore(seed, score(seed) + maxScoreLeft + maxScoreRight);
 }
 
+
+// --------------------------------------------------------------------------
+// Function _seqanUngapedExtendSeed()
+// --------------------------------------------------------------------------
+
+template <typename TConfig,
+typename TDatabase,
+typename TQuery,
+typename TScoreValue,
+typename TScoreSpec>
+inline void
+_seqanUngappedExtendSeed(Seed<Simple, TConfig> & seed,
+                    TDatabase const & database,
+                    TQuery const & query,
+                    Score<TScoreValue, TScoreSpec> const & scoringScheme,
+                    TScoreValue scoreDropOff)
+{
+    // Horizontal = database
+    // Vertical   = query
+
+    typedef typename Position<Seed<Simple, TConfig> >::Type     TPosition;
+    typedef typename Size<Seed<Simple, TConfig> >::Type         TSize;
+    typedef typename Iterator<TDatabase const, Standard>::Type  TDbIter;
+    typedef typename Iterator<TQuery const, Standard>::Type     TQuIter;
+
+    TDbIter dbBeg = begin(database, Standard());
+    TDbIter dbEnd = end(database, Standard());
+    TDbIter quBeg = begin(query, Standard());
+    TDbIter quEnd = end(query, Standard());
+
+    TScoreValue tmpScore, maxScoreLeft, maxScoreRight;
+    TPosition len, optLenLeft, optLenRight;
+    TDbIter dbIt;
+    TQuIter quIt;
+
+    // TODO
+}
 
 // -----------------------------------------------------------------------------
 // Function myExtendAlignment()
@@ -742,7 +780,10 @@ void linearLastal(TMatches                                   & finalMatches,
 
                 // Gapless Alignment in both directions with a XDrop
                 //double xxxx = cpuTime();
-                myUngapedExtendSeed(seed, database, query, params.scoreMatrix, params.Xgapless);
+                if (params.myUngappedExtend)
+                    _myUngapedExtendSeed(seed, database, query, params.scoreMatrix, params.Xgapless);
+                else
+                    _seqanUngappedExtendSeed(seed, database, query, params.scoreMatrix, params.Xgapless);
                 //_tglAlsCalls += cpuTime() - xxxx; ++_cglAls;
 
                 // Mark diagonal as already visited

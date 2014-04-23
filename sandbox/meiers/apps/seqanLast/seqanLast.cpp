@@ -123,6 +123,7 @@ int importAndRun(SeqanLastOptions &options,
                                                          options.gappedThreshold,
                                                          options.onlyUngappedAlignments,
                                                          options.useHashTable,
+                                                         options.myUngappedExtend,
                                                          options.verbosity);
 
     // Do the main work: alignments
