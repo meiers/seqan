@@ -58,6 +58,7 @@ struct SeqanLastOptions
     int gaplessThreshold;
     int gappedThreshold;
     bool onlyUngappedAlignments;
+    bool useHashTable;
 
     CharString databaseName;
     CharString queryFile;
@@ -174,7 +175,6 @@ void _setLastParser(ArgumentParser & parser)
     addOption(parser, ArgParseOption("o", "output", "File to write results into (gff format)",
                                      ArgParseArgument::OUTPUTFILE));
     setDefaultValue(parser, "o", "stdout");
-    addOption(parser, ArgParseOption("u", "ungapped", "Ungapped (gapless) extension only. Note that threshold d determines the output rather than e"));
     addOption(parser, ArgParseOption("v", "verbose", "Set verbosity mode."));
     addOption(parser, ArgParseOption("V", "very-verbose", "Set stronger verbosity mode."));
     addOption(parser, ArgParseOption("Q", "quiet", "No output, please."));
@@ -209,6 +209,10 @@ void _setLastParser(ArgumentParser & parser)
     addOption(parser, ArgParseOption("e", "gappedThreshold", "Minimum score of the gapped alignment to continue",
                                      ArgParseArgument::INTEGER));
     setDefaultValue(parser, "e", "25");
+
+    addSection(parser, "Miscellaneous Options");
+    addOption(parser, ArgParseOption("u", "ungapped", "Ungapped (gapless) extension only. Note that threshold d determines the output rather than e"));
+    addOption(parser, ArgParseOption("iH", "ignore-hashtable", "Do not use the hash table to speed up adaptive seeding"));
 
     addTextSection(parser, "References");
     addText(parser, "Kielbasa et al.: Adaptive seeds tame genomic sequence comparison. 2008");
@@ -245,10 +249,9 @@ parseCommandLine(SeqanLastOptions & options, int argc, char const ** argv)
     getOptionValue(options.gaplessThreshold, parser, "gaplessThreshold");
     getOptionValue(options.gappedThreshold, parser, "gappedThreshold");
     getOptionValue(options.outputFile, parser, "output");
-    if (isSet(parser, "ungapped"))
-        options.onlyUngappedAlignments = true;
-    else
-        options.onlyUngappedAlignments = false;
+
+    options.onlyUngappedAlignments = isSet(parser, "ungapped");
+    options.useHashTable = ! isSet(parser, "iH");
 
     // Extract verbosity options.
     if (isSet(parser, "quiet"))

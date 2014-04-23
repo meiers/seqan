@@ -122,6 +122,7 @@ int importAndRun(SeqanLastOptions &options,
                                                          options.gaplessThreshold,
                                                          options.gappedThreshold,
                                                          options.onlyUngappedAlignments,
+                                                         options.useHashTable,
                                                          options.verbosity);
 
     // Do the main work: alignments

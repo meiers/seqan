@@ -203,13 +203,15 @@ struct LastParameters
     TScore                  Tgapless;
     TScore                  Tgapped;
     bool                    onlyUngappedAlignments;
+    bool                    useHashTable;
     int                     verbosity;
 
     LastParameters(TSize f, TScoreMatrix const & scoreMatrix, TScore Xgapless,
-                   TScore Xgapped, TScore Tgapless, TScore Tgapped, bool ungAl, int v) :
+                   TScore Xgapped, TScore Tgapless, TScore Tgapped, bool ungAl,
+                   bool useHash, int v) :
         maxFreq(f), scoreMatrix(scoreMatrix), Xgapless(Xgapless), Xgapped(Xgapped),
         Tgapless(Tgapless), Tgapped(Tgapped), onlyUngappedAlignments(ungAl),
-        verbosity(v)
+        useHashTable(useHash), verbosity(v)
     {}
 };
 
@@ -301,26 +303,42 @@ void adaptedCreateQGramIndexDirOnly(TDir &dir,
 // Function _fastTableLookup()
 // -----------------------------------------------------------------------------
 
+template <typename TTrieIt, typename TLookupTable, typename TQueryIt, typename TSize>
+inline void _fastTableLookup(TTrieIt & trieIt,
+                             TLookupTable & table,
+                             TQueryIt qryIt,
+                             TQueryIt qryEnd,
+                             TSize maxFreq)
+{
+    typedef typename Fibre<TLookupTable, FibreShape>::Type TShape;
+    typedef typename Value<TShape>::Type THashValue;
+    typedef typename Size<TLookupTable>::Type TSaPos;
+
+    // determine hash values
+    THashValue x = hash(indexShape(table), qryIt, qryEnd - qryIt);
+    THashValue y = x+1;
+    if (static_cast<TSaPos>(qryEnd - qryIt) < length(indexShape(table)))
+        y = hashUpper(indexShape(table), qryIt, qryEnd - qryIt);
+
+    // get range in SA
+    TSaPos from  = indexDir(table)[x];
+    TSaPos to    = indexDir(table)[y];
+
+    if (to - from > maxFreq)
+    {
+        value(trieIt).range.i1 = from;
+        value(trieIt).range.i2 = to;
+        value(trieIt).repLen = weight(indexShape(table));
+        goFurther(qryIt, weight(indexShape(table)) - 1);
+        value(trieIt).lastChar = *qryIt++;
+    }
+    else
+    {
+        // TODO: Go Up in the table
+    }
+}
+
 /*
-typedef typename Fibre<TLookupIndex, FibreShape>::Type TShape;
-typedef typename Value<TShape>::Type THashValue;
-typedef typename Size<TLookupIndex>::Type TSaPos;
-
-// determine hash values
-THashValue x = hash(indexShape(table), qryIt, qryEnd - qryIt);
-THashValue y = x+1;
-if (static_cast<TSaPos>(qryEnd - qryIt) < length(indexShape(table)))
-y = hashUpper(indexShape(table), qryIt, qryEnd - qryIt);
-
-// get range in SA
-TSaPos from  = indexDir(table)[x];
-TSaPos to    = indexDir(table)[y];
-
-value(trieIt).range.i1 = from;
-value(trieIt).range.i2 = to;
-value(trieIt).repLen = weight(indexShape(table));
-goFurther(qryIt, weight(indexShape(table)) - 1);
-value(trieIt).lastChar = *qryIt++;
 
 
 // OR: make seed shorter
@@ -420,7 +438,7 @@ adaptiveSeeds(TTrieIndex   & index,
     TQueryIter  qryIt  = begin(query, Standard());
     TQueryIter  qryEnd = end(query, Standard());
 
-//    _fastTableLookup(trieIt, table, qryIt, qryEnd);
+    _fastTableLookup(trieIt, table, qryIt, qryEnd, maxFreq);
     _goDownTrie(trieIt, qryIt, qryEnd, maxFreq);
     return range(trieIt);
 }
@@ -461,7 +479,7 @@ adaptiveSeeds(Index<TIndexText, IndexSa<Gapped<TMod> > > & index,
     TQueryIter  qryIt  = begin(modQuery, Standard());
     TQueryIter  qryEnd = end(modQuery, Standard());
 
-//    _fastTableLookup(trieIt, table, qryIt, qryEnd);
+    _fastTableLookup(trieIt, table, qryIt, qryEnd, maxFreq);
     _goDownTrie(trieIt, qryIt, qryEnd, maxFreq);
     return range(trieIt);
 }
@@ -699,7 +717,9 @@ void linearLastal(TMatches                                   & finalMatches,
         {
             // Lookup adaptive Seed
             //double xxx = cpuTime();
-            Pair<TDbSize> range = adaptiveSeeds(index, table, suffix(query, queryPos), params.maxFreq);
+            Pair<TDbSize> range = (params.useHashTable ?
+                                   adaptiveSeeds(index, table, suffix(query, queryPos), params.maxFreq) :
+                                   adaptiveSeeds(index, suffix(query, queryPos), params.maxFreq));
             //_tASCalls += cpuTime() - xxx; ++_cASCalls;
 
             if(range.i2 <= range.i1) continue; // seed doesn't hit at all
