@@ -372,7 +372,8 @@ struct ContextLss_
 		TSA &SA,
 		TText const &s,
 		LarssonSadakane const &,
-		unsigned K)
+		unsigned K,
+        unsigned)
 	{
 		typedef typename Value<TSA>::Type			TValue;
 		typedef typename MakeSigned_<TValue>::Type	TSValue;	// LarssonSadakane expects signed values
@@ -420,7 +421,7 @@ struct ContextLss_
 			endRead(_textIn);
 
 			resize(sa, len + 1, Exact());
-			createSuffixArray(sa, text, LarssonSadakane(), maxChar + 1);
+			createSuffixArray(sa, text, LarssonSadakane(), maxChar + 1, 0);
 		}
 
 		inline typename Value<TSource>::Type const & operator*() {
