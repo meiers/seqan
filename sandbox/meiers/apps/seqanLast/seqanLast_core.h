@@ -77,6 +77,24 @@ namespace SEQAN_NAMESPACE_MAIN
 // Tags, Classes, Enums
 // =============================================================================
 
+/*!
+ * @class SeqanLast SeqanLast App
+ * @headerfile seqanLast/seqanLast_core.h
+ *
+ * @brief A local alignment search tool implemented in SeqAn.
+ *
+ * @signature none;
+ *
+ * This is the documnetation of the local alignment search tool seqanLast,
+ * which is a reimplementation of Last [Kielbasa et al., 2011].
+ *
+ * @section Overview
+ *
+ * Lalalala
+ *
+ */
+
+
 // -----------------------------------------------------------------------------
 // Struct DiagonalTable
 // -----------------------------------------------------------------------------
@@ -280,82 +298,113 @@ void adaptedCreateQGramIndexDirOnly(TDir &dir,
 // =============================================================================
 
 // -----------------------------------------------------------------------------
+// Function _fastTableLookup()
+// -----------------------------------------------------------------------------
+
+/*
+typedef typename Fibre<TLookupIndex, FibreShape>::Type TShape;
+typedef typename Value<TShape>::Type THashValue;
+typedef typename Size<TLookupIndex>::Type TSaPos;
+
+// determine hash values
+THashValue x = hash(indexShape(table), qryIt, qryEnd - qryIt);
+THashValue y = x+1;
+if (static_cast<TSaPos>(qryEnd - qryIt) < length(indexShape(table)))
+y = hashUpper(indexShape(table), qryIt, qryEnd - qryIt);
+
+// get range in SA
+TSaPos from  = indexDir(table)[x];
+TSaPos to    = indexDir(table)[y];
+
+value(trieIt).range.i1 = from;
+value(trieIt).range.i2 = to;
+value(trieIt).repLen = weight(indexShape(table));
+goFurther(qryIt, weight(indexShape(table)) - 1);
+value(trieIt).lastChar = *qryIt++;
+
+
+// OR: make seed shorter
+else
+{
+    std::cout << "Use new function!!" << std::endl;
+    THashValue sigma, sigmaToQ;
+    sigma = sigmaToQ = static_cast<THashValue>(ValueSize<typename Host<TShape>::Type>::VALUE);
+    unsigned len = std::min(static_cast<TSaPos>(qryEnd - qryIt), weight(indexShape(table)));
+
+    // for len = q-1 to 0
+    for(--len; len > 0; --len, sigmaToQ *= sigma)
+    {
+        // hash values of the substring one shorter
+        x = (x/sigmaToQ) * sigmaToQ;
+        y = (x/sigmaToQ + 1) * sigmaToQ;
+
+        // if the range is > maxFreq, the previous range was correct
+        if (indexDir(table)[y] - indexDir(table)[x] > maxFreq)
+        {
+            value(trieIt).range.i1 = from;
+            value(trieIt).range.i2 = to;
+            value(trieIt).repLen = len+1;
+            value(trieIt).lastChar = *(qryIt + len);
+        }
+        from = indexDir(table)[x];
+        to   = indexDir(table)[y];
+    }
+}
+*/
+
+
+// -----------------------------------------------------------------------------
 // Function _goDownTrie()
 // -----------------------------------------------------------------------------
 
-template <typename TTrieIt, typename TLookupIndex, typename TQueryIt, typename TSize>
+template <typename TTrieIt, typename TQueryIt, typename TSize>
 inline void _goDownTrie(TTrieIt & trieIt,
-                        TLookupIndex  & table,
                         TQueryIt qryIt,
                         TQueryIt qryEnd,
                         TSize maxFreq)
 {
-
-    typedef typename Fibre<TLookupIndex, FibreShape>::Type TShape;
-    typedef typename Value<TShape>::Type THashValue;
-    typedef typename Size<TLookupIndex>::Type TSaPos;
-
-    // determine hash values
-    THashValue x = hash(indexShape(table), qryIt, qryEnd - qryIt);
-    THashValue y = x+1;
-    if (static_cast<TSaPos>(qryEnd - qryIt) < length(indexShape(table)))
-        y = hashUpper(indexShape(table), qryIt, qryEnd - qryIt);
-
-    // get range in SA
-    TSaPos from  = indexDir(table)[x];
-    TSaPos to    = indexDir(table)[y];
-
-    // EITHER: make seed longer
-    if ( to - from > maxFreq)
+    while(qryIt < qryEnd)
     {
-        value(trieIt).range.i1 = from;
-        value(trieIt).range.i2 = to;
-        value(trieIt).repLen = weight(indexShape(table));
-        goFurther(qryIt, weight(indexShape(table)) - 1);
-        value(trieIt).lastChar = *qryIt++;
-
-        while(qryIt < qryEnd)
-        {
-            if(!goDown(trieIt, *(qryIt++)))
-                break;
-            if(countOccurrences(trieIt) <= maxFreq)
-                break;
-        }
+        if(!goDown(trieIt, *(qryIt++)))
+            break;
+        if(countOccurrences(trieIt) <= maxFreq)
+            break;
     }
-
-    // OR: make seed shorter
-    else
-    {
-        std::cout << "Use new function!!" << std::endl;
-        THashValue sigma, sigmaToQ;
-        sigma = sigmaToQ = static_cast<THashValue>(ValueSize<typename Host<TShape>::Type>::VALUE);
-        unsigned len = std::min(static_cast<TSaPos>(qryEnd - qryIt), weight(indexShape(table)));
-
-        // for len = q-1 to 0
-        for(--len; len > 0; --len, sigmaToQ *= sigma)
-        {
-            // hash values of the substring one shorter
-            x = (x/sigmaToQ) * sigmaToQ;
-            y = (x/sigmaToQ + 1) * sigmaToQ;
-
-            // if the range is > maxFreq, the previous range was correct
-            if (indexDir(table)[y] - indexDir(table)[x] > maxFreq)
-            {
-                value(trieIt).range.i1 = from;
-                value(trieIt).range.i2 = to;
-                value(trieIt).repLen = len+1;
-                value(trieIt).lastChar = *(qryIt + len);
-            }
-            from = indexDir(table)[x];
-            to   = indexDir(table)[y];
-        }
-    }
-
 }
 
 // -----------------------------------------------------------------------------
 // Function adaptiveSeeds()                                           [ungapped]
 // -----------------------------------------------------------------------------
+
+/*!
+ * @fn SeqanLast#adaptiveSeeds
+ * @headerfile seqanLast/seqanLast_core.h
+ *
+ * @brief Find adaptive seeds to a query using a (gapped) suffix array
+ *
+ * @signature Pair<TSize> adaptiveSeeds(index, lookupTable, query, maxFreq);
+ * @signature Pair<TSize> adaptiveSeeds(index, query, maxFreq);
+ *
+ * @param[in] index A trie-like index that can be traversed using goDown(). 
+ *             Currently this parameter is limited to the IndexSa class
+ *             specialization and its subclasses. For gapped adaptive seeds
+ *             provide the IndexSa<Gapped<...> > index.
+ * @param[in] lookupTable A hash table that supports the fast lookup of short
+ *             strings in the suffix array. The q-gram index specialization
+ *             is meant. Watch that the positions of the indexDir match those
+ *             in the suffix array - usually the indexDir does not contain
+ *             incomplete q-grams. This table significantly speeds up the
+ *             determination of adaptive seeds.
+ * @param[in] maxFreq maximum allowed frequency of a seed to match in the target
+ *             sequence.
+ * @return Range of occurrences in the suffix array. If adaptive seeds exist
+ *             for this query and frequency, this range will be less than
+ *             or equal maxFreq. If the range is zero or larger than maxFreq,
+ *             no adaptive seeds exist according to the definition of adaptive
+ *             seeds.
+ */
+
+// Ungapped seeds:
 
 template <typename TTrieIndex, typename TLookupIndex, typename TQuery, typename TSize>
 inline Pair<typename Size<TTrieIndex>::Type>
@@ -371,13 +420,29 @@ adaptiveSeeds(TTrieIndex   & index,
     TQueryIter  qryIt  = begin(query, Standard());
     TQueryIter  qryEnd = end(query, Standard());
 
-    _goDownTrie(trieIt, table, qryIt, qryEnd, maxFreq);
+//    _fastTableLookup(trieIt, table, qryIt, qryEnd);
+    _goDownTrie(trieIt, qryIt, qryEnd, maxFreq);
     return range(trieIt);
 }
 
-// -----------------------------------------------------------------------------
-// Function adaptiveSeeds()                                             [Gapped]
-// -----------------------------------------------------------------------------
+template <typename TTrieIndex, typename TQuery, typename TSize>
+inline Pair<typename Size<TTrieIndex>::Type>
+adaptiveSeeds(TTrieIndex   & index,
+              TQuery const & query,
+              TSize maxFreq)
+{
+    typedef typename Iterator<TTrieIndex, TopDown<> >::Type   TTreeIter;
+    typedef typename Iterator<TQuery const, Standard>::Type   TQueryIter;
+
+    TTreeIter   trieIt(index);
+    TQueryIter  qryIt  = begin(query, Standard());
+    TQueryIter  qryEnd = end(query, Standard());
+
+    _goDownTrie(trieIt, qryIt, qryEnd, maxFreq);
+    return range(trieIt);
+}
+
+// Gapped Seeds:
 
 template <typename TIndexText, typename TMod, typename TLookupIndex, typename TQuery, typename TSize>
 inline Pair<typename Size<Index<TIndexText, IndexSa<Gapped<TMod> > > >::Type>
@@ -396,10 +461,30 @@ adaptiveSeeds(Index<TIndexText, IndexSa<Gapped<TMod> > > & index,
     TQueryIter  qryIt  = begin(modQuery, Standard());
     TQueryIter  qryEnd = end(modQuery, Standard());
 
-    _goDownTrie(trieIt, table, qryIt, qryEnd, maxFreq);
+//    _fastTableLookup(trieIt, table, qryIt, qryEnd);
+    _goDownTrie(trieIt, qryIt, qryEnd, maxFreq);
     return range(trieIt);
 }
 
+template <typename TIndexText, typename TMod, typename TQuery, typename TSize>
+inline Pair<typename Size<Index<TIndexText, IndexSa<Gapped<TMod> > > >::Type>
+adaptiveSeeds(Index<TIndexText, IndexSa<Gapped<TMod> > > & index,
+              TQuery const & query,
+              TSize maxFreq)
+{
+    typedef Index<TIndexText, IndexSa<Gapped<TMod> > >          TTrieIndex;
+    typedef typename Iterator<TTrieIndex, TopDown<> >::Type     TTreeIter;
+    typedef ModifiedString<TQuery const, TMod>                  TModStr;
+    typedef typename Iterator<TModStr, Standard>::Type          TQueryIter;
+
+    TTreeIter   trieIt(index);
+    TModStr     modQuery(query);
+    TQueryIter  qryIt  = begin(modQuery, Standard());
+    TQueryIter  qryEnd = end(modQuery, Standard());
+
+    _goDownTrie(trieIt, qryIt, qryEnd, maxFreq);
+    return range(trieIt);
+}
 
 
 // --------------------------------------------------------------------------
