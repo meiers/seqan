@@ -100,95 +100,72 @@ parseCommandLine(AppOptions & options, int argc, char const ** argv)
 }
 
 
-// --------------------------------------------------------------------------
-// Function callBenchmark()
-// --------------------------------------------------------------------------
-
-template <typename TString, typename TSpec>
-void callBenchmarks(StringSet<TString, TSpec> const & set) {
-
-    CharString dislexExt = "Extern";
-    CharString shapeStr  = "10011001100";
-    CharString string    = "String";
-    CharString stringset = "StrSet";
-
-    //- Gapped Indices: 011 ----------------------------------------------------------------
-
-    typedef CyclicShape<FixedShape<1,GappedShape<HardwiredShape<1> >, 0> > TShape;
-
-    {
-        typedef typename Concatenator<StringSet<TString, TSpec> >::Type			TConcat;
-        typedef Multi<GappedTupler<TShape, false /* not bitpacked */>,
-                Pair<typename Size<TString>::Type>,
-                typename StringSetLimits<StringSet<TString, TSpec> >::Type>     TMulti;
-
-        // specialization
-		typedef Pipe< TConcat, Source<> >                                       TSource;
-        typedef Pipe< TSource, TMulti>                                          TTupler;
-
-        TSource source(concat(set));
-        TTupler tupler(source, stringSetLimits(set));
-        beginRead(tupler);
-        while (!eof(tupler))
-        {
-            TypeOf_(TTupler) c;
-            pop(tupler,c);
-            std::cout << c << std::endl;
-        }
-        endRead(tupler);
 
 
-    }
 
-}
 
 // --------------------------------------------------------------------------
 // Function main()
 // --------------------------------------------------------------------------
 
 // Program entry point.
-
+using namespace seqan;
 int main(int argc, char const ** argv)
 {
-    // Parse the command line.
-    seqan::ArgumentParser parser;
-    AppOptions options;
-    seqan::ArgumentParser::ParseResult res = parseCommandLine(options, argc, argv);
+    Dna5String ref;
+    Dna5String comp;
+    CharString id;
 
-    // If there was an error parsing or built-in argument parser functionality
-    // was triggered then we exit the program.  The return code is 1 if there
-    // were errors and 0 if there were none.
-    if (res != seqan::ArgumentParser::PARSE_OK)
-        return res == seqan::ArgumentParser::PARSE_ERROR;
+    SequenceStream seqStream("/Users/mauli87/Development/seqan-build/chr1.fa");
+    if (isGood(seqStream) && !readRecord(id, ref, seqStream))
+        std::cout << "read reference file: ok" << std::endl;
 
+    clear(id);
+    SequenceStream seqStream2("/Users/mauli87/Development/seqan-build/chr20_head10k.fa");
+    if (isGood(seqStream2) && !readRecord(id, comp, seqStream2))
+        std::cout << "read comparison file: ok" << std::endl;
 
-    // start main program ///////////////////////////////////////////////////
+    clear(id);
 
-    seqan::StringSet<seqan::CharString> ids;
-    seqan::StringSet<seqan::Dna5String> seqs;
-
-
-
-    // New reading:
-    // use the sequenceStream
-    seqan::SequenceStream seqStream(seqan::toCString(options.infile));
-    if (!isGood(seqStream))
-    {
-        std::cerr << "ERROR: Could not open the file." << std::endl;
-        return 1;
-    }
-    if (readAll(ids, seqs, seqStream) != 0)
-    {
-        std::cerr << "ERROR: Could not read from " << options.infile << std::endl;
+    if(argc != 5) {
+        std::cout << "no positions given. Use R_from R_to C_from C_to" << std::endl;
         return 1;
     }
 
+    unsigned rF = atoi(argv[1]);
+    unsigned rT = atoi(argv[2]);
+    unsigned cF = atoi(argv[3]);
+    unsigned cT = atoi(argv[4]);
 
-    time_t t; time(&t);
-    std::cout << "# input file : " << options.infile << std::endl;
-    std::cout << "# timestamp  : " << ctime(&t);
+    std::stringstream ss;
+    ss << rF;
+    CharString s = "*";
+    append(s,ss.str());
 
-    callBenchmarks(seqs);
+    std::cout << s;
+    for(unsigned i=rF+length(s); i<rT; ++i)
+    {
+        if(i%100 == 0) std::cout << "|";
+        else if(i%50 == 0) std::cout << ":";
+        else if(i%10 ==0) std::cout << ".";
+        else std::cout << " ";
+    }
+    std::cout << std::endl;
+
+    //ref sequence
+    std::cout << infix(ref,  rF, rT) << std::endl;
+
+
+    // alignment symbols
+    for(unsigned i=0; i < std::min(rT-rF, cT-cF); ++i)
+        if(ref[rF+i] == comp[cF+i]) std::cout << "+";
+        else std::cout << " ";
+    std::cout << std::endl;
+
+
+    // compare seq
+    std::cout << infix(comp, cF, cT) << std::endl;
+
 
     return 0;
 }
