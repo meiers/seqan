@@ -115,34 +115,12 @@ int importAndRun(SeqanLastOptions &options,
 
     // Prepare LastParameters
 
-    // New Score:
-    Score<int, Simple> scoreMatrix(options.matchScore, options.mismatchScore, options.gapExtendScore,
+
+    // Old Score:
+    Score<int, Simple> oldScore(options.matchScore, options.mismatchScore, options.gapExtendScore,
                                    options.gapExtendScore + options.gapOpenScore);
-    Score<int, ScoreMatrix<Dna5> > newScore(options.gapExtendScore, options.gapExtendScore + options.gapOpenScore);
-
-    Score<int, ScoreMatrix<AminoAcid> > mat(-1);
-    setDefaultScoreMatrix(mat, Default());
-    setDefaultScoreMatrix(mat, Blosum30_());
-    setDefaultScoreMatrix(mat, Blosum45_());
-    setDefaultScoreMatrix(mat, Blosum62_());
-    setDefaultScoreMatrix(mat, Blosum80_());
-    setDefaultScoreMatrix(mat, Pam40_());
-    setDefaultScoreMatrix(mat, Pam120_());
-    setDefaultScoreMatrix(mat, Pam200_());
-    setDefaultScoreMatrix(mat, Pam250_());
-    setDefaultScoreMatrix(mat, Vtml200_());
-
-
-
-
-
-//    Score<int, ScoreMatrix<AminoAcid, Blosum30> > mat(-1);
-
-    //setDefaultScoreMatrix(newScore, Dna5SimpleMatch());
-
-
     LastParameters<unsigned, Score<int, Simple> > params(options.frequency,
-                                                         scoreMatrix,
+                                                         oldScore,
                                                          options.gaplessXDrop,
                                                          options.gappedXDrop,
                                                          options.gaplessThreshold,
@@ -152,11 +130,28 @@ int importAndRun(SeqanLastOptions &options,
                                                          options.myUngappedExtend,
                                                          options.verbosity);
 
+    // New Score:
+    Score<int, ScoreMatrix<Dna5> > newScore(options.gapExtendScore, options.gapExtendScore + options.gapOpenScore);
+    setDefaultScoreMatrix(newScore, Default(), options.matchScore, options.mismatchScore);
+    LastParameters<unsigned, Score<int, ScoreMatrix<Dna5> > > paramsNew( options.frequency,
+                                                                         newScore,
+                                                                         options.gaplessXDrop,
+                                                                         options.gappedXDrop,
+                                                                         options.gaplessThreshold,
+                                                                         options.gappedThreshold,
+                                                                         options.onlyUngappedAlignments,
+                                                                         options.useHashTable,
+                                                                         options.myUngappedExtend,
+                                                                         options.verbosity);
+
     // Do the main work: alignments
     if (options.verbosity) std::cout << "Start searching..." << std::endl;
     String<TMatch> matchContainer;
     double teim = sysTime();
-    linearLastal(matchContainer, suffixArray, hashTab, querySet, params);
+    if (options.newScoring)
+        linearLastal(matchContainer, suffixArray, hashTab, querySet, paramsNew);
+    else
+        linearLastal(matchContainer, suffixArray, hashTab, querySet, params);
     std::cout << "Time spend in linearLastal: " << sysTime() - teim << std::endl;
 
     // TODO: If the sorting takes long, cosider only sorting a string of references instead of the heavy match objects

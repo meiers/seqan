@@ -57,9 +57,11 @@ struct SeqanLastOptions
     int gaplessXDrop;
     int gaplessThreshold;
     int gappedThreshold;
+
     bool onlyUngappedAlignments;
     bool useHashTable;
     bool myUngappedExtend;
+    bool newScoring;
 
     CharString databaseName;
     CharString queryFile;
@@ -95,6 +97,7 @@ struct SeqanLastOptions
         std::cout << "Debug options:" << std::endl;
         std::cout << "   use hash table:   " << (useHashTable ? "yes":"no") << std::endl;
         std::cout << "   ungapped Extend:  " << (myUngappedExtend ? "mine" : "seqan's") << std::endl;
+        std::cout << "   scoring type:     " << (newScoring ? "matrix" : "simple") << std::endl;
     }
 };
 
@@ -218,6 +221,7 @@ void _setLastParser(ArgumentParser & parser)
     addOption(parser, ArgParseOption("u", "ungapped", "Ungapped (gapless) extension only. Note that threshold d determines the output rather than e"));
     addOption(parser, ArgParseOption("iH", "ignore-hashtable", "Do not use the hash table to speed up adaptive seeding"));
     addOption(parser, ArgParseOption("sU", "seqanUngappedExtension", "Use seqan module for ungapped extension, instead of self-written one"));
+    addOption(parser, ArgParseOption("nS", "newScoring", "Use a matrix-based scoring function instead of Seqan's Simple scoring scheme."));
 
 
     addTextSection(parser, "References");
@@ -259,6 +263,7 @@ parseCommandLine(SeqanLastOptions & options, int argc, char const ** argv)
     options.onlyUngappedAlignments = isSet(parser, "ungapped");
     options.useHashTable = ! isSet(parser, "iH");
     options.myUngappedExtend = ! isSet(parser, "seqanUngappedExtension");
+    options.newScoring = isSet(parser, "newScoring");
 
     // Extract verbosity options.
     if (isSet(parser, "quiet"))
