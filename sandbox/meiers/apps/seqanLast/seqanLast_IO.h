@@ -121,7 +121,7 @@ struct SeqanLastDbOptions
     {
         // prepare shape to print:
         CharString shape;
-        switch (k) {
+        switch (shapeChoice) {
             case 1: cyclicShapeToString(shape, Shape1()); break;
             case 2: cyclicShapeToString(shape, Shape2()); break;
             case 3: cyclicShapeToString(shape, Shape3()); break;
@@ -131,8 +131,8 @@ struct SeqanLastDbOptions
         std::cout << "   database:    " << databaseFile << std::endl;
         std::cout << "   output name: " << outputName  << std::endl;
         std::cout << "Options:" << std::endl;
-        std::cout << "   shape:       " << shapeChoice << std::endl;
-        std::cout << "   k:           " << k << " = " << shape << std::endl;
+        std::cout << "   shape:       " << shapeChoice << " = " << shape << std::endl;
+        std::cout << "   k:           " << k << std::endl;
         std::cout << "algorithm:      " << algorithm << std::endl;
     }
 };
