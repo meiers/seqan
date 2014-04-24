@@ -122,11 +122,21 @@ struct DiagonalTable
     {
         TSigned d = static_cast<TSigned>(pGenome) - static_cast<TSigned>(pQuery);
         TSigned dd =(Q + d%Q)%Q; // hope the modulo is replaced by fast bit operations.
+        TSize l=0;
 
-        for(TIter it=begin(table[dd]); it != end(table[dd]); ++it)
+        for(TIter it=begin(table[dd]); it != end(table[dd]); )
         {
-            if(it->i1 != d) continue;
-            if(it->i2 > pQuery) return true;
+            if(it->i2 >= pQuery) 
+            {
+                if(it->i1 == d) return true;
+                ++it;
+                ++l;
+            }
+            else // clean up old entries right away
+            {
+                erase(table[dd], l);
+                //it = begin(table[dd])+l; // this happens automaticly
+            }     
         }
         return false;
     }
@@ -136,18 +146,22 @@ struct DiagonalTable
         TSigned d = static_cast<TSigned>(pGenome) - static_cast<TSigned>(pQuery);
         TSigned dd =(Q + d%Q)%Q; // hope the modulo is replaced by fast bit operations.
 
+/*
         for(TIter it=begin(table[dd]); it != end(table[dd]); ++it)
         {
             if(it->i1 != d) continue;
-            if(it->i2 < pQuery)
+            if(it->i2 <= pQuery)
             {
                 // remove smaller entries
-                typename Size<String<Pair<TSigned, TSize> > >::Type pos = it - begin(table[dd]);
-                erase(table[dd], pos);
+                it->i2 = pQuery;
+                break;
+                //typename Size<String<Pair<TSigned, TSize> > >::Type pos = it - begin(table[dd]);
+                //erase(table[dd], pos);
                 // restore iterator (seems not even to be neccessary since erase does not realloc memory)
-                it = begin(table[dd]) + (pos-1);
+                //it = begin(table[dd]) + (pos-1);
             }
         }
+*/
         appendValue(table[dd], Pair<TSigned,TSize>(d,pQuery));
     }
 
