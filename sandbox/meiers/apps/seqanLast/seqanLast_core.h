@@ -324,8 +324,8 @@ void adaptedCreateQGramIndexDirOnly(TDir &dir,
 template <typename TTrieIt, typename TLookupTable, typename TQueryIt, typename TSize>
 inline void _fastTableLookup(TTrieIt & trieIt,
                              TLookupTable & table,
-                             TQueryIt qryIt,
-                             TQueryIt qryEnd,
+                             TQueryIt & qryIt,      // will be modified
+                             TQueryIt & qryEnd,
                              TSize maxFreq)
 {
     typedef typename Fibre<TLookupTable, FibreShape>::Type TShape;
@@ -358,7 +358,7 @@ inline void _fastTableLookup(TTrieIt & trieIt,
         value(trieIt).range.i2 = to;
         value(trieIt).repLen = restLen;
         goFurther(qryIt, restLen-1);
-        value(trieIt).lastChar = *qryIt;
+        value(trieIt).lastChar = *qryIt++;
         // TODO: set parentRight? I think I don't need itm because I won't goRight(). Do I need lastChar?
     }
     else
@@ -786,7 +786,8 @@ void linearLastal(TMatches                                   & finalMatches,
             Pair<TDbSize> range = (params.useHashTable ?
                                    adaptiveSeeds(index, table, suffix(query, queryPos), params.maxFreq) :
                                    adaptiveSeeds(index, suffix(query, queryPos), params.maxFreq));
-            //_tASCalls += cpuTime() - xxx; ++_cASCalls;
+            //_tASCalls += cpuTime() - xxx;
+            ++_cASCalls;
 
             if(range.i2 <= range.i1) continue; // seed doesn't hit at all
             if(range.i2 - range.i1 > params.maxFreq) continue; // seed hits too often
@@ -812,7 +813,8 @@ void linearLastal(TMatches                                   & finalMatches,
                     _myUngapedExtendSeed(seed, database, query, params.scoreMatrix, params.Xgapless);
                 else
                     _seqanUngappedExtendSeed(seed, database, query, params.scoreMatrix, params.Xgapless);
-                //_tglAlsCalls += cpuTime() - xxxx; ++_cglAls;
+                //_tglAlsCalls += cpuTime() - xxxx;
+                ++_cglAls;
 
 
 
