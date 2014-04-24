@@ -40,8 +40,8 @@
 #include <seqan/index.h>
 #include <seqan/seeds.h>
 
-#include "seqanLast_IO.h"
 #include "seqanLast_core.h"
+#include "seqanLast_IO.h"
 
 using namespace seqan;
 

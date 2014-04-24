@@ -119,12 +119,20 @@ struct SeqanLastDbOptions
 
     void print()
     {
+        // prepare shape to print:
+        CharString shape;
+        switch (k) {
+            case 1: cyclicShapeToString(shape, Shape1()); break;
+            case 2: cyclicShapeToString(shape, Shape2()); break;
+            case 3: cyclicShapeToString(shape, Shape3()); break;
+            case 4: cyclicShapeToString(shape, Shape4()); break;
+            default: shape = "Cannot print this shape";         }
         std::cout << "Files:" << std::endl;
         std::cout << "   database:    " << databaseFile << std::endl;
         std::cout << "   output name: " << outputName  << std::endl;
         std::cout << "Options:" << std::endl;
         std::cout << "   shape:       " << shapeChoice << std::endl;
-        std::cout << "   k:           " << k  << std::endl;
+        std::cout << "   k:           " << k << " = " << shape << std::endl;
         std::cout << "algorithm:      " << algorithm << std::endl;
     }
 };

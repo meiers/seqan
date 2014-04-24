@@ -41,12 +41,12 @@
 #include <seqan/index.h>
 #include <seqan/seeds.h>
 #include <seqan/align_extend.h>
-#include "seqanLast_IO.h"
-#include "seqanLast_core.h"
 
 //#include <seqan/align_extend.h>
 
 using namespace seqan;
+#include "seqanLast_IO.h"
+#include "seqanLast_core.h"
 
 
 // =============================================================================
