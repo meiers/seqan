@@ -800,11 +800,13 @@ void linearLastal(TMatches                                   & finalMatches,
                     _seqanUngappedExtendSeed(seed, database, query, params.scoreMatrix, params.Xgapless);
                 //_tglAlsCalls += cpuTime() - xxxx; ++_cglAls;
 
-                // Mark diagonal as already visited
-                diagTable.add(endPositionH(seed), endPositionV(seed));
+
 
                 // gapLess alignment too weak
                 if (score(seed) < params.Tgapless) continue;
+
+                // Mark diagonal as already visited
+                diagTable.add(endPositionH(seed), endPositionV(seed));
 
                 // Prepare a match object with an align object inside
                 TMatch matchObj;
