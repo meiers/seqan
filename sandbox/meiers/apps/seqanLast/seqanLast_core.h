@@ -46,6 +46,9 @@ typedef StringSet<String<Dna5>,          Owner<ConcatDirect<> > >         TNorma
 // Shapes
 typedef CyclicShape<FixedShape<0, GappedShape<HardwiredShape<1> >, 1> >       Shape1;   // 110
 typedef CyclicShape<FixedShape<0, GappedShape<HardwiredShape<1,1> >, 1> >     Shape2;   // 1110
+typedef CyclicShape<FixedShape<0, ShapePatternHunter, 2> >                    Shape3;   // 11101001010011011100
+typedef CyclicShape<FixedShape<0, ShapeIlieB3, 2> >                           Shape4;   // 11100010010000101011
+
 // TODO(meiers): Define more shapes!
 
 namespace SEQAN_NAMESPACE_MAIN

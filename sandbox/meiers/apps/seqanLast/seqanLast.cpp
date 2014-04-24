@@ -112,9 +112,35 @@ int importAndRun(SeqanLastOptions &options,
         return 1;
 
 
+
     // Prepare LastParameters
+
+    // New Score:
     Score<int, Simple> scoreMatrix(options.matchScore, options.mismatchScore, options.gapExtendScore,
                                    options.gapExtendScore + options.gapOpenScore);
+    Score<int, ScoreMatrix<Dna5> > newScore(options.gapExtendScore, options.gapExtendScore + options.gapOpenScore);
+
+    Score<int, ScoreMatrix<AminoAcid> > mat(-1);
+    setDefaultScoreMatrix(mat, Default());
+    setDefaultScoreMatrix(mat, Blosum30_());
+    setDefaultScoreMatrix(mat, Blosum45_());
+    setDefaultScoreMatrix(mat, Blosum62_());
+    setDefaultScoreMatrix(mat, Blosum80_());
+    setDefaultScoreMatrix(mat, Pam40_());
+    setDefaultScoreMatrix(mat, Pam120_());
+    setDefaultScoreMatrix(mat, Pam200_());
+    setDefaultScoreMatrix(mat, Pam250_());
+    setDefaultScoreMatrix(mat, Vtml200_());
+
+
+
+
+
+//    Score<int, ScoreMatrix<AminoAcid, Blosum30> > mat(-1);
+
+    //setDefaultScoreMatrix(newScore, Dna5SimpleMatch());
+
+
     LastParameters<unsigned, Score<int, Simple> > params(options.frequency,
                                                          scoreMatrix,
                                                          options.gaplessXDrop,
@@ -194,6 +220,8 @@ int _lastChoice1(SeqanLastOptions &options)
     {
         case 1: return _lastChoice2(options, Shape1() );
         case 2: return _lastChoice2(options, Shape2() );
+        case 3: return _lastChoice2(options, Shape3() );
+        case 4: return _lastChoice2(options, Shape4() );
         default:
             std::cout << "No valid shape chosen. Exit" << std::endl;
             return 1;

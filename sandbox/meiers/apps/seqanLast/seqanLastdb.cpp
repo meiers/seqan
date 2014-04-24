@@ -223,6 +223,8 @@ int _lastDbChoice1(TSeqSet const &databases, TIdSet const &ids, SeqanLastDbOptio
     {
         case 1: return _lastDbChoice2(databases, ids, options, Shape1());
         case 2: return _lastDbChoice2(databases, ids, options, Shape2());
+        case 3: return _lastDbChoice2(databases, ids, options, Shape3());
+        case 4: return _lastDbChoice2(databases, ids, options, Shape4());
         default:
             std::cout << "No valid shape chosen. Exit" << std::endl;
             return 1;
@@ -257,8 +259,8 @@ int main(int argc, char const ** argv)
     addOption(parser, ArgParseOption("Q", "quiet", "No output, please."));
     addOption(parser, ArgParseOption("s", "shape", "shape used for the suffix array", ArgParseArgument::INTEGER));
     setDefaultValue(parser, "s", "1");
-    setMinValue(parser, "s", "0");
-    setMaxValue(parser, "s", "2");
+    setMinValue(parser, "s", "1");
+    setMaxValue(parser, "s", "4");
     addOption(parser, ArgParseOption("k", "k-mer", "k-mer size used in the hash table.", ArgParseArgument::INTEGER));
     setDefaultValue(parser, "k", "8");
     setMinValue(parser, "k", "2");
