@@ -332,12 +332,16 @@ inline void _fastTableLookup(TTrieIt & trieIt,
     typedef typename Value<TShape>::Type THashValue;
     typedef typename Size<TLookupTable>::Type TSaPos;
 
-    // determine hash values
-    THashValue x = hash(indexShape(table), qryIt, qryEnd - qryIt);
-    THashValue y = x+1;
-    if (static_cast<TSaPos>(qryEnd - qryIt) < length(indexShape(table)))
-        y = hashUpper(indexShape(table), qryIt, qryEnd - qryIt);
+    TSaPos restLen = std::min(static_cast<TSaPos>(length(indexShape(table))), static_cast<TSaPos>(qryEnd - qryIt));
+    if (restLen < 1) return;
 
+    // determine hash values
+    THashValue x = hash(indexShape(table), qryIt, restLen);
+    THashValue y = x+1;
+    if (restLen < length(indexShape(table)))
+        y = hashUpper(indexShape(table), qryIt, restLen);
+
+    
     // get range in SA
     TSaPos from  = indexDir(table)[x];
     TSaPos to    = indexDir(table)[y];
@@ -346,9 +350,9 @@ inline void _fastTableLookup(TTrieIt & trieIt,
     {
         value(trieIt).range.i1 = from;
         value(trieIt).range.i2 = to;
-        value(trieIt).repLen = weight(indexShape(table));
-        goFurther(qryIt, weight(indexShape(table)) - 1);
-        value(trieIt).lastChar = *qryIt++;
+        value(trieIt).repLen = restLen;
+        goFurther(qryIt, restLen - 1);
+        value(trieIt).lastChar = *qryIt;
     }
     else
     {
