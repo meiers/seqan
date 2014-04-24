@@ -83,7 +83,7 @@ namespace SEQAN_NAMESPACE_MAIN
  *
  * @brief A local alignment search tool implemented in SeqAn.
  *
- * @signature none;
+ * @signature struct SeqanLast;
  *
  * This is the documnetation of the local alignment search tool seqanLast,
  * which is a reimplementation of Last [Kielbasa et al., 2011].
