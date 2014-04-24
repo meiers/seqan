@@ -351,8 +351,7 @@ inline void _fastTableLookup(TTrieIt & trieIt,
         value(trieIt).range.i1 = from;
         value(trieIt).range.i2 = to;
         value(trieIt).repLen = restLen;
-        goFurther(qryIt, restLen - 1);
-        value(trieIt).lastChar = *qryIt;
+        value(trieIt).lastChar = indexShape(table).leftChar;
     }
     else
     {
