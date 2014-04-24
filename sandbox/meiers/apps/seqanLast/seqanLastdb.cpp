@@ -121,7 +121,7 @@ struct Lastdb
             if (options.algorithm == "radix")
                 indexCreate(index, FibreSA(), InplaceRadixSort() );
             if (options.algorithm == "dislex")
-                indexCreate(index, FibreSA(), Dislex<LarssonSadakane>() );
+                indexCreate(index, FibreSA(), Dislex<Skew7>() );
             if (options.algorithm == "external")
                 indexCreate(index, FibreSA(), DislexExternal<TShape>() );
             save(index, toCString(options.outputName));
