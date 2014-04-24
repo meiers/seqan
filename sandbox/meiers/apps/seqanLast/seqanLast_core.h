@@ -244,54 +244,78 @@ struct LastParameters
 // -----------------------------------------------------------------------------
 
 template <typename TDir, typename TBucketMap, typename TText, typename TShape>
-void _insertMissingQGrams(TDir &dir,
+typename Value<TDir>::Type _insertMissingQGrams(TDir &dir,
                           TBucketMap &bucketMap,
                           TText const &text,
                           TShape &shape)
 {
+    typedef typename Value<TDir>::Type TSize;
     typedef typename Size<TText>::Type TPos;
     typedef typename Iterator<TText const,Standard>::Type TIter;
 
-    if (!length(text)) return;
+    TSize offset = 0;
+    if(empty(text)) return offset;
 
-    std::cout << shape.span << std::endl;
     TPos start = length(text) < shape.span ? 0 : length(text)-shape.span+1;
     TIter it = begin(text, Standard()) + start;
-    ++dir[requestBucket(bucketMap, hash(shape, it, length(text)-start))];
+    TSize h = hash(shape, it, length(text)-start);
+    if (h >0)
+        ++dir[requestBucket(bucketMap, h-1)];
+    else
+        ++offset;
 
     for(++start, ++it; start < length(text); ++start, ++it)
     {
-        ++dir[requestBucket(bucketMap, hash(shape, it, length(text)-start))];
+        h = hash(shape, it, length(text)-start);
+        if (h >0)
+            ++dir[requestBucket(bucketMap, h-1)];
+        else
+            ++offset;
     }
+    return offset;
 }
 
 template <typename TDir, typename TBucketMap, typename TText, typename TSetSpec, typename TShape>
-void _insertMissingQGrams(TDir &dir,
-                          TBucketMap &bucketMap,
-                          StringSet<TText, TSetSpec> const &textSet,
-                          TShape &shape)
+typename Value<TDir>::Type _insertMissingQGrams(  TDir &dir,
+                                                  TBucketMap &bucketMap,
+                                                  StringSet<TText, TSetSpec> const &textSet,
+                                                  TShape &shape)
 {
+    typedef typename Value<TDir>::Type TSize;
     typedef typename Size<TText>::Type TPos;
     typedef typename Iterator<TText const,Standard>::Type TIter;
     typedef typename Iterator<StringSet<TText, TSetSpec> const,Standard>::Type TSetIter;
 
-    if (!length(textSet)) return;
+    TSize offset = 0;
 
     for (TSetIter set=begin(textSet,Standard()); set != end(textSet,Standard()); ++set)
     {
         TText const & text = *set;
-        if (!length(text)) continue;
+        if (empty(text)) continue;
 
         TPos start = length(text) < shape.span ? 0 : length(text)-shape.span+1;
         TIter it = begin(text, Standard()) + start;
-        ++dir[requestBucket(bucketMap, hash(shape, it, length(text)-start))];
+        TSize h = hash(shape, it, length(text)-start);
+        if (h >0)
+            ++dir[requestBucket(bucketMap, h-1)];
+        else
+            ++offset;
 
         for(++start, ++it; start < length(text); ++start, ++it)
         {
-            ++dir[requestBucket(bucketMap, hash(shape, it, length(text)-start))];
+            h = hash(shape, it, length(text)-start);
+            if (h >0)
+                ++dir[requestBucket(bucketMap, h-1)];
+            else
+                ++offset;
         }
     }
+    return offset;
 }
+
+
+
+
 
 template <typename TDir, typename TBucketMap, typename TText, typename TShape>
 void adaptedCreateQGramIndexDirOnly(TDir &dir,
@@ -299,17 +323,30 @@ void adaptedCreateQGramIndexDirOnly(TDir &dir,
                                     TText const &text,
                                     TShape &shape)
 {
+    typedef typename Value<TDir>::Type      TSize;
+    typedef typename Iterator<TDir>::Type   TIter;
+
+
     // 1. clear counters
     _qgramClearDir(dir, bucketMap);
 
     // 2. count q-grams
     _qgramCountQGrams(dir, bucketMap, text, shape, 1);
 
-    // New part: Add Q-1 last q-grams (that are usually missed) to the count vector
-    _insertMissingQGrams(dir, bucketMap, text, shape);
+    // New part: Add Q-1 last q-grams (that are usually missed) to the count vector,
+    //           exept for "AAA...A"-tuples, they are saved into an offset
+    TSize offset = _insertMissingQGrams(dir, bucketMap, text, shape);
     
     // 3. cumulative sum (Step 4 is ommited)
     _qgramCummulativeSumAlt(dir, False());
+
+    // New part: Add possible offset
+    if (offset>0)
+    {
+        for(TIter it=begin(dir, Standard()); it != end(dir, Standard()); ++it)
+            *it += offset;
+    }
+
 }
 
 
@@ -351,7 +388,9 @@ inline void _fastTableLookup(TTrieIt & trieIt,
         value(trieIt).range.i1 = from;
         value(trieIt).range.i2 = to;
         value(trieIt).repLen = restLen;
-        value(trieIt).lastChar = indexShape(table).leftChar;
+        goFurther(qryIt, restLen-1);
+        value(trieIt).lastChar = *qryIt;
+        // TODO: set parentRight? I think I don't need itm because I won't goRight(). Do I need lastChar?
     }
     else
     {
