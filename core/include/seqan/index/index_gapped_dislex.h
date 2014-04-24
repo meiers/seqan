@@ -320,7 +320,7 @@ struct GappedSuffixQgramLess_ <TSAValue, TShape, StringSet<TText, TSpec>, TResul
 {
     typedef StringSet<TText, TSpec>                         TSet;
     typedef typename Size<TText>::Type                      TSize;
-    typedef ModifiedString<typename Suffix<TText const>::Type, ModCyclicShape<TShape> >      TSuffix;
+    typedef ModifiedString<typename Suffix<TSet const>::Type, ModCyclicShape<TShape> >      TSuffix;
     typedef typename Iterator<TSuffix,Standard>::Type       TSuffIter;
 
     TSet const &   _text;
