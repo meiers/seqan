@@ -34,7 +34,6 @@
 
 #ifndef SANDBOX_MEIERS_APPS_SEQANLAST_SEQANLAST_CORE_H_
 #define SANDBOX_MEIERS_APPS_SEQANLAST_SEQANLAST_CORE_H_
-using namespace seqan;
 
 // =============================================================================
 // Global Definitions

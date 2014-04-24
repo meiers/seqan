@@ -34,7 +34,6 @@
 
 #ifndef SANDBOX_MEIERS_APPS_SEQANLAST_SEQANLAST_IO_H_
 #define SANDBOX_MEIERS_APPS_SEQANLAST_SEQANLAST_IO_H_
-using namespace seqan;
 
 // =============================================================================
 // Tags, Classes, Enums
