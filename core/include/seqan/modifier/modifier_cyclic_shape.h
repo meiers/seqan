@@ -629,6 +629,8 @@ operator+=(ModifiedIterator<THost, ModCyclicShape<CyclicShape<TSpec> > >&me, TDe
         // jump full patterns
         host(me) += (delta / weight(cargo(me))) * cargo(me).span;
 
+        // TODO: THere must be a better way!
+
         // number of jumps in dist that remain
         for (delta = delta % weight(cargo(me)); delta != 0; --delta)
             goNext(me);
@@ -639,6 +641,43 @@ operator+=(ModifiedIterator<THost, ModCyclicShape<CyclicShape<TSpec> > >&me, TDe
     }
     return me;
 }
+
+// better(?) version for FixedShape
+template<typename THost, unsigned L, typename TInnerShape, unsigned R, typename TDelta>
+inline ModifiedIterator<THost, ModCyclicShape<CyclicShape<FixedShape<L,TInnerShape,R> > > > &
+operator+=(ModifiedIterator<THost, ModCyclicShape<CyclicShape<FixedShape<L,TInnerShape,R> > > >&me, TDelta delta_)
+{
+    //TODO(meiers): Difference, or Position type?
+    typedef ModifiedIterator<THost, ModCyclicShape<CyclicShape<FixedShape<L,TInnerShape,R> > > > TIterator;
+    typedef typename Difference<TIterator>::Type TDiff;
+    TDiff delta = delta_;
+
+    if (delta == 0)
+    {
+        return me;
+    }
+    else if (delta == 1)
+    {
+        goNext(me);
+        return me;
+    }
+    else if (delta > 1)
+    {
+        typedef CyclicShape<FixedShape<L,TInnerShape,R> >   TS;
+
+        typename Size<TS>::Type const * carePos = &TS::carePos[0];
+        TDiff blocks = (delta/weight(cargo(me))) * cargo(me).span;
+
+        me._idx = carePos[delta - blocks];
+        host(me) +=  - carePos[me._idx] + blocks + me._idx;
+    }
+    else
+    {
+        me -= -delta;
+    }
+    return me;
+}
+
 
 // --------------------------------------------------------------------------
 // Function operator-=()                    [ModCyclicShape ModifiedIterator]
