@@ -45,7 +45,7 @@ using namespace seqan;
 #include "seqanLast_IO.h"
 
 
-/*
+
 // debug output (delete later)
 template<typename TSA, typename TDir, typename TSeqSet>
 void printTables(TSA const & sa, TDir const & dir, TSeqSet const & seqs)
@@ -59,21 +59,29 @@ void printTables(TSA const & sa, TDir const & dir, TSeqSet const & seqs)
     {
         std::cout << dirPos << ":\t" << dir[dirPos];
 
+        CharString suffStr = (length(suffix(seqs, sa[saPos])) > 30   ?
+                              prefix(suffix(seqs, sa[saPos]), 30) :
+                              suffix(seqs, sa[saPos]));
+
         if (saPos < dir[dirPos+1]) {
-            std::cout  << "\t\t" << saPos << "\t" << sa[saPos] << "\t" << suffix(seqs, sa[saPos]) << std::endl;
+
+            std::cout  << "\t\t" << saPos << "\t" << sa[saPos] << "\t" << suffStr << std::endl;
             ++saPos;
         } else {
             std::cout << std::endl;
         }
         while (saPos < dir[dirPos+1])
         {
-            std::cout << "\t\t\t" << saPos << "\t" << sa[saPos]  << "\t" << suffix(seqs, sa[saPos])  << std::endl;
+            suffStr = (length(suffix(seqs, sa[saPos])) > 30   ?
+                       prefix(suffix(seqs, sa[saPos]), 30) :
+                       suffix(seqs, sa[saPos]));
+            std::cout << "\t\t\t" << saPos << "\t" << sa[saPos]  << "\t" << suffStr  << std::endl;
             ++saPos;
         }
         ++dirPos;
     }
 }
- */
+ 
 
 // =============================================================================
 // Functions
@@ -115,7 +123,7 @@ struct Lastdb
         if (options.verbosity)
             std::cout << "Building Suffix array... " << std::endl;
 
-        {
+        //{
             typedef Index<TSeqSet const, IndexSa<Gapped<ModCyclicShape<TShape> > > > TIndex;
             TIndex index(databases, TShape());
             if (options.algorithm == "radix")
@@ -128,7 +136,7 @@ struct Lastdb
 
             if (options.verbosity > 1)
                 std::cout << "Suffix array entries have a size of " << sizeof(indexSA(index)[0]) << " bytes" << std::endl;
-        }
+        //}
 
         if (options.verbosity)
             std::cout << "Building Look up table for K=" << K << "... " << std::endl;
