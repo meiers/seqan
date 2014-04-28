@@ -595,7 +595,7 @@ inline bool _goDownChar(Iter<Index<TText, IndexSa<TIndexSpec> >, VSTree<TopDown<
     TSuf  dereferer(index);
 
     // Check whether this is an edge, not a node of the suffix tree
-    if (             false     &&      _isEdge(it,c))  // disable this branch for now
+    if (             true     &&      _isEdge(it,c))  // disable this branch for now
     {
         value(it).lastChar = c;
         value(it).repLen++;
