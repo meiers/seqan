@@ -652,6 +652,7 @@ _seqanUngappedExtendSeed(Seed<Simple, TConfig> & seed,
     TDbIter dbIt;
     TQuIter quIt;
 
+    std::cout << "The Seqan module for the ungapped extension is not fully implemented" << std::endl;
     // TODO
 }
 
