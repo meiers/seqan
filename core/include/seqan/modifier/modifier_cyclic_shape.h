@@ -641,7 +641,7 @@ operator+=(ModifiedIterator<THost, ModCyclicShape<CyclicShape<TSpec> > >&me, TDe
     }
     return me;
 }
-
+/*
 // better(?) version for FixedShape
 template<typename THost, unsigned L, typename TInnerShape, unsigned R, typename TDelta>
 inline ModifiedIterator<THost, ModCyclicShape<CyclicShape<FixedShape<L,TInnerShape,R> > > > &
@@ -677,7 +677,7 @@ operator+=(ModifiedIterator<THost, ModCyclicShape<CyclicShape<FixedShape<L,TInne
     }
     return me;
 }
-
+*/
 
 // --------------------------------------------------------------------------
 // Function operator-=()                    [ModCyclicShape ModifiedIterator]
