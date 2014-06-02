@@ -362,7 +362,7 @@ inline void _fastTableLookup(TTrieIt & trieIt,
         value(trieIt).repLen = restLen;
         goFurther(qryIt, restLen-1);
         value(trieIt).lastChar = *qryIt++;
-        // TODO: set parentRight? I think I don't need itm because I won't goRight(). Do I need lastChar?
+        // TODO: set parentRight? I think I don't need it because I won't goRight()
     }
     else
     {
@@ -429,10 +429,11 @@ inline void _goDownTrie(TTrieIt & trieIt,
         if (length(globalCounts)< x)
         {
             resize(globalCounts, x+1);
-            globalCounts[x] = 0;
+            globalCounts[x] = 1;
         } else {
             globalCounts[x]++;
         }
+        ++x;
     }
 }
 
