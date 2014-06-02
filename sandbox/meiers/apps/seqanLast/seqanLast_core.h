@@ -873,15 +873,15 @@ void linearLastal(TMatches                                   & finalMatches,
         } //for(; queryIt != queryEnd; ++queryIt)
     }
 
+
+    // test: count vector of adaptive seeds
+    std::cout << "Counts:" << std::endl;
+    for (unsigned x=0; x<length(globalCounts); ++x)
+        std::cout << x << "\t" << globalCounts[x] << std::endl;
+
+
     if (params.verbosity > 1)
     {
-
-        // test: count vector of adaptive seeds
-        std::cout << "Counts:" << std::endl;
-        for (unsigned x=0; x<length(globalCounts); ++x)
-            std::cout << x << "\t" << globalCounts[x] << std::endl;
-
-
         std::cout << "Time spend in adaptive seeding:  " << _tASCalls <<    "\t(" << _cASCalls << " calls)" << std::endl;
         std::cout << "Time spend in gapless alignment: " << _tglAlsCalls << "\t(" << _cglAls <<   " calls)" << std::endl;
         std::cout << "Time spend in gapped alignment:  " << _tgpAlsCalls << "\t(" << _cgpAls <<   " calls)" << std::endl;
