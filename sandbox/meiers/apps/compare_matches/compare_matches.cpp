@@ -637,7 +637,8 @@ readMatches(CharString & fileName,
 
 template<typename TMatch, typename TMapping>
 void
-mapMatches(String<TMatch> & subjectMatches, String<TMatch> & otherMatches, TMapping & mapping) {
+mapMatches(String<TMatch> & subjectMatches, String<TMatch> & otherMatches, TMapping & mapping)
+{
 	// interval tree for epsilon matches
 	typedef IntervalAndCargo<unsigned, unsigned> TInterval;
 	String<TInterval> intervals;
@@ -728,9 +729,10 @@ binMatches(String<TMatch> & epsMatches, String<TMatch> & otherMatches, TMapping 
 		TMatch epsMatch = epsMatches[position(mapIt, mapping)];
 		double coverageSeq1 = computeCoverage(epsMatch, *mapIt, otherMatches);
 
+
 		// increment corresponding bin counter
 		if (coverageSeq1 == 0.0) {
-			//write(epsMatch);
+			write(epsMatch);
 			++bins[0];
 		}
 		else if (coverageSeq1 < 10.0) {
