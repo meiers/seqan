@@ -39,8 +39,8 @@
 // Global Definitions
 // =============================================================================
 
-// test: count vector of adaptive seeds
-String<unsigned> globalCounts;
+// test: length of adaptive seeds
+unsigned globalLength;
 
 // StringSet
 typedef StringSet<String<Dna5, MMap<> >, Owner<ConcatDirect<> > >         TMMapStringSet;
@@ -413,9 +413,7 @@ inline void _goDownTrie(TTrieIt & trieIt,
                         TQueryIt qryEnd,
                         TSize maxFreq)
 {
-    // test: count vector of adaptive seeds
-    unsigned x =0;
-
+    globalLength = 0;
 
     while(qryIt < qryEnd)
     {
@@ -424,15 +422,8 @@ inline void _goDownTrie(TTrieIt & trieIt,
         if(countOccurrences(trieIt) <= maxFreq)
             break;
 
-        // test: count vector of adaptive seeds
-        if (length(globalCounts)<= x)
-        {
-            resize(globalCounts, x+1);
-            globalCounts[x] = range(trieIt).i2 - range(trieIt).i1;
-        } else {
-            globalCounts[x]+= range(trieIt).i2 - range(trieIt).i1;
-        }
-        ++x;
+        // test output
+        ++globalLength;
     }
 }
 
@@ -790,8 +781,6 @@ void linearLastal(TMatches                                   & finalMatches,
     unsigned    _cgpAls = 0;
 
 
-    resize(globalCounts, 0);
-
     // diagonal tables for the identification of redundant hits
     String<TDiagTable> diagTables;
     resize(diagTables, length(indexText(index)));
@@ -817,6 +806,10 @@ void linearLastal(TMatches                                   & finalMatches,
                                    adaptiveSeeds(index, suffix(query, queryPos), params.maxFreq));
             //_tASCalls += cpuTime() - xxx;
             ++_cASCalls;
+
+            // test output:
+            std::cout << queryPos << "\t" << globalLength << std::endl;
+
 
             if(range.i2 <= range.i1) continue; // seed doesn't hit at all
             if(range.i2 - range.i1 > params.maxFreq) continue; // seed hits too often
@@ -872,12 +865,6 @@ void linearLastal(TMatches                                   & finalMatches,
             } // for(; saIt != saEnd; ++saIt)
         } //for(; queryIt != queryEnd; ++queryIt)
     }
-
-
-    // test: count vector of adaptive seeds
-    std::cout << "Counts:" << std::endl;
-    for (unsigned x=0; x<length(globalCounts); ++x)
-        std::cout << x << "\t" << globalCounts[x] << std::endl;
 
 
     if (params.verbosity > 1)
