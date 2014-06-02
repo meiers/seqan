@@ -428,9 +428,9 @@ inline void _goDownTrie(TTrieIt & trieIt,
         if (length(globalCounts)<= x)
         {
             resize(globalCounts, x+1);
-            globalCounts[x] = 1;
+            globalCounts[x] = range(trieIt).i2 - range(trieIt).i1;
         } else {
-            globalCounts[x]++;
+            globalCounts[x]+= range(trieIt).i2 - range(trieIt).i1;
         }
         ++x;
     }
