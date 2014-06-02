@@ -538,6 +538,15 @@ adaptiveSeeds(Index<TIndexText, IndexSa<Gapped<TMod> > > & index,
 // Function _myUngapedExtendSeed()
 // --------------------------------------------------------------------------
 
+/*!
+ * @fn SeqanLast#_myUngapedExtendSeed
+ * @headerfile seqanLast/seqanLast_core.h
+ *
+ * @brief Ungapped xDrop Extension
+ * 
+ * write a documentation?
+ */
+
 template <typename TConfig,
     typename TDatabase,
     typename TQuery,
@@ -573,7 +582,7 @@ _myUngapedExtendSeed(Seed<Simple, TConfig> & seed,
     quIt = quBeg + beginPositionV(seed);
     tmpScore = maxScoreLeft = score(seed);
     len = optLenLeft = 0;
-    while (dbIt > dbBeg && quIt > quBeg && tmpScore > maxScoreLeft - scoreDropOff)
+    while (dbIt > dbBeg && quIt > quBeg && tmpScore >= maxScoreLeft - scoreDropOff)
     {
         --dbIt; --quIt; ++len;
         tmpScore += score(scoringScheme, *dbIt, *quIt);
@@ -589,7 +598,7 @@ _myUngapedExtendSeed(Seed<Simple, TConfig> & seed,
     quIt = quBeg + endPositionV(seed);
     tmpScore = maxScoreRight = score(seed);
     len = optLenRight = 0;
-    while (dbIt < dbEnd && quIt < quEnd && tmpScore > maxScoreRight - scoreDropOff)
+    while (dbIt < dbEnd && quIt < quEnd && tmpScore >= maxScoreRight - scoreDropOff)
     {
         tmpScore += score(scoringScheme, *dbIt, *quIt);
         ++dbIt; ++quIt; ++len;
