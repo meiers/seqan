@@ -424,9 +424,8 @@ inline void _goDownTrie(TTrieIt & trieIt,
         if(countOccurrences(trieIt) <= maxFreq)
             break;
 
-
         // test: count vector of adaptive seeds
-        if (length(globalCounts)< x)
+        if (length(globalCounts)<= x)
         {
             resize(globalCounts, x+1);
             globalCounts[x] = 1;
