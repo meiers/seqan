@@ -534,6 +534,39 @@ inline bool _goRight(Iter<Index<TText, IndexSa<TIndexSpec> >, VSTree<TopDown<TSp
 }
 
 template <typename TText, typename TIndexSpec, typename TSpec, typename TValue>
+inline bool _isEdge(Iter<Index<TText, IndexSa<TIndexSpec> >, VSTree<TopDown<TSpec> > > & it, TValue c)
+{
+    typedef Index<TText, IndexSa<TIndexSpec> >              TIndex;
+    typedef typename Fibre<TIndex, FibreSA>::Type           TSA;
+    typedef typename Size<TIndex>::Type                     TSASize;
+    typedef typename Iterator<TSA const, Standard>::Type    TSAIterator;
+   
+
+    if(isRoot(it)) return false;
+
+    TIndex const & index = container(it);
+    TSA const & sa = indexSA(index);
+    TSASize repLen = value(it).repLen;
+    TSAIterator l = begin(sa, Standard()) + value(it).range.i1;
+    TSAIterator r = begin(sa, Standard()) + value(it).range.i2 - 1;
+    
+    typedef SuffixFunctor<TIndex, typename Value<TSA>::Type> TSuf;
+    typedef typename TSuf::result_type TSuffix;
+    TSuf dereferer(index);
+ 
+    typedef typename Iterator<TSuffix const>::Type TSufIter;
+    TSufIter lit = begin(dereferer(*l)) + repLen, len = end(dereferer(*l));
+    TSufIter rit = begin(dereferer(*r)) + repLen, ren = end(dereferer(*r));
+
+    
+    if (lit < len && rit < ren && *rit == c && *rit == c)
+        return true;
+ 
+    return false;
+}
+
+
+template <typename TText, typename TIndexSpec, typename TSpec, typename TValue>
 inline bool _goDownChar(Iter<Index<TText, IndexSa<TIndexSpec> >, VSTree<TopDown<TSpec> > > & it, TValue c)
 {
     typedef Index<TText, IndexSa<TIndexSpec> >              TIndex;
@@ -558,26 +591,35 @@ inline bool _goDownChar(Iter<Index<TText, IndexSa<TIndexSpec> >, VSTree<TopDown<
 
     TSearchTreeIterator node(saBegin, saLen);
 
-    SuffixFunctor<TIndex, typename Value<TSA>::Type> dereferer(index);
-    Pair<TSAIterator> range = _equalRangeSA(dereferer, node, c, value(it).repLen);
+    typedef SuffixFunctor<TIndex, typename Value<TSA>::Type> TSuf;
+    TSuf  dereferer(index);
 
-    if (!(range.i1 < range.i2))
-        return false;
+    // Check whether this is an edge, not a node of the suffix tree
+    if (             true     &&      _isEdge(it,c))  // disable this branch for now
+    {
+        value(it).lastChar = c;
+        value(it).repLen++;
 
-    // Save vertex descriptor.
-    _historyPush(it);
+        return true;
+    }
+    else
+    { 
+        Pair<TSAIterator> range = _equalRangeSA(dereferer, node, c, value(it).repLen);
+
+        if (!(range.i1 < range.i2))
+            return false;
+
+        // Save vertex descriptor.
+        _historyPush(it);
     
-    // Update range, lastChar and repLen.
-    value(it).range.i1 = range.i1 - begin(sa, Standard());
-    value(it).range.i2 = range.i2 - begin(sa, Standard());
-    value(it).lastChar = c;
-    value(it).repLen++;
+        // Update range, lastChar and repLen.
+        value(it).range.i1 = range.i1 - begin(sa, Standard());
+        value(it).range.i2 = range.i2 - begin(sa, Standard());
+        value(it).lastChar = c;
+        value(it).repLen++;
     
-#ifdef SEQAN_DEBUG
-    //std::cout << "child: " <<  value(it).range.i1 << " " << value(it).range.i2 << std::endl;
-#endif
-
-    return true;
+        return true;
+    }
 }
 
 template <typename TText, typename TIndexSpec, typename TSpec, typename TString, typename TSize>
