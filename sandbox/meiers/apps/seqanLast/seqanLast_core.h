@@ -39,6 +39,9 @@
 // Global Definitions
 // =============================================================================
 
+// test: count vector of adaptive seeds
+String<unsigned> globalCounts;
+
 // StringSet
 typedef StringSet<String<Dna5, MMap<> >, Owner<ConcatDirect<> > >         TMMapStringSet;
 typedef StringSet<String<Dna5>,          Owner<ConcatDirect<> > >         TNormalStringSet;
@@ -410,12 +413,26 @@ inline void _goDownTrie(TTrieIt & trieIt,
                         TQueryIt qryEnd,
                         TSize maxFreq)
 {
+    // test: count vector of adaptive seeds
+    unsigned x =0;
+
+
     while(qryIt < qryEnd)
     {
         if(!goDown(trieIt, *(qryIt++)))
             break;
         if(countOccurrences(trieIt) <= maxFreq)
             break;
+
+
+        // test: count vector of adaptive seeds
+        if (length(globalCounts)< x)
+        {
+            resize(globalCounts, x+1);
+            globalCounts[x] = 0;
+        } else {
+            globalCounts[x]++;
+        }
     }
 }
 
@@ -773,6 +790,8 @@ void linearLastal(TMatches                                   & finalMatches,
     unsigned    _cgpAls = 0;
 
 
+    resize(globalCounts, 0);
+
     // diagonal tables for the identification of redundant hits
     String<TDiagTable> diagTables;
     resize(diagTables, length(indexText(index)));
@@ -826,8 +845,6 @@ void linearLastal(TMatches                                   & finalMatches,
                 //_tglAlsCalls += cpuTime() - xxxx;
                 ++_cglAls;
 
-
-
                 // gapLess alignment too weak
                 if (score(seed) < params.Tgapless) continue;
 
@@ -858,6 +875,13 @@ void linearLastal(TMatches                                   & finalMatches,
 
     if (params.verbosity > 1)
     {
+
+        // test: count vector of adaptive seeds
+        std::cout << "Counts:" << std::endl;
+        for (unsigned x=0; x<length(globalCounts); ++x)
+            std::cout << x << "\t" << globalCounts[x] << std::endl;
+
+
         std::cout << "Time spend in adaptive seeding:  " << _tASCalls <<    "\t(" << _cASCalls << " calls)" << std::endl;
         std::cout << "Time spend in gapless alignment: " << _tglAlsCalls << "\t(" << _cglAls <<   " calls)" << std::endl;
         std::cout << "Time spend in gapped alignment:  " << _tgpAlsCalls << "\t(" << _cgpAls <<   " calls)" << std::endl;
