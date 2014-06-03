@@ -817,8 +817,8 @@ void linearLastal(TMatches                                   & finalMatches,
                 Seed<Simple>        seed( getSeqOffset(*saIt), queryIt - queryBeg, 0 );
 
                 // Check whether seed is redundant
-                if (diagTable.redundant(beginPositionH(seed), beginPositionV(seed)))
-                    continue;
+//                if (diagTable.redundant(beginPositionH(seed), beginPositionV(seed)))
+//                    continue;
 
                 // Gapless Alignment in both directions with a XDrop
                 //double xxxx = cpuTime();
@@ -833,7 +833,7 @@ void linearLastal(TMatches                                   & finalMatches,
                 if (score(seed) < params.Tgapless) continue;
 
                 // Mark diagonal as already visited
-                diagTable.add(endPositionH(seed), endPositionV(seed));
+//                diagTable.add(endPositionH(seed), endPositionV(seed));
 
                 // Prepare a match object with an align object inside
                 TMatch matchObj;
