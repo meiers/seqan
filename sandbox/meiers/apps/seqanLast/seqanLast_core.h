@@ -39,9 +39,6 @@
 // Global Definitions
 // =============================================================================
 
-// test: length of adaptive seeds
-unsigned globalLength;
-
 // StringSet
 typedef StringSet<String<Dna5, MMap<> >, Owner<ConcatDirect<> > >         TMMapStringSet;
 typedef StringSet<String<Dna5>,          Owner<ConcatDirect<> > >         TNormalStringSet;
@@ -413,17 +410,12 @@ inline void _goDownTrie(TTrieIt & trieIt,
                         TQueryIt qryEnd,
                         TSize maxFreq)
 {
-    globalLength = 0;
-
     while(qryIt < qryEnd)
     {
         if(!goDown(trieIt, *(qryIt++)))
             break;
         if(countOccurrences(trieIt) <= maxFreq)
             break;
-
-        // test output
-        ++globalLength;
     }
 }
 
@@ -518,6 +510,7 @@ adaptiveSeeds(Index<TIndexText, IndexSa<Gapped<TMod> > > & index,
 
     _fastTableLookup(trieIt, table, qryIt, qryEnd, maxFreq);
     _goDownTrie(trieIt, qryIt, qryEnd, maxFreq);
+    //std::cout << "adapt. seed (freq " << countOccurrences(trieIt) << "): " << representative(trieIt) << std::endl;
     return range(trieIt);
 }
 
@@ -538,6 +531,7 @@ adaptiveSeeds(Index<TIndexText, IndexSa<Gapped<TMod> > > & index,
     TQueryIter  qryEnd = end(modQuery, Standard());
 
     _goDownTrie(trieIt, qryIt, qryEnd, maxFreq);
+    //std::cout << "adapt. seed (freq " << countOccurrences(trieIt) << "): " << representative(trieIt) << std::endl;
     return range(trieIt);
 }
 
@@ -781,6 +775,7 @@ void linearLastal(TMatches                                   & finalMatches,
     unsigned    _cgpAls = 0;
 
 
+
     // diagonal tables for the identification of redundant hits
     String<TDiagTable> diagTables;
     resize(diagTables, length(indexText(index)));
@@ -806,10 +801,6 @@ void linearLastal(TMatches                                   & finalMatches,
                                    adaptiveSeeds(index, suffix(query, queryPos), params.maxFreq));
             //_tASCalls += cpuTime() - xxx;
             ++_cASCalls;
-
-            // test output:
-            std::cout << queryPos << "\t" << globalLength << "\t" << range.i2 - range.i1 << std::endl;
-
 
             if(range.i2 <= range.i1) continue; // seed doesn't hit at all
             if(range.i2 - range.i1 > params.maxFreq) continue; // seed hits too often
