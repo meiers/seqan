@@ -808,7 +808,7 @@ void linearLastal(TMatches                                   & finalMatches,
             ++_cASCalls;
 
             // test output:
-            std::cout << queryPos << "\t" << globalLength << std::endl;
+            std::cout << queryPos << "\t" << globalLength << "\t" << range.i2 - range.i1 << std::endl;
 
 
             if(range.i2 <= range.i1) continue; // seed doesn't hit at all
