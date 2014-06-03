@@ -35,7 +35,7 @@
 #ifndef CORE_INCLUDE_SEQAN_INDEX_INDEX_GAPPED_SA_DISLEX_H_
 #define CORE_INCLUDE_SEQAN_INDEX_INDEX_GAPPED_SA_DISLEX_H_
 
-#define DISLEX_INTERNAL_RUNNING_TIMES
+//#define DISLEX_INTERNAL_RUNNING_TIMES
 
 namespace SEQAN_NAMESPACE_MAIN
 {
@@ -425,6 +425,7 @@ typename Size<TText>::Type _maxSigma(TText const & text, typename Size<TText>::T
 }
 
 
+// NOTE(meiers): The function MaxValue or  valueSize will fail on Finite alphabets
 template <typename TText, typename TSpec>
 typename Size<TText>::Type _maxSigma(StringSet<TText, TSpec> const & text, typename Size<TText>::Type weight, typename Size<TText>::Type span)
 {
@@ -433,7 +434,7 @@ typename Size<TText>::Type _maxSigma(StringSet<TText, TSpec> const & text, typen
     
     String<TSize> alphabet;
     resize(alphabet, valueSize<TAlph>());
-    std::fill(begin(alphabet), end(alphabet), 0u);    
+    std::fill(begin(alphabet), end(alphabet), static_cast<TSize>(0));
     
     for(TSize i=0; i<length(text); ++i)
         for (TSize j=0; j<length(text[i]); ++j)
@@ -721,8 +722,9 @@ inline void createGappedSuffixArray(
     SEQAN_ASSERT_GEQ_MSG(maxSigma, sigma, "Alphabet size of lecical names exceeds the theoretical upper bound");
     #endif
 
-    // Build Index using Skew7 into the memory of SA
-    createSuffixArray(SA, lexText, TSACA(), sigma);
+    // Build Index using TSACA into the memory of SA.
+    // TODO(meiers): Some createSuffixArray() functions do not accept 5 arguments
+    createSuffixArray(SA, lexText, TSACA(), sigma, 0);
 
     #ifdef DISLEX_INTERNAL_RUNNING_TIMES
     std::cout << "   |     saca: " << sysTime() - teim << "s (len = " << length(concat(lexText)) << ")" << std::endl; teim = sysTime();
