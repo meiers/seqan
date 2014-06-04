@@ -641,9 +641,9 @@ operator+=(ModifiedIterator<THost, ModCyclicShape<CyclicShape<TSpec> > >&me, TDe
     }
     return me;
 }
-/*
+
 // better(?) version for FixedShape
-/*
+
 template<typename THost, unsigned L, typename TInnerShape, unsigned R, typename TDelta>
 inline ModifiedIterator<THost, ModCyclicShape<CyclicShape<FixedShape<L,TInnerShape,R> > > > &
 operator+=(ModifiedIterator<THost, ModCyclicShape<CyclicShape<FixedShape<L,TInnerShape,R> > > >&me, TDelta delta_)
@@ -651,8 +651,10 @@ operator+=(ModifiedIterator<THost, ModCyclicShape<CyclicShape<FixedShape<L,TInne
     //TODO(meiers): Difference, or Position type?
     typedef ModifiedIterator<THost, ModCyclicShape<CyclicShape<FixedShape<L,TInnerShape,R> > > > TIterator;
     typedef typename Difference<TIterator>::Type TDiff;
-    TDiff delta = delta_;
+    typedef CyclicShape<FixedShape<L,TInnerShape,R> >   TShape;
+    typedef typename Size<TShape>::Type TSmallSize;
 
+    TDiff delta = delta_;
     if (delta == 0)
     {
         return me;
@@ -664,13 +666,13 @@ operator+=(ModifiedIterator<THost, ModCyclicShape<CyclicShape<FixedShape<L,TInne
     }
     else if (delta > 1)
     {
-        typedef CyclicShape<FixedShape<L,TInnerShape,R> >   TS;
+        TSmallSize const * carePos = &TShape::carePos[0];
 
-        typename Size<TS>::Type const * carePos = &TS::carePos[0];
-        TDiff blocks = (delta/weight(cargo(me))) * cargo(me).span;
+        TSmallSize idx = me._idx;
+        TDiff blocks = (delta + idx) / weight(cargo(me));
+        me._idx = delta + idx - blocks * weight(cargo(me));
 
-        me._idx = carePos[delta - blocks];
-        host(me) +=  - carePos[me._idx] + blocks + me._idx;
+        host(me) +=  - carePos[idx] + blocks * cargo(me).span + me._idx;
     }
     else
     {
@@ -678,7 +680,7 @@ operator+=(ModifiedIterator<THost, ModCyclicShape<CyclicShape<FixedShape<L,TInne
     }
     return me;
 }
-*/
+
 
 // --------------------------------------------------------------------------
 // Function operator-=()                    [ModCyclicShape ModifiedIterator]
