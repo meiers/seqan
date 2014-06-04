@@ -419,39 +419,9 @@ inline void _goDownTrie(TTrieIt & trieIt,
         if(countOccurrences(trieIt) <= maxFreq)
             break;
     }
-
-//    std::cout << "Iter: " << representative(trieIt) << " with " << value(trieIt).range.i2 - value(trieIt).range.i1 << " hits: " << value(trieIt).range.i1 << " - " << value(trieIt).range.i2 << std::endl;
 }
 
-// -----------------------------------------------------------------------------
-// Function _goDownTrie() alternative (slower)
-// -----------------------------------------------------------------------------
-/*
-template <typename TTrieIt, typename TQuery, typename TSize>
-inline void _goDownTrie(TTrieIt & trieIt,
-                        TQuery const & query,
-                        TSize maxFreq)
-{
-    typedef typename Container<TTrieIt>::Type TIndex;
-    TIndex & index = container(trieIt);
 
-
-    unsigned len = 1;
-    Finder<TIndex> finder(index);
-    find(finder, prefix(query, len));
-    while (len <= length(query) && finder.range.i2 - finder.range.i1 > maxFreq && length(finder) > 0)
-    {
-        clear(finder);
-        find(finder, prefix(query, ++len));
-    }
-
-    value(trieIt).range.i1 = finder.range.i1 - begin(indexSA(container(trieIt)));
-    value(trieIt).range.i2 = finder.range.i2 - begin(indexSA(container(trieIt)));
-
-    std::cout << "Find: " << prefix(query, len) << " with " << finder.range.i2 - finder.range.i1 << " hits: " << value(trieIt).range.i1 << " - " << value(trieIt).range.i2 << std::endl;
-
-}
-*/
 
 
 // -----------------------------------------------------------------------------
@@ -565,12 +535,6 @@ adaptiveSeeds(Index<TIndexText, IndexSa<Gapped<TMod> > > & index,
     TQueryIter  qryEnd = end(modQuery, Standard());
 
     _goDownTrie(trieIt, qryIt, qryEnd, maxFreq);
-
-// DEBUG
-    /*
-    goRoot(trieIt);
-    _goDownTrie(trieIt, modQuery, maxFreq);
-     */
     return range(trieIt);
 }
 
