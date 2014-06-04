@@ -540,7 +540,8 @@ inline bool _isEdge(Iter<Index<TText, IndexSa<TIndexSpec> >, VSTree<TopDown<TSpe
     typedef typename Fibre<TIndex, FibreSA>::Type           TSA;
     typedef typename Size<TIndex>::Type                     TSASize;
     typedef typename Iterator<TSA const, Standard>::Type    TSAIterator;
-   
+
+    std::cout << "TODO(meiers): Function _isEdge (index_sa_stree.h) does not work properly" << std::endl;
 
     if(isRoot(it)) return false;
 
@@ -595,7 +596,7 @@ inline bool _goDownChar(Iter<Index<TText, IndexSa<TIndexSpec> >, VSTree<TopDown<
     TSuf  dereferer(index);
 
     // Check whether this is an edge, not a node of the suffix tree
-    if (             true     &&      _isEdge(it,c))  // disable this branch for now
+    if (             false     &&      _isEdge(it,c))  // TODO(meiers): disable this branch for now because I think that isEdge does not work correctly
     {
         value(it).lastChar = c;
         value(it).repLen++;

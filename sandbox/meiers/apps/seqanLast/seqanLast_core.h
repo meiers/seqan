@@ -412,12 +412,47 @@ inline void _goDownTrie(TTrieIt & trieIt,
 {
     while(qryIt < qryEnd)
     {
+     //   std::cout << *qryIt << ": " << representative(trieIt) << " (" << countOccurrences(trieIt) << ")" << std::endl;
+        
         if(!goDown(trieIt, *(qryIt++)))
             break;
         if(countOccurrences(trieIt) <= maxFreq)
             break;
     }
+
+//    std::cout << "Iter: " << representative(trieIt) << " with " << value(trieIt).range.i2 - value(trieIt).range.i1 << " hits: " << value(trieIt).range.i1 << " - " << value(trieIt).range.i2 << std::endl;
 }
+
+// -----------------------------------------------------------------------------
+// Function _goDownTrie() alternative (slower)
+// -----------------------------------------------------------------------------
+/*
+template <typename TTrieIt, typename TQuery, typename TSize>
+inline void _goDownTrie(TTrieIt & trieIt,
+                        TQuery const & query,
+                        TSize maxFreq)
+{
+    typedef typename Container<TTrieIt>::Type TIndex;
+    TIndex & index = container(trieIt);
+
+
+    unsigned len = 1;
+    Finder<TIndex> finder(index);
+    find(finder, prefix(query, len));
+    while (len <= length(query) && finder.range.i2 - finder.range.i1 > maxFreq && length(finder) > 0)
+    {
+        clear(finder);
+        find(finder, prefix(query, ++len));
+    }
+
+    value(trieIt).range.i1 = finder.range.i1 - begin(indexSA(container(trieIt)));
+    value(trieIt).range.i2 = finder.range.i2 - begin(indexSA(container(trieIt)));
+
+    std::cout << "Find: " << prefix(query, len) << " with " << finder.range.i2 - finder.range.i1 << " hits: " << value(trieIt).range.i1 << " - " << value(trieIt).range.i2 << std::endl;
+
+}
+*/
+
 
 // -----------------------------------------------------------------------------
 // Function adaptiveSeeds()                                           [ungapped]
@@ -510,7 +545,6 @@ adaptiveSeeds(Index<TIndexText, IndexSa<Gapped<TMod> > > & index,
 
     _fastTableLookup(trieIt, table, qryIt, qryEnd, maxFreq);
     _goDownTrie(trieIt, qryIt, qryEnd, maxFreq);
-    //std::cout << "adapt. seed (freq " << countOccurrences(trieIt) << "): " << representative(trieIt) << std::endl;
     return range(trieIt);
 }
 
@@ -531,8 +565,13 @@ adaptiveSeeds(Index<TIndexText, IndexSa<Gapped<TMod> > > & index,
     TQueryIter  qryEnd = end(modQuery, Standard());
 
     _goDownTrie(trieIt, qryIt, qryEnd, maxFreq);
-    //std::cout << "adapt. seed (freq " << countOccurrences(trieIt) << "): " << representative(trieIt) << std::endl;
+
+// DEBUG
+    /*
+    goRoot(trieIt);
+    _goDownTrie(trieIt, modQuery, maxFreq);
     return range(trieIt);
+     */
 }
 
 
@@ -796,6 +835,7 @@ void linearLastal(TMatches                                   & finalMatches,
         {
             // Lookup adaptive Seed
             //double xxx = cpuTime();
+//            std::cout << queryPos << ": " << prefix(suffix(query,queryPos),20) << "..." << std::endl;
             Pair<TDbSize> range = (params.useHashTable ?
                                    adaptiveSeeds(index, table, suffix(query, queryPos), params.maxFreq) :
                                    adaptiveSeeds(index, suffix(query, queryPos), params.maxFreq));
@@ -817,8 +857,8 @@ void linearLastal(TMatches                                   & finalMatches,
                 Seed<Simple>        seed( getSeqOffset(*saIt), queryIt - queryBeg, 0 );
 
                 // Check whether seed is redundant
-//                if (diagTable.redundant(beginPositionH(seed), beginPositionV(seed)))
-//                    continue;
+                if (diagTable.redundant(beginPositionH(seed), beginPositionV(seed)))
+                    continue;
 
                 // Gapless Alignment in both directions with a XDrop
                 //double xxxx = cpuTime();
@@ -833,7 +873,7 @@ void linearLastal(TMatches                                   & finalMatches,
                 if (score(seed) < params.Tgapless) continue;
 
                 // Mark diagonal as already visited
-//                diagTable.add(endPositionH(seed), endPositionV(seed));
+                diagTable.add(endPositionH(seed), endPositionV(seed));
 
                 // Prepare a match object with an align object inside
                 TMatch matchObj;
