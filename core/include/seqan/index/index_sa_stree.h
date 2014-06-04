@@ -543,8 +543,6 @@ inline bool _isEdge(Iter<Index<TText, IndexSa<TIndexSpec> >, VSTree<TopDown<TSpe
     typedef typename Size<TIndex>::Type                     TSASize;
     typedef typename Iterator<TSA const, Standard>::Type    TSAIterator;
 
-    //std::cout << "TODO(meiers): Function _isEdge (index_sa_stree.h) does not work properly" << std::endl;
-
     if(isRoot(it)) return false;
     if(value(it).range.i2 == value(it).range.i1) return false;
 
@@ -582,15 +580,10 @@ inline bool _goDownChar(Iter<Index<TText, IndexSa<TIndexSpec> >, VSTree<TopDown<
     if (_isLeaf(it, HideEmptyEdges()))
         return false;
 
-    TIndex const & index = container(it);
-    TSA const & sa = indexSA(index);
-
-#ifdef SEQAN_DEBUG
-    //std::cout << "parent: " << value(it).range.i1 << " " << value(it).range.i2 << std::endl;
-#endif
-
-    TSAIterator saBegin = begin(sa, Standard()) + value(it).range.i1;
-    TSASize saLen = isRoot(it) ? length(sa) : value(it).range.i2 - value(it).range.i1;
+    TIndex const & index   = container(it);
+    TSA const &    sa      = indexSA(index);
+    TSAIterator    saBegin = begin(sa, Standard()) + value(it).range.i1;
+    TSASize        saLen   = isRoot(it) ? length(sa) : value(it).range.i2 - value(it).range.i1;
 
     TSearchTreeIterator node(saBegin, saLen);
 
@@ -599,7 +592,7 @@ inline bool _goDownChar(Iter<Index<TText, IndexSa<TIndexSpec> >, VSTree<TopDown<
 
     // Check whether this is an edge, not a node of the suffix tree
     // NOTE(meiers): disable this branch because it is slower
-    if (             false     &&      _isEdge(it,c))
+    if ( false   &&  _isEdge(it,c))
     {
         value(it).lastChar = c;
         value(it).repLen++;
@@ -623,7 +616,7 @@ inline bool _goDownChar(Iter<Index<TText, IndexSa<TIndexSpec> >, VSTree<TopDown<
     
         return true;
     }
-}
+[}
 
 template <typename TText, typename TIndexSpec, typename TSpec, typename TString, typename TSize>
 inline bool _goDownString(Iter<Index<TText, IndexSa<TIndexSpec> >, VSTree<TopDown<TSpec> > > & it,
