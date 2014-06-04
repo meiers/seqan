@@ -616,7 +616,7 @@ inline bool _goDownChar(Iter<Index<TText, IndexSa<TIndexSpec> >, VSTree<TopDown<
     
         return true;
     }
-[}
+}
 
 template <typename TText, typename TIndexSpec, typename TSpec, typename TString, typename TSize>
 inline bool _goDownString(Iter<Index<TText, IndexSa<TIndexSpec> >, VSTree<TopDown<TSpec> > > & it,
