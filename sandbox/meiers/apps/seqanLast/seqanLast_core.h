@@ -570,8 +570,8 @@ adaptiveSeeds(Index<TIndexText, IndexSa<Gapped<TMod> > > & index,
     /*
     goRoot(trieIt);
     _goDownTrie(trieIt, modQuery, maxFreq);
-    return range(trieIt);
      */
+    return range(trieIt);
 }
 
 
