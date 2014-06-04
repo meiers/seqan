@@ -533,6 +533,8 @@ inline bool _goRight(Iter<Index<TText, IndexSa<TIndexSpec> >, VSTree<TopDown<TSp
     return true;
 }
 
+// NOTE(meiers): Shortcut for going down edges character-wise. If the borders are labeled already
+//               with the specific char no binary search has to be performed.
 template <typename TText, typename TIndexSpec, typename TSpec, typename TValue>
 inline bool _isEdge(Iter<Index<TText, IndexSa<TIndexSpec> >, VSTree<TopDown<TSpec> > > & it, TValue c)
 {
@@ -541,9 +543,10 @@ inline bool _isEdge(Iter<Index<TText, IndexSa<TIndexSpec> >, VSTree<TopDown<TSpe
     typedef typename Size<TIndex>::Type                     TSASize;
     typedef typename Iterator<TSA const, Standard>::Type    TSAIterator;
 
-    std::cout << "TODO(meiers): Function _isEdge (index_sa_stree.h) does not work properly" << std::endl;
+    //std::cout << "TODO(meiers): Function _isEdge (index_sa_stree.h) does not work properly" << std::endl;
 
     if(isRoot(it)) return false;
+    if(value(it).range.i2 == value(it).range.i1) return false;
 
     TIndex const & index = container(it);
     TSA const & sa = indexSA(index);
@@ -551,16 +554,15 @@ inline bool _isEdge(Iter<Index<TText, IndexSa<TIndexSpec> >, VSTree<TopDown<TSpe
     TSAIterator l = begin(sa, Standard()) + value(it).range.i1;
     TSAIterator r = begin(sa, Standard()) + value(it).range.i2 - 1;
     
-    typedef SuffixFunctor<TIndex, typename Value<TSA>::Type> TSuf;
-    typedef typename TSuf::result_type TSuffix;
-    TSuf dereferer(index);
- 
-    typedef typename Iterator<TSuffix const>::Type TSufIter;
+    typedef SuffixFunctor<TIndex, typename Value<TSA>::Type>    TSufFunctor;
+    typedef typename TSufFunctor::result_type                   TSuffix;
+    typedef typename Iterator<TSuffix const>::Type              TSufIter;
+
+    TSufFunctor dereferer(index);
     TSufIter lit = begin(dereferer(*l)) + repLen, len = end(dereferer(*l));
     TSufIter rit = begin(dereferer(*r)) + repLen, ren = end(dereferer(*r));
 
-    
-    if (lit < len && rit < ren && *rit == c && *rit == c)
+    if (lit < len && rit < ren && *lit == c && *rit == c)
         return true;
  
     return false;
@@ -596,7 +598,7 @@ inline bool _goDownChar(Iter<Index<TText, IndexSa<TIndexSpec> >, VSTree<TopDown<
     TSuf  dereferer(index);
 
     // Check whether this is an edge, not a node of the suffix tree
-    if (             false     &&      _isEdge(it,c))  // TODO(meiers): disable this branch for now because I think that isEdge does not work correctly
+    if (             true     &&      _isEdge(it,c))  // TODO(meiers): disable this branch for now because I think that isEdge does not work correctly
     {
         value(it).lastChar = c;
         value(it).repLen++;
