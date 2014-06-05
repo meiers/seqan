@@ -370,39 +370,6 @@ inline void _fastTableLookup(TTrieIt & trieIt,
     // TODO: set parentRight? I think I don't need it because I won't goRight()
 }
 
-/*
-
-
-// OR: make seed shorter
-else
-{
-    std::cout << "Use new function!!" << std::endl;
-    THashValue sigma, sigmaToQ;
-    sigma = sigmaToQ = static_cast<THashValue>(ValueSize<typename Host<TShape>::Type>::VALUE);
-    unsigned len = std::min(static_cast<TSaPos>(qryEnd - qryIt), weight(indexShape(table)));
-
-    // for len = q-1 to 0
-    for(--len; len > 0; --len, sigmaToQ *= sigma)
-    {
-        // hash values of the substring one shorter
-        x = (x/sigmaToQ) * sigmaToQ;
-        y = (x/sigmaToQ + 1) * sigmaToQ;
-
-        // if the range is > maxFreq, the previous range was correct
-        if (indexDir(table)[y] - indexDir(table)[x] > maxFreq)
-        {
-            value(trieIt).range.i1 = from;
-            value(trieIt).range.i2 = to;
-            value(trieIt).repLen = len+1;
-            value(trieIt).lastChar = *(qryIt + len);
-        }
-        from = indexDir(table)[x];
-        to   = indexDir(table)[y];
-    }
-}
-*/
-
-
 // -----------------------------------------------------------------------------
 // Function _goDownTrie()
 // -----------------------------------------------------------------------------
@@ -683,20 +650,20 @@ inline TScoreValue myExtendAlignment(
     typedef typename Size<TDatabase>::Type                     TSize;
 
     // Run a local alignment first to get the "core" of the alignment
-    TScoreValue localScore = localAlignment(alignObj, scoreMatrix);
+    //TScoreValue localScore = score(align);//localAlignment(alignObj, scoreMatrix);
 
-    /* TODO
+
     // Now extend both ends
     Tuple<TSize, 4> positions;
-    positions[0] = beginPositionH(seed) + beginPosition(row(alignObj, 0));
-    positions[1] = beginPositionV(seed) + beginPosition(row(alignObj, 1));
-    positions[2] = beginPositionH(seed) + endPosition(row(alignObj, 0));
-    positions[3] = beginPositionV(seed) + endPosition(row(alignObj, 1));
+    positions[0] = beginPosition(row(alignObj, 0));
+    positions[1] = beginPosition(row(alignObj, 1));
+    positions[2] = endPosition(row(alignObj, 0));
+    positions[3] = endPosition(row(alignObj, 1));
 
 
     // TODO: extendAlignment mit AliExtContext damit die Matrizen nicht immer wieder allokiert werden müssen!
 
-    TScoreValue finalScore = extendAlignment(alignObj, localScore, database, query, positions,
+    TScoreValue finalScore = extendAlignment(alignObj, 0, database, query, positions,
                                              EXTEND_BOTH,
                                              -25,       // lower Diag           // TODO(meiers): Choose band width
                                              +25,       // upper Diag
@@ -704,11 +671,7 @@ inline TScoreValue myExtendAlignment(
 
 
     return finalScore;
-     */
-    return localScore;
 }
-
-
 
 
 // TODO:
@@ -801,20 +764,17 @@ void linearLastal(TMatches                                   & finalMatches,
         for(TQueryIter queryIt = queryBeg; queryIt != queryEnd; ++queryIt, ++queryPos)
         {
             // Lookup adaptive Seed
-            //double xxx = cpuTime();
-//            std::cout << queryPos << ": " << prefix(suffix(query,queryPos),20) << "..." << std::endl;
             Pair<TDbSize> range = (params.useHashTable ?
                                    adaptiveSeeds(index, table, suffix(query, queryPos), params.maxFreq) :
                                    adaptiveSeeds(index, suffix(query, queryPos), params.maxFreq));
-            //_tASCalls += cpuTime() - xxx;
             ++_cASCalls;
 
-            if(range.i2 <= range.i1) continue; // seed doesn't hit at all
-            if(range.i2 - range.i1 > params.maxFreq) continue; // seed hits too often
+            if(range.i2 <= range.i1) continue;                  // seed doesn't hit at all
+            if(range.i2 - range.i1 > params.maxFreq) continue;  // seed hits too often
 
             // Enumerate adaptive seeds
-            TSAIter saIt = begin(indexSA(index), Standard()) + range.i1;
-            TSAIter saEnd  = begin(indexSA(index), Standard()) + range.i2;
+            TSAIter saIt  = begin(indexSA(index), Standard()) + range.i1;
+            TSAIter saEnd = begin(indexSA(index), Standard()) + range.i2;
 
             for(; saIt != saEnd; ++saIt)
             {
@@ -828,12 +788,10 @@ void linearLastal(TMatches                                   & finalMatches,
                     continue;
 
                 // Gapless Alignment in both directions with a XDrop
-                //double xxxx = cpuTime();
                 if (params.myUngappedExtend)
                     _myUngapedExtendSeed(seed, database, query, params.scoreMatrix, params.Xgapless);
                 else
                     _seqanUngappedExtendSeed(seed, database, query, params.scoreMatrix, params.Xgapless);
-                //_tglAlsCalls += cpuTime() - xxxx;
                 ++_cglAls;
 
                 // gapLess alignment too weak
@@ -854,12 +812,12 @@ void linearLastal(TMatches                                   & finalMatches,
                 }
 
                 // Gapped alignment:
-                //double xxxxx = cpuTime();
                 TScore finalScore = myExtendAlignment(matchObj.align, database, query, params.scoreMatrix, params.Xgapped);
-                //_tgpAlsCalls += cpuTime() - xxxxx; ++_cgpAls;
+                matchObj.score += finalScore;
 
-                if (finalScore > params.Tgapped) appendValue(finalMatches, matchObj);
-                
+                if (finalScore > params.Tgapped)
+                    appendValue(finalMatches, matchObj);
+
             } // for(; saIt != saEnd; ++saIt)
         } //for(; queryIt != queryEnd; ++queryIt)
     }
@@ -867,9 +825,9 @@ void linearLastal(TMatches                                   & finalMatches,
 
     if (params.verbosity > 1)
     {
-        std::cout << "Time spend in adaptive seeding:  " << _tASCalls <<    "\t(" << _cASCalls << " calls)" << std::endl;
-        std::cout << "Time spend in gapless alignment: " << _tglAlsCalls << "\t(" << _cglAls <<   " calls)" << std::endl;
-        std::cout << "Time spend in gapped alignment:  " << _tgpAlsCalls << "\t(" << _cgpAls <<   " calls)" << std::endl;
+        std::cout << "Adaptive seeding:  " << _cASCalls << " calls" << std::endl;
+        std::cout << "Gapless alignment: " << _cglAls <<   " calls" << std::endl;
+        std::cout << "Gapped alignment:  " << _cgpAls <<   " calls" << std::endl;
         std::cout << std::endl;
         std::cout << " # adaptive seeds:     " << _cSeeds << std::endl;
     }
