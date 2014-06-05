@@ -341,30 +341,36 @@ inline void _fastTableLookup(TTrieIt & trieIt,
     if (restLen < length(indexShape(table)))
         y = hashUpper(indexShape(table), qryIt, restLen);
 
-    
     // get range in SA
     TSaPos from  = indexDir(table)[x];
     TSaPos to    = indexDir(table)[y];
-
 
     // SA contains incomplete q-grams. These must be skipped:
     while( suffixLength(indexSA(container(trieIt))[from], container(trieIt)) < length(indexShape(table))
            && from + maxFreq < to)
         ++from;
 
-    if (to - from > maxFreq)
+    // If range is too narrow go up in the table
+    if (to <= from + maxFreq)
     {
-        value(trieIt).range.i1 = from;
-        value(trieIt).range.i2 = to;
-        value(trieIt).repLen = restLen;
-        goFurther(qryIt, restLen-1);
-        value(trieIt).lastChar = *qryIt++;
-        // TODO: set parentRight? I think I don't need it because I won't goRight()
+        THashValue base = ValueSize<typename Host<TShape>::Type>::VALUE;
+        while (to <= from + maxFreq && restLen >0)
+        {
+            x     = x/base * base;
+            y     = (y/base +1) * base;
+            base *= base;
+            --restLen;
+            from  = indexDir(table)[x];
+            to    = indexDir(table)[y];
+        }
     }
-    else
-    {
-        // TODO: Go Up in the table
-    }
+
+    value(trieIt).range.i1 = from;
+    value(trieIt).range.i2 = to;
+    value(trieIt).repLen = restLen;
+    goFurther(qryIt, restLen-1);
+    value(trieIt).lastChar = *qryIt++;
+    // TODO: set parentRight? I think I don't need it because I won't goRight()
 }
 
 /*
