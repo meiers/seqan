@@ -663,7 +663,7 @@ inline TScoreValue myExtendAlignment(
 
     // TODO: extendAlignment mit AliExtContext damit die Matrizen nicht immer wieder allokiert werden müssen!
 
-    int diagonal = (gappedXDropScore - scoreGapOpen(scoreMatrix) + scoreGapExtend(scoreMatrix)) / + scoreGapExtend(scoreMatrix);
+    int diagonal = ((- gappedXDropScore - scoreGapOpen(scoreMatrix) + scoreGapExtend(scoreMatrix)) / scoreGapExtend(scoreMatrix));
 
     TScoreValue finalScore = extendAlignment(alignObj, 0, database, query, positions,
                                              EXTEND_BOTH,
@@ -827,6 +827,7 @@ void linearLastal(TMatches                                   & finalMatches,
 
     if (params.verbosity > 1)
     {
+        std::cout << "diagonal for gapped extension: " << ((- params.Xgapped - scoreGapOpen(params.scoreMatrix) + scoreGapExtend(params.scoreMatrix)) / scoreGapExtend(params.scoreMatrix)) << std::endl;
         std::cout << "Adaptive seeding:  " << _cASCalls << " calls" << std::endl;
         std::cout << "Gapless alignment: " << _cglAls <<   " calls" << std::endl;
         std::cout << "Gapped alignment:  " << _cgpAls <<   " calls" << std::endl;
