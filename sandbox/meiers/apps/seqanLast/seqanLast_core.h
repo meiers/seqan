@@ -351,18 +351,15 @@ inline void _fastTableLookup(TTrieIt & trieIt,
         ++from;
 
     // If range is too narrow go up in the table
-    if (to <= from + maxFreq)
+    THashValue base = ValueSize<typename Host<TShape>::Type>::VALUE;
+    while (to <= from + maxFreq && restLen >0)
     {
-        THashValue base = ValueSize<typename Host<TShape>::Type>::VALUE;
-        while (to <= from + maxFreq && restLen >0)
-        {
-            x     = x/base * base;
-            y     = (y/base +1) * base;
-            base *= base;
-            --restLen;
-            from  = indexDir(table)[x];
-            to    = indexDir(table)[y];
-        }
+        x     = x/base * base;
+        y     = (y/base +1) * base;
+        base *= base;
+        --restLen;
+        from  = indexDir(table)[x];
+        to    = indexDir(table)[y];
     }
 
     value(trieIt).range.i1 = from;
