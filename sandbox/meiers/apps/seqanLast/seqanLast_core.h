@@ -655,10 +655,10 @@ inline TScoreValue myExtendAlignment(
 
     // Now extend both ends
     Tuple<TSize, 4> positions;
-    positions[0] = beginPosition(row(alignObj, 0));
-    positions[1] = beginPosition(row(alignObj, 1));
-    positions[2] = endPosition(row(alignObj, 0));
-    positions[3] = endPosition(row(alignObj, 1));
+    positions[0] = beginPosition(source(row(alignObj, 0)));
+    positions[1] = beginPosition(source(row(alignObj, 1)));
+    positions[2] = endPosition(source(row(alignObj, 0)));
+    positions[3] = endPosition(source(row(alignObj, 1)));
 
 
     // TODO: extendAlignment mit AliExtContext damit die Matrizen nicht immer wieder allokiert werden müssen!
@@ -701,6 +701,8 @@ inline void _prepareMatchObject(TMatch & match,
     match.score = score(seed);
     match.dbId = dbId;
     match.quId = quId;
+
+    std::cout << match.align;
 }
 
 // -----------------------------------------------------------------------------
@@ -815,7 +817,7 @@ void linearLastal(TMatches                                   & finalMatches,
                 TScore finalScore = myExtendAlignment(matchObj.align, database, query, params.scoreMatrix, params.Xgapped);
                 matchObj.score += finalScore;
 
-                if (finalScore > params.Tgapped)
+                if (matchObj.score > params.Tgapped)
                     appendValue(finalMatches, matchObj);
 
             } // for(; saIt != saEnd; ++saIt)
@@ -834,8 +836,6 @@ void linearLastal(TMatches                                   & finalMatches,
     if (params.verbosity)
         std::cout << " # final matches:      " << length(finalMatches) << std::endl;
 }
-
-
 
 
 #endif  // #ifndef SANDBOX_MEIERS_APPS_SEQANLAST_SEQANLAST_CORE_H_
