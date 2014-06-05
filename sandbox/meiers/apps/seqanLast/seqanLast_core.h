@@ -663,10 +663,12 @@ inline TScoreValue myExtendAlignment(
 
     // TODO: extendAlignment mit AliExtContext damit die Matrizen nicht immer wieder allokiert werden müssen!
 
+    int diagonal = (gappedXDropScore - scoreGapOpen(scoreMatrix) + scoreGapExtend(scoreMatrix)) / + scoreGapExtend(scoreMatrix);
+
     TScoreValue finalScore = extendAlignment(alignObj, 0, database, query, positions,
                                              EXTEND_BOTH,
-                                             -25,       // lower Diag           // TODO(meiers): Choose band width
-                                             +25,       // upper Diag
+                                             - diagonal,       // lower Diag
+                                             + diagonal,       // upper Diag
                                              gappedXDropScore, scoreMatrix);
 
 
@@ -701,8 +703,6 @@ inline void _prepareMatchObject(TMatch & match,
     match.score = score(seed);
     match.dbId = dbId;
     match.quId = quId;
-
-    std::cout << match.align;
 }
 
 // -----------------------------------------------------------------------------
