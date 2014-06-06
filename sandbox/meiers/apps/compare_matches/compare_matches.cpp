@@ -760,7 +760,7 @@ binMatches(String<TMatch> & epsMatches, String<TMatch> & otherMatches, TMapping 
 
 template<typename TPos, typename TMatch>
 Tuple<int, 5>
-analyze(TMatch & subjectMatch, String<TPos> & map, String<TMatch> & otherMatches) \
+analyze(TMatch & subjectMatch, String<TPos> & map, String<TMatch> & otherMatches, bool verbose) \
 {
     Tuple<int, 5> result;
     int & exactHits = result.i[0];
@@ -783,23 +783,27 @@ analyze(TMatch & subjectMatch, String<TPos> & map, String<TMatch> & otherMatches
         {
             if (scoreDiff(subjectMatch, otherMatches[*oIt]) == 0)
                 ++exactHits;
-            else
+            else {
+                if (verbose) std::cout << "Score difference: " << std::endl;
+                if (verbose) std::cout << "ref:  "; write(subjectMatch);
+                if (verbose) std::cout << "comp: "; write(otherMatches[*oIt]);
                 ++scoreDist;
+            }
         }
         else
         {
             if ( subjectMatch.begin1 == otherMatches[*oIt].begin1 && subjectMatch.begin2 == otherMatches[*oIt].begin2)
             {
-                std::cout << "Same start: " << std::endl;
-                std::cout << "ref:  "; write(subjectMatch);
-                std::cout << "comp: "; write(otherMatches[*oIt]);
+                if (verbose) std::cout << "Same start: " << std::endl;
+                if (verbose) std::cout << "ref:  "; write(subjectMatch);
+                if (verbose) std::cout << "comp: "; write(otherMatches[*oIt]);
                 ++sameStart;
             }
             else if ( subjectMatch.end1 == otherMatches[*oIt].end1 && subjectMatch.end2 == otherMatches[*oIt].end2)
             {
-                std::cout << "Same end: " << std::endl;
-                std::cout << "ref:  "; write(subjectMatch);
-                std::cout << "comp: "; write(otherMatches[*oIt]);
+                if (verbose) std::cout << "Same end: " << std::endl;
+                if (verbose) std::cout << "ref:  "; write(subjectMatch);
+                if (verbose) std::cout << "comp: "; write(otherMatches[*oIt]);
                 ++sameEnd;
             }
         }
@@ -811,7 +815,7 @@ analyze(TMatch & subjectMatch, String<TPos> & map, String<TMatch> & otherMatches
 
 template<typename TMatch, typename TMapping>
 void
-exactAnalysis(String<TMatch> & epsMatches, String<TMatch> & otherMatches, TMapping & mapping) {
+exactAnalysis(String<TMatch> & epsMatches, String<TMatch> & otherMatches, TMapping & mapping, bool verbose = false) {
 	// iterate over eps-matches
 	typedef typename Iterator<TMapping>::Type TIterator;
 	TIterator mapIt = begin(mapping);
@@ -823,7 +827,7 @@ exactAnalysis(String<TMatch> & epsMatches, String<TMatch> & otherMatches, TMappi
     {
 		// compute coverage of epsilon-match
 		TMatch epsMatch = epsMatches[position(mapIt, mapping)];
-		Tuple<int, 5> p = analyze(epsMatch, *mapIt, otherMatches);
+		Tuple<int, 5> p = analyze(epsMatch, *mapIt, otherMatches, verbose);
         r.i[0] += p.i[0];
         r.i[1] += p.i[1];
         r.i[2] += p.i[2];
