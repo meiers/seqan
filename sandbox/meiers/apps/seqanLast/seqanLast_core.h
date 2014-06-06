@@ -815,6 +815,7 @@ void linearLastal(TMatches                                   & finalMatches,
 
                 // Gapped alignment:
                 TScore finalScore = myExtendAlignment(matchObj.align, database, query, params.scoreMatrix, params.Xgapped);
+                ++_cgpAls;
                 matchObj.score += finalScore;
 
                 if (matchObj.score > params.Tgapped)
