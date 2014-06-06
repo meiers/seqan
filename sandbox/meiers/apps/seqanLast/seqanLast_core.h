@@ -818,7 +818,7 @@ void linearLastal(TMatches                                   & finalMatches,
                 ++_cgpAls;
                 matchObj.score += finalScore;
 
-                if (matchObj.score > params.Tgapped)
+                if (matchObj.score >= params.Tgapped)
                     appendValue(finalMatches, matchObj);
 
             } // for(; saIt != saEnd; ++saIt)
