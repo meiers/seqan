@@ -197,7 +197,7 @@ void _setLastParser(ArgumentParser & parser)
 
     addOption(parser, ArgParseOption("F", "frequency", "Initial match frequency for adaptive seeds",
                                      ArgParseArgument::INTEGER));
-    setDefaultValue(parser, "F", "10");
+    setDefaultValue(parser, "F", "5");
     setMinValue(parser, "F", "0");
     addOption(parser, ArgParseOption("r", "matchScore", "Match score for verification phase",
                                      ArgParseArgument::INTEGER));
@@ -213,22 +213,22 @@ void _setLastParser(ArgumentParser & parser)
     setDefaultValue(parser, "b", "-1");
     addOption(parser, ArgParseOption("x", "gappedXDrop", "Maximal x-drop score during the gapped alignment",
                                      ArgParseArgument::INTEGER));
-    setDefaultValue(parser, "x", "10");
+    setDefaultValue(parser, "x", "39");
     addOption(parser, ArgParseOption("y", "gaplessXDrop", "Maximal x-drop score during the gapless extension",
                                      ArgParseArgument::INTEGER));
     setDefaultValue(parser, "y", "14");
     addOption(parser, ArgParseOption("d", "gaplessThreshold", "Minimum score of the gapless alignment to continue",
                                      ArgParseArgument::INTEGER));
-    setDefaultValue(parser, "d", "12");
+    setDefaultValue(parser, "d", "17");
     addOption(parser, ArgParseOption("e", "gappedThreshold", "Minimum score of the gapped alignment to continue",
                                      ArgParseArgument::INTEGER));
-    setDefaultValue(parser, "e", "25");
+    setDefaultValue(parser, "e", "40");
 
     addSection(parser, "Miscellaneous Options");
     addOption(parser, ArgParseOption("u", "ungapped", "Ungapped (gapless) extension only. Note that threshold d determines the output rather than e"));
     addOption(parser, ArgParseOption("iH", "ignore-hashtable", "Do not use the hash table to speed up adaptive seeding"));
     addOption(parser, ArgParseOption("sU", "seqanUngappedExtension", "Use seqan module for ungapped extension, instead of self-written one"));
-    addOption(parser, ArgParseOption("nS", "newScoring", "Use a matrix-based scoring function instead of Seqan's Simple scoring scheme."));
+    addOption(parser, ArgParseOption("oS", "oldScoring", "Use SimpleScore class instead of a matrix-based scoring function."));
 
 
     addTextSection(parser, "References");
@@ -270,7 +270,7 @@ parseCommandLine(SeqanLastOptions & options, int argc, char const ** argv)
     options.onlyUngappedAlignments = isSet(parser, "ungapped");
     options.useHashTable = ! isSet(parser, "iH");
     options.myUngappedExtend = ! isSet(parser, "seqanUngappedExtension");
-    options.newScoring = isSet(parser, "newScoring");
+    options.newScoring = !isSet(parser, "oldScoring");
 
     // Extract verbosity options.
     if (isSet(parser, "quiet"))

@@ -265,7 +265,7 @@ int main(int argc, char const ** argv)
     addOption(parser, ArgParseOption("V", "very-verbose", "Set stronger verbosity mode."));
     addOption(parser, ArgParseOption("Q", "quiet", "No output, please."));
     addOption(parser, ArgParseOption("s", "shape", "shape used for the suffix array", ArgParseArgument::INTEGER));
-    setDefaultValue(parser, "s", "1");
+    setDefaultValue(parser, "s", "3");
     setMinValue(parser, "s", "1");
     setMaxValue(parser, "s", "4");
     addOption(parser, ArgParseOption("k", "k-mer", "k-mer size used in the hash table.", ArgParseArgument::INTEGER));
