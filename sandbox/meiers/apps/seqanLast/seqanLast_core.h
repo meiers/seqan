@@ -254,7 +254,6 @@ void _insertMissingQGrams(TDir &dir,
 
     if (!length(text)) return;
 
-    std::cout << shape.span << std::endl;
     TPos start = length(text) < shape.span ? 0 : length(text)-shape.span+1;
     TIter it = begin(text, Standard()) + start;
     ++dir[requestBucket(bucketMap, hash(shape, it, length(text)-start))];
@@ -382,8 +381,6 @@ inline void _goDownTrie(TTrieIt & trieIt,
 {
     while(qryIt < qryEnd)
     {
-     //   std::cout << *qryIt << ": " << representative(trieIt) << " (" << countOccurrences(trieIt) << ")" << std::endl;
-        
         if(!goDown(trieIt, *(qryIt++)))
             break;
         if(countOccurrences(trieIt) <= maxFreq)

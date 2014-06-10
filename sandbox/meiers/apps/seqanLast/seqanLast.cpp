@@ -152,14 +152,15 @@ int importAndRun(SeqanLastOptions &options,
         linearLastal(matchContainer, suffixArray, hashTab, querySet, paramsNew);
     else
         linearLastal(matchContainer, suffixArray, hashTab, querySet, params);
-    std::cout << "Time spend in linearLastal: " << sysTime() - teim << std::endl;
+
+    if (options.verbosity) std::cout << "Time spend in linearLastal: " << sysTime() - teim << std::endl;
 
     // TODO: If the sorting takes long, cosider only sorting a string of references instead of the heavy match objects
     teim = sysTime();
     MatchScoreLess<TMatch> scoreLess;
-    std::sort(begin(matchContainer, Standard()), end(matchContainer, Standard()), scoreLess);
-    std::cout << "Sorting results " << sysTime() - teim << std::endl;
 
+    std::sort(begin(matchContainer, Standard()), end(matchContainer, Standard()), scoreLess);
+    if (options.verbosity) std::cout << "Sorting results " << sysTime() - teim << std::endl;
 
     // Output
     teim = sysTime();
@@ -170,13 +171,15 @@ int importAndRun(SeqanLastOptions &options,
             std::cout << "Could not open \"" << options.outputFile << "\" to write output. Using stdout instead." << std::endl;
         std::cout << "================================================================================" << std::endl;
         _outputMatches(matchContainer, dbIds, queryIds, std::cout, options.verbosity);
-	} else {
-        std::cout << "Writing output to " << options.outputFile << "..." << std::endl;
+	}
+    else
+    {
+        if (options.verbosity) std::cout << "Writing output to " << options.outputFile << "..." << std::endl;
         _outputMatches(matchContainer, dbIds, queryIds, file, options.verbosity);
     }
     file.close();
 
-    std::cout << "Wrting took: "<< sysTime() - teim << std::endl;
+    if (options.verbosity) std::cout << "Wrting took: "<< sysTime() - teim << std::endl;
     return 0;
 }
 
