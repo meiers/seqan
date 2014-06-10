@@ -150,7 +150,7 @@ int _writePropertyFile(CharString const & fileName, TSize k, TType shapeChoice, 
     }
     file << "k=" << k << std::endl;
     file << "shape=" << shapeChoice << std::endl;
-    file << "strSetSize=" << strSetSize << std::endl;
+    //file << "strSetSize=" << strSetSize << std::endl;
     return 0;
 }
 
