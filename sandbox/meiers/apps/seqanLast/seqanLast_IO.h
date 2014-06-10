@@ -565,7 +565,7 @@ bool _readPropertyFile(SeqanLastOptions & options)
                 }
                 b_shape = true;
                 int v = std::atoi(value.c_str());
-                if (v <=0 || v >2)
+                if (v <=0 || v >4)
                 {
 
                 } else {
