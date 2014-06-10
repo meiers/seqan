@@ -530,9 +530,9 @@ bool _outputMatches(TMatches const & matches,
         _writeMatchGff(dbIds[it->dbId], quIds[it->quId], true, it->score, row(it->align,0), row(it->align,1), stream);
     }
     if(empty(matches))
-        std::cout << "No results" << std::endl;
-    else if (!verbosity)
-        std::cout << "# matches = " << length(matches) << std::endl;
+        if (verbosity) std::cout << "No results" << std::endl;
+    else if (verbosity) std::cout << "# matches = " << length(matches) << std::endl;
+
     return true;
 }
 
