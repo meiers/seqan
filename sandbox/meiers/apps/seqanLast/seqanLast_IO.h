@@ -197,7 +197,7 @@ void _setLastParser(ArgumentParser & parser)
 
     addOption(parser, ArgParseOption("F", "frequency", "Initial match frequency for adaptive seeds",
                                      ArgParseArgument::INTEGER));
-    setDefaultValue(parser, "F", "5");
+    setDefaultValue(parser, "F", "10");
     setMinValue(parser, "F", "0");
     addOption(parser, ArgParseOption("r", "matchScore", "Match score for verification phase",
                                      ArgParseArgument::INTEGER));

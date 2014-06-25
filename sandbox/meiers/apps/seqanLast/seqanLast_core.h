@@ -762,6 +762,10 @@ void linearLastal(TMatches                                   & finalMatches,
         // Sequential search over queries
         for(TQueryIter queryIt = queryBeg; queryIt != queryEnd; ++queryIt, ++queryPos)
         {
+            // quick'n'dirty hack to skip Ns:
+            if (*queryIt == 'N') continue;
+
+
             // Lookup adaptive Seed
             Pair<TDbSize> range = (params.useHashTable ?
                                    adaptiveSeeds(index, table, suffix(query, queryPos), params.maxFreq) :
