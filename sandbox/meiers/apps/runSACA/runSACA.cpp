@@ -153,7 +153,7 @@ parseCommandLine(RunSACAOptions & options, int argc, char const ** argv)
     addDescription(parser, "6:        11101001010011011100 (11/20, Pattern Hunter 2)");
     addDescription(parser, "7:        101110010101110110101110101011 (19/30)");
     
-    addArgument(parser, ArgParseArgument(ArgParseArgument::INPUTFILE, "FASTA FILE"));
+    addArgument(parser, ArgParseArgument(ArgParseArgument::INPUT_FILE, "FASTA FILE"));
 
     addOption(parser, seqan::ArgParseOption("a", "algorithm", "Specify the SACA algorithm to use.", ArgParseArgument::STRING, "STR"));
     setValidValues(parser, "algorithm", "DislexSkew7 DislexExternal InplaceRadixSort QSort Skew7 SkewExternal None");

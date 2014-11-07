@@ -87,7 +87,7 @@ parseCommandLine(AppOptions & options, int argc, char const ** argv)
     addDescription(parser, "Builds an index (ESA) of the specified genome and writes it to disk.");
 
     // We require one argument.
-    addArgument(parser, seqan::ArgParseArgument(seqan::ArgParseArgument::INPUTFILE, "IN"));
+    addArgument(parser, seqan::ArgParseArgument(seqan::ArgParseArgument::INPUT_FILE, "IN"));
 
     addOption(parser, seqan::ArgParseOption("n", "noqsort", "Disable QuickSort (for large input files)"));
     addOption(parser, seqan::ArgParseOption("m", "mode", "What kind of benchmark?",
@@ -843,18 +843,32 @@ int main(int argc, char const ** argv)
 
     // New reading:
     // use the sequenceStream
-    seqan::SequenceStream seqStream(seqan::toCString(options.infile));
-    if (!isGood(seqStream))
+    SeqFileIn file;
+    if (!open(file, toCString(options.infile)))
     {
         std::cerr << "ERROR: Could not open the file." << std::endl;
         return 1;
     }
-    if (readAll(ids, seqs, seqStream) != 0)
+    Dna5String seqStr;
+    CharString idStr;
+    while (!atEnd(file))
     {
-        std::cerr << "ERROR: Could not read from " << options.infile << std::endl;
-        return 1;
+        try
+        {
+            readRecord(idStr, seqStr, file);
+            appendValue(seqs, seqStr);
+//            ++seqCount;
+        }
+        catch (UnexpectedEnd &)
+        {
+            return 1;
+        }
+        catch (ParseError & e)
+        {
+            std::cerr << "Problem reading record: " << e.what() << std::endl;
+            continue;
+        }
     }
-    clear(ids);
 
     time_t t; time(&t);
     std::cout << "############# Call Benchmarks for Seqan's SACAs ###############" << std::endl;
