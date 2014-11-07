@@ -199,6 +199,22 @@ public:
 	}
 };
 
+// ----------------------------------------------------------------------------
+// Function swap()
+// ----------------------------------------------------------------------------
+
+template <typename TSequence>
+void swap(Gaps<TSequence, ArrayGaps> & lhs, Gaps<TSequence, ArrayGaps> & rhs)
+{
+    swap(lhs._source, rhs._source);
+    swap(lhs._array, rhs._array);
+
+    std::swap(lhs._sourceBeginPos, rhs._sourceBeginPos);
+    std::swap(lhs._sourceEndPos, rhs._sourceEndPos);
+    std::swap(lhs._clippingBeginPos, rhs._clippingBeginPos);
+    std::swap(lhs._clippingEndPos, rhs._clippingEndPos);
+}
+
 // ============================================================================
 // Metafunctions
 // ============================================================================
@@ -681,6 +697,24 @@ inline void
 clearGaps(Gaps<TSequence, ArrayGaps> & gaps)
 {
     _reinitArrayGaps(gaps);
+}
+
+// ----------------------------------------------------------------------------
+// Function clear()
+// ----------------------------------------------------------------------------
+
+template <typename TSequence>
+inline void
+clear(Gaps<TSequence, ArrayGaps> & gaps)
+{
+    clear(gaps._source);
+    clear(gaps._array);
+    gaps._sourceBeginPos     = 0;
+    gaps._sourceEndPos       = 0;
+    gaps._clippingBeginPos   = 0;
+    gaps._clippingEndPos     = 0;
+    // cannot use clearGaps() here, since that calls value() on _source
+    // which instates the Holder to Owner; we want it to be empty
 }
 
 // ----------------------------------------------------------------------------

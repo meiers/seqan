@@ -42,10 +42,10 @@ def main(source_base, binary_base):
     # ============================================================
 
     path_to_join = app_tests.autolocateBinary(
-      binary_base, 'bin', 'join')
+      binary_base, 'bin', 's4_join')
 
     path_to_search = app_tests.autolocateBinary(
-      binary_base, 'bin', 'search')
+      binary_base, 'bin', 's4_search')
 
     # ============================================================
     # Built TestConf list.
@@ -61,13 +61,13 @@ def main(source_base, binary_base):
 
     # Seed length
     SL = {
-            'geo': ['5', '6'],
-            'dna': ['10', '13']
+            'geo': ['5'],
+            'dna': ['10']
     }
     # Errors
     K  = {
-            'geo': ['0', '1', '2', '3'],
-            'dna': ['0', '4', '8', '12', '16']
+            'geo': ['0', '1', '3'],
+            'dna': ['0', '8', '16']
     }
     # Threads
     THREADS = '4'

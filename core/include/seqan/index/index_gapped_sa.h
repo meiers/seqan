@@ -54,10 +54,10 @@ template <typename T, typename TSAValue> struct SuffixFunctor;
 // ============================================================================
 
 // TODO(meiers): Remove this definition as soon as Ticket #1096 has been solved: http://trac.seqan.de/ticket/1096
-template < typename TText, typename TSpec >
-struct DefaultFinder< Index<TText, IndexSa<TSpec> > > {
-    typedef EsaFindMlr Type;	// standard suffix array finder is mlr-heuristic
-};
+//template < typename TText, typename TSpec >
+//struct DefaultFinder< Index<TText, IndexSa<TSpec> > > {
+//    typedef EsaFindMlr Type;	// standard suffix array finder is mlr-heuristic
+//};
 
 template <typename TSuffixMod, typename TSpec = void>
 struct Gapped {};

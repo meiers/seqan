@@ -57,7 +57,7 @@ namespace SEQAN_NAMESPACE_MAIN
  *
  * @signature Prefix<TSeq>::Type
  *
- * @tparam TSeq The segmentable sequence type to get infix type for.
+ * @tparam TSeq The segmentable sequence type to get prefix type for.
  * @return Type The prefix type.
  *
  * The prefix type of a prefix is a suffix, the prefix of any other segment type is an infix.
@@ -80,7 +80,7 @@ namespace SEQAN_NAMESPACE_MAIN
  * @mfn SegmentableConcept#Infix
  * @brief Returns infix type in a flattening fashion.
  *
- * @signature Suffix<TSeq>::Type
+ * @signature Infix<TSeq>::Type
  *
  * @tparam TSeq The segmentable sequence type to get infix type for.
  * @return Type The infix type.
@@ -92,7 +92,7 @@ namespace SEQAN_NAMESPACE_MAIN
  * @fn SegmentableConcept#infixWithLength
  * @brief Returns the infix of a Segmentable type.
  *
- * @signature TPrefix infixWithLength(s, beginPos, len);
+ * @signature TInfix infixWithLength(s, beginPos, len);
  *
  * @param[in] s        Segmentable sequence to return the infix for (type <tt>TSeq</tt>).
  * @param[in] beginPos Begin position must be convertible to <tt>Position&lt;TSeq&gt;::Type</tt>.
@@ -107,7 +107,7 @@ namespace SEQAN_NAMESPACE_MAIN
  * @fn SegmentableConcept#infix
  * @brief Returns the infix of a Segmentable type.
  *
- * @signature TPrefix infix(s, beginPos, endPos);
+ * @signature TInfix infix(s, beginPos, endPos);
  *
  * @param[in] s        Segmentable sequence to return the infix for (type <tt>TSeq</tt>).
  * @param[in] beginPos Begin position must be convertible to <tt>Position&lt;TSeq&gt;::Type</tt>.
@@ -132,7 +132,7 @@ namespace SEQAN_NAMESPACE_MAIN
  * @fn SegmentableConcept#suffix
  * @brief Returns the suffix of a Segmentable type.
  *
- * @signature TPrefix suffix(s, beginPos);
+ * @signature TSuffix suffix(s, beginPos);
  *
  * @param[in] s        The segmentable type to get the suffix of.
  * @param[in] beginPos Begin position must be convertible to <tt>Position&lt;TSeq&gt;::Type</tt>.
@@ -156,7 +156,7 @@ namespace SEQAN_NAMESPACE_MAIN
  * @signature template <typename THost, typename TSpec>
  *            class Segment;
  *
- * @tparam THost The underlying @link SequenceConcept sequence @endlink type.
+ * @tparam THost The underlying @link ContainerConcept sequence @endlink type.
  * @tparam TSpec The tag to use for selecting the Segment specialization.
  *
  * Segments are lightweight representations of an underlying sequence (host).  Only a pointer to the host and begin
@@ -166,8 +166,8 @@ namespace SEQAN_NAMESPACE_MAIN
  *
  * @snippet demos/sequence/segment.cpp basic operations
  *
- * You can get the type of the infix/prefix/suffix of a sequence using @link SequenceConcept#Infix @endlink,
- * @link SequenceConcept#Prefix @endlink, and @link SequenceConcept#Suffix @endlink.  These metafunctions will
+ * You can get the type of the infix/prefix/suffix of a sequence using @link ContainerConcept#Infix @endlink,
+ * @link ContainerConcept#Prefix @endlink, and @link ContainerConcept#Suffix @endlink.  These metafunctions will
  * "flatten" the type such that using these metafunctions, the infix of an infix is an infix and not
  * an Infix Segment with an Infix Segment as its host.  Instead, it will again be an Infix Segment
  * of the host of the inner type.
@@ -440,6 +440,16 @@ struct IsContiguous< Segment<THost, TSpec> > :
 template <typename THost, typename TSpec>
 struct IsSequence< Segment<THost, TSpec> > :
     True {};
+
+// ----------------------------------------------------------------------------
+// Concept ContainerConcept
+// ----------------------------------------------------------------------------
+
+template <typename THost, typename TSpec>
+SEQAN_CONCEPT_IMPL((Segment<THost, TSpec>), (ContainerConcept));
+
+template <typename THost, typename TSpec>
+SEQAN_CONCEPT_IMPL((Segment<THost, TSpec> const), (ContainerConcept));
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -872,8 +882,8 @@ inline TStream &
 operator << (TStream & target,
              Segment<THost, TSpec> const & source)
 {
-SEQAN_CHECKPOINT
-    write(target, source);
+    typename DirectionIterator<TStream, Output>::Type it(target);
+    write(it, source);
     return target;
 }
 
@@ -884,8 +894,8 @@ inline TStream &
 operator >> (TStream & source,
              Segment<THost, TSpec> & target)
 {
-SEQAN_CHECKPOINT
-    read(source, target);
+    typename DirectionIterator<TStream, Input>::Type it(source);
+    read(it, target);
     return source;
 }
 template <typename TStream, typename THost, typename TSpec>
@@ -893,8 +903,8 @@ inline TStream &
 operator >> (TStream & source,
              Segment<THost, TSpec> const & target)
 {
-SEQAN_CHECKPOINT
-    read(source, target);
+    typename DirectionIterator<TStream, Input>::Type it(source);
+    read(it, target);
     return source;
 }
 

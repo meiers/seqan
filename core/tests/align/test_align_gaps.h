@@ -114,7 +114,6 @@ void testAlignGapsConstructorAndSource(TGapsSpec const & /*spec*/)
 
 // Test setSource() function of Array Gaps.
 
-
 template <typename TGapsSpec>
 void testAlignGapsSetSource(TGapsSpec const & /*spec*/)
 {
@@ -207,10 +206,24 @@ void testAlignGapsGapOperationsGapCenter(TGapsSpec const & /*spec*/)
         SEQAN_ASSERT(gaps[4] == '-');
         SEQAN_ASSERT(gaps[5] == 'G');
         
-        // Query gaps.
+        // Query gaps and character.
+        SEQAN_ASSERT_EQ(countGaps(gaps, 0), 0u);
+        SEQAN_ASSERT_EQ(countCharacters(gaps, 0), 4u);
+
         SEQAN_ASSERT_NOT(isGap(gaps, 3));
+        SEQAN_ASSERT(isCharacter(gaps, 3));
+        SEQAN_ASSERT_EQ(countGaps(gaps, 3), 0u);
+        SEQAN_ASSERT_EQ(countCharacters(gaps, 3), 1u);
+
         SEQAN_ASSERT(isGap(gaps, 4));
+        SEQAN_ASSERT_NOT(isCharacter(gaps, 4));
+        SEQAN_ASSERT_EQ(countGaps(gaps, 4), 1u);
+        SEQAN_ASSERT_EQ(countCharacters(gaps, 4), 0u);
+
         SEQAN_ASSERT_NOT(isGap(gaps, 5));
+        SEQAN_ASSERT(isCharacter(gaps, 5));
+        SEQAN_ASSERT_EQ(countGaps(gaps, 5), 0u);
+        SEQAN_ASSERT_EQ(countCharacters(gaps, 5), 4u);
     }
 
     // Insert two gaps in the center and do queries on the result.
@@ -230,10 +243,22 @@ void testAlignGapsGapOperationsGapCenter(TGapsSpec const & /*spec*/)
         SEQAN_ASSERT(gaps[6] == 'G');
         
         // Query gaps.
+        SEQAN_ASSERT_EQ(countGaps(gaps, 0), 0u);
+        SEQAN_ASSERT_EQ(countCharacters(gaps, 0), 4u);
+
         SEQAN_ASSERT_NOT(isGap(gaps, 3));
+        SEQAN_ASSERT(isCharacter(gaps, 3));
+
         SEQAN_ASSERT(isGap(gaps, 4));
+        SEQAN_ASSERT_NOT(isCharacter(gaps, 4));
+
         SEQAN_ASSERT(isGap(gaps, 5));
+        SEQAN_ASSERT_NOT(isCharacter(gaps, 5));
+
         SEQAN_ASSERT_NOT(isGap(gaps, 6));
+        SEQAN_ASSERT(isCharacter(gaps, 6));
+        SEQAN_ASSERT_EQ(countGaps(gaps, 6), 0u);
+        SEQAN_ASSERT_EQ(countCharacters(gaps, 6), 4u);
     }
 
     // Insert three gaps in the center, remove one, then perform queries.
@@ -254,13 +279,31 @@ void testAlignGapsGapOperationsGapCenter(TGapsSpec const & /*spec*/)
         SEQAN_ASSERT(gaps[6] == 'G');
         
         // Query gaps.
+        SEQAN_ASSERT_EQ(countGaps(gaps, 0), 0u);
+        SEQAN_ASSERT_EQ(countCharacters(gaps, 0), 4u);
+        
         SEQAN_ASSERT_NOT(isGap(gaps, 3));
+        SEQAN_ASSERT(isCharacter(gaps, 3));
+        SEQAN_ASSERT_EQ(countGaps(gaps, 3), 0u);
+        SEQAN_ASSERT_EQ(countCharacters(gaps, 3), 1u);
+
         SEQAN_ASSERT(isGap(gaps, 4));
+        SEQAN_ASSERT_NOT(isCharacter(gaps, 4));
+        SEQAN_ASSERT_EQ(countGaps(gaps, 4), 2u);
+        SEQAN_ASSERT_EQ(countCharacters(gaps, 4), 0u);
+
         SEQAN_ASSERT(isGap(gaps, 5));
+        SEQAN_ASSERT_NOT(isCharacter(gaps, 5));
+        SEQAN_ASSERT_EQ(countGaps(gaps, 5), 1u);
+        SEQAN_ASSERT_EQ(countCharacters(gaps, 5), 0u);
+
         SEQAN_ASSERT_NOT(isGap(gaps, 6));
+        SEQAN_ASSERT(isCharacter(gaps, 6));
+        SEQAN_ASSERT_EQ(countGaps(gaps, 6), 0u);
+        SEQAN_ASSERT_EQ(countCharacters(gaps, 6), 4u);
     }
 
-    // Insert four gaps in the center, remove one, then perform queries.
+    // Insert four gaps in the center, remove two, then perform queries.
     {
         TString seq("AAACGTTT");
         TGaps gaps(seq);
@@ -278,10 +321,28 @@ void testAlignGapsGapOperationsGapCenter(TGapsSpec const & /*spec*/)
         SEQAN_ASSERT(gaps[6] == 'G');
         
         // Query gaps.
+        SEQAN_ASSERT_EQ(countGaps(gaps, 0), 0u);
+        SEQAN_ASSERT_EQ(countCharacters(gaps, 0), 4u);
+
         SEQAN_ASSERT_NOT(isGap(gaps, 3));
+        SEQAN_ASSERT(isCharacter(gaps, 3));
+        SEQAN_ASSERT_EQ(countGaps(gaps, 3), 0u);
+        SEQAN_ASSERT_EQ(countCharacters(gaps, 3), 1u);
+
         SEQAN_ASSERT(isGap(gaps, 4));
+        SEQAN_ASSERT_NOT(isCharacter(gaps, 4));
+        SEQAN_ASSERT_EQ(countGaps(gaps, 4), 2u);
+        SEQAN_ASSERT_EQ(countCharacters(gaps, 4), 0u);
+
         SEQAN_ASSERT(isGap(gaps, 5));
+        SEQAN_ASSERT_NOT(isCharacter(gaps, 5));
+        SEQAN_ASSERT_EQ(countGaps(gaps, 5), 1u);
+        SEQAN_ASSERT_EQ(countCharacters(gaps, 5), 0u);
+
         SEQAN_ASSERT_NOT(isGap(gaps, 6));
+        SEQAN_ASSERT(isCharacter(gaps, 6));
+        SEQAN_ASSERT_EQ(countGaps(gaps, 6), 0u);
+        SEQAN_ASSERT_EQ(countCharacters(gaps, 6), 4u);
     }
 
     // Insert gaps in the center, then clear.
@@ -302,10 +363,16 @@ void testAlignGapsGapOperationsGapCenter(TGapsSpec const & /*spec*/)
         SEQAN_ASSERT(gaps[5] == 'T');
         
         // Query gaps.
+        SEQAN_ASSERT_EQ(countCharacters(gaps, 0), 8u);
+
         SEQAN_ASSERT_NOT(isGap(gaps, 2));
+        SEQAN_ASSERT(isCharacter(gaps, 2));
         SEQAN_ASSERT_NOT(isGap(gaps, 3));
+        SEQAN_ASSERT(isCharacter(gaps, 3));
         SEQAN_ASSERT_NOT(isGap(gaps, 4));
+        SEQAN_ASSERT(isCharacter(gaps, 4));
         SEQAN_ASSERT_NOT(isGap(gaps, 5));
+        SEQAN_ASSERT(isCharacter(gaps, 5));
     }
 }
 
@@ -341,8 +408,17 @@ void testAlignGapsGapOperationsGapsLeading(TGapsSpec const & /*spec*/)
         SEQAN_ASSERT(gaps[1] == 'G');
         
         // Query gaps.
+
+
         SEQAN_ASSERT(isGap(gaps, 0));
+        SEQAN_ASSERT_NOT(isCharacter(gaps, 0));
+        SEQAN_ASSERT_EQ(countGaps(gaps, 0), 1u);
+        SEQAN_ASSERT_EQ(countCharacters(gaps, 0), 0u);
+
         SEQAN_ASSERT_NOT(isGap(gaps, 1));
+        SEQAN_ASSERT(isCharacter(gaps, 1));
+        SEQAN_ASSERT_EQ(countGaps(gaps, 1), 0u);
+        SEQAN_ASSERT_EQ(countCharacters(gaps, 1), 7u);
     }
 
     // Insert two gaps at the beginning and do queries on the result.
@@ -362,8 +438,19 @@ void testAlignGapsGapOperationsGapsLeading(TGapsSpec const & /*spec*/)
         
         // Query gaps.
         SEQAN_ASSERT(isGap(gaps, 0));
+        SEQAN_ASSERT_NOT(isCharacter(gaps, 0));
+        SEQAN_ASSERT_EQ(countGaps(gaps, 0), 2u);
+        SEQAN_ASSERT_EQ(countCharacters(gaps, 0), 0u);
+
         SEQAN_ASSERT(isGap(gaps, 1));
+        SEQAN_ASSERT_NOT(isCharacter(gaps, 1));
+        SEQAN_ASSERT_EQ(countGaps(gaps, 1), 1u);
+        SEQAN_ASSERT_EQ(countCharacters(gaps, 1), 0u);
+
         SEQAN_ASSERT_NOT(isGap(gaps, 2));
+        SEQAN_ASSERT(isCharacter(gaps, 2));
+        SEQAN_ASSERT_EQ(countGaps(gaps, 2), 0u);
+        SEQAN_ASSERT_EQ(countCharacters(gaps, 2), 7u);
     }
 
     // Insert three gaps at the beginning, remove one, then perform queries.
@@ -384,8 +471,19 @@ void testAlignGapsGapOperationsGapsLeading(TGapsSpec const & /*spec*/)
         
         // Query gaps.
         SEQAN_ASSERT(isGap(gaps, 0));
+        SEQAN_ASSERT_NOT(isCharacter(gaps, 0));
+        SEQAN_ASSERT_EQ(countGaps(gaps, 0), 2u);
+        SEQAN_ASSERT_EQ(countCharacters(gaps, 0), 0u);
+
         SEQAN_ASSERT(isGap(gaps, 1));
+        SEQAN_ASSERT_NOT(isCharacter(gaps, 1));
+        SEQAN_ASSERT_EQ(countGaps(gaps, 1), 1u);
+        SEQAN_ASSERT_EQ(countCharacters(gaps, 1), 0u);
+
         SEQAN_ASSERT_NOT(isGap(gaps, 2));
+        SEQAN_ASSERT(isCharacter(gaps, 2));
+        SEQAN_ASSERT_EQ(countGaps(gaps, 2), 0u);
+        SEQAN_ASSERT_EQ(countCharacters(gaps, 2), 7u);
     }
 
     // Insert four gaps at the beginning, remove one, then perform queries.
@@ -406,8 +504,19 @@ void testAlignGapsGapOperationsGapsLeading(TGapsSpec const & /*spec*/)
         
         // Query gaps.
         SEQAN_ASSERT(isGap(gaps, 0));
+        SEQAN_ASSERT_NOT(isCharacter(gaps, 0));
+        SEQAN_ASSERT_EQ(countGaps(gaps, 0), 2u);
+        SEQAN_ASSERT_EQ(countCharacters(gaps, 0), 0u);
+
         SEQAN_ASSERT(isGap(gaps, 1));
+        SEQAN_ASSERT_NOT(isCharacter(gaps, 1));
+        SEQAN_ASSERT_EQ(countGaps(gaps, 1), 1u);
+        SEQAN_ASSERT_EQ(countCharacters(gaps, 1), 0u);
+
         SEQAN_ASSERT_NOT(isGap(gaps, 2));
+        SEQAN_ASSERT(isCharacter(gaps, 2));
+        SEQAN_ASSERT_EQ(countGaps(gaps, 2), 0u);
+        SEQAN_ASSERT_EQ(countCharacters(gaps, 2), 7u);
     }
 
     // Insert gaps at the beginning, then clear.
@@ -429,9 +538,24 @@ void testAlignGapsGapOperationsGapsLeading(TGapsSpec const & /*spec*/)
         
         // Query gaps.
         SEQAN_ASSERT_NOT(isGap(gaps, 3));
+        SEQAN_ASSERT(isCharacter(gaps, 3));
+        SEQAN_ASSERT_EQ(countGaps(gaps, 3), 0u);
+        SEQAN_ASSERT_EQ(countCharacters(gaps, 3), 4u);
+
         SEQAN_ASSERT_NOT(isGap(gaps, 4));
+        SEQAN_ASSERT(isCharacter(gaps, 4));
+        SEQAN_ASSERT_EQ(countGaps(gaps, 4), 0u);
+        SEQAN_ASSERT_EQ(countCharacters(gaps, 4), 3u);
+
         SEQAN_ASSERT_NOT(isGap(gaps, 5));
+        SEQAN_ASSERT(isCharacter(gaps, 5));
+        SEQAN_ASSERT_EQ(countGaps(gaps, 5), 0u);
+        SEQAN_ASSERT_EQ(countCharacters(gaps, 5), 2u);
+
         SEQAN_ASSERT_NOT(isGap(gaps, 6));
+        SEQAN_ASSERT(isCharacter(gaps, 6));
+        SEQAN_ASSERT_EQ(countGaps(gaps, 6), 0u);
+        SEQAN_ASSERT_EQ(countCharacters(gaps, 6), 1u);
     }
 }
 
@@ -441,6 +565,9 @@ void testAlignGapsGapOperationsGapsLeading(TGapsSpec const & /*spec*/)
 template <typename TGapsSpec>
 void testAlignGapsGapOperationsGapsTrailing(TGapsSpec const & /*spec*/)
 {
+    // Note: Not testing isCharacter and counting here because the case is similar
+    // to the gaps in the center.
+
     using namespace seqan;
 
     typedef Dna5String               TString;
@@ -1407,6 +1534,38 @@ SEQAN_DEFINE_TEST(test_align_gaps_array_gaps_source_is_nothing)
     testAlignGapsSourceIsNothing(TTag());
 }
 
+SEQAN_DEFINE_TEST(test_align_gaps_array_gaps_clear)
+{
+    using namespace seqan;
+
+    typedef Gaps<CharString, ArrayGaps> TGaps;
+    typedef typename Size<TGaps>::Type TSize;
+    typedef typename Position<TGaps>::Type TPosition;
+    typedef typename Position<typename Source<TGaps>::Type>::Type TSrcPosition;
+
+    TGaps gaps;
+
+    assignSource(gaps, "FOO BAR BAX");
+
+    setClippedEndPosition(gaps, 10);
+    setClippedBeginPosition(gaps, 1);
+    insertGaps(gaps, 1, 2);
+
+    {
+        std::stringstream ss;
+        ss << gaps;
+        SEQAN_ASSERT_EQ(ss.str(), "O--O BAR BA");
+    }
+
+    clear(gaps);
+
+    SEQAN_ASSERT_EQ(gaps._source.data_state, (Holder<CharString, Tristate>::EMPTY));
+    SEQAN_ASSERT_EQ(length(gaps._array), static_cast<TSize>(0));
+    SEQAN_ASSERT_EQ(gaps._sourceBeginPos, static_cast<TSrcPosition>(0));
+    SEQAN_ASSERT_EQ(gaps._sourceEndPos, static_cast<TSrcPosition>(0));
+    SEQAN_ASSERT_EQ(gaps._clippingBeginPos, static_cast<TPosition>(0));
+    SEQAN_ASSERT_EQ(gaps._clippingEndPos, static_cast<TPosition>(0));
+}
 // ==========================================================================
 // Tests for Anchor Gaps
 // ==========================================================================
@@ -1594,5 +1753,35 @@ SEQAN_DEFINE_TEST(test_align_gaps_anchor_gaps_copy_clipping)
 //     typedef AnchorGaps<> TTag;
 //     testAlignGapsSourceIsNothing(TTag());
 // }
+
+SEQAN_DEFINE_TEST(test_align_gaps_anchor_gaps_clear)
+{
+    using namespace seqan;
+
+    Gaps<CharString, AnchorGaps<> > gaps;
+
+    assignSource(gaps, "FOO BAR BAX");
+
+    setClippedEndPosition(gaps, 10);
+    setClippedBeginPosition(gaps, 1);
+    insertGaps(gaps, 1, 2);
+
+    {
+        std::stringstream ss;
+        ss << gaps;
+        SEQAN_ASSERT_EQ(ss.str(), "O--O BAR BA");
+    }
+
+    clear(gaps);
+
+    SEQAN_ASSERT_EQ(gaps.data_source.data_state,
+                    (Holder<CharString, Tristate>::EMPTY));
+    SEQAN_ASSERT_EQ(gaps.data_gaps.data_state,
+                    (Holder<String<GapAnchor<unsigned int> >, Tristate>::EMPTY));
+    SEQAN_ASSERT_EQ(gaps.data_cutBegin,     0);
+    SEQAN_ASSERT_EQ(gaps.data_cutEnd,       0);
+    SEQAN_ASSERT_EQ(gaps.data_viewCutBegin, 0);
+    SEQAN_ASSERT_EQ(gaps.data_viewCutEnd,   0);
+}
 
 #endif  // #ifndef SEQAN_CORE_TESTS_ALIGN_TEST_ALIGN_GAPS_H_

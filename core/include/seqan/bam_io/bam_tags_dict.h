@@ -30,7 +30,7 @@
 //
 // ==========================================================================
 // Author: Manuel Holtgrewe <manuel.holtgrewe@fu-berlin.de>
-//         David Weese <david.weese@fu-berlin.de>
+// Author: David Weese <david.weese@fu-berlin.de>
 // ==========================================================================
 // Code for read/write access to BAM tag dicts.
 // ==========================================================================
@@ -80,7 +80,6 @@ struct Position<BamTagsDict>
 {
     typedef unsigned Type;
 };
-
 
 // ============================================================================
 // Tags, Classes, Enums
@@ -150,14 +149,16 @@ for (unsigned i = 0; i < length(tags); ++i)
 
 class BamTagsDict
 {
+public:
     typedef Host<BamTagsDict>::Type TBamTagsSequence;
     typedef Position<TBamTagsSequence>::Type TPos;
 
-public:
     Holder<TBamTagsSequence> _host;
     mutable String<TPos> _positions;
 
     BamTagsDict() {}
+
+    explicit
     BamTagsDict(TBamTagsSequence & tags) : _host(tags) {}
 
     template <typename TPos>
@@ -256,25 +257,43 @@ hasIndex(BamTagsDict const & bamTags)
 ..include:seqan/bam_io.h
 */
 
+struct GetBamTypeSizeHelper_
+{
+    int     &resultSize;
+    char    typeC;
+    
+    GetBamTypeSizeHelper_(int &resultSize, char typeC) :
+        resultSize(resultSize),
+        typeC(typeC)
+    {}
+    
+    template <typename Type>
+    bool operator() (Type) const
+    {
+        if (BamTypeChar<Type>::VALUE != typeC)
+            return false;
+
+        resultSize = sizeof(Type);
+        return true;
+    }
+};
+
+
 inline int
 getBamTypeSize(char c)
 {
     switch (toUpperValue(c))
     {
-        case 'A':
-        case 'C':
-            return 1;
-        case 'S':
-            return 2;
-        case 'I':
-        case 'F':
-            return 4;
         case 'Z':
         case 'H':
         case 'B':
             return -1;
+
         default:
-            return -2;
+            int result = -2;
+            GetBamTypeSizeHelper_ func(result, c);
+            tagApply(func, BamTagTypes());
+            return result;
     }
 }
 
@@ -310,7 +329,7 @@ buildIndex(BamTagsDict const & bamTags)
     typedef Iterator<TTagString const, Standard>::Type TIter;
 
     clear(bamTags._positions);
-    if (empty(value(bamTags._host)))
+    if (empty(host(bamTags)))
         return;  // Done.
 
     appendValue(bamTags._positions, 0);
@@ -318,11 +337,12 @@ buildIndex(BamTagsDict const & bamTags)
     TIter itEnd = end(host(bamTags), Standard());
     for (TIter it = itBegin; it != itEnd; )
     {
+        SEQAN_ASSERT(it < itEnd);
         // skip tag name (e.g. "NM")
         it += 2;
 
         // get tag type (e.g. 'I')
-        register char c = *(it++);
+        char c = *(it++);
         if (c == 'H' || c == 'Z')
         {
             // skip string and its end-of-string marker
@@ -414,7 +434,7 @@ setHost(BamTagsDict & me, THost const & host_)
 inline Size<BamTagsDict>::Type
 length(BamTagsDict const & tags)
 {
-    if (empty(value(tags._host)))
+    if (empty(host(tags)))
         return 0;
     if (!hasIndex(tags))
         buildIndex(tags);
@@ -577,6 +597,36 @@ findTagKey(TId & id, BamTagsDict const & tags, TKey const & key)
 ..include:seqan/bam_io.h
 */
 
+template <typename TResultType, typename TIter>
+struct ExtractTagValueHelper_
+{
+    TResultType &result;
+    TIter rawIter;
+    char typeC;
+    
+    ExtractTagValueHelper_(TResultType &result, char typeC, TIter rawIter) :
+        result(result),
+        rawIter(rawIter),
+        typeC(typeC)
+    {}
+    
+    template <typename Type>
+    bool operator() (Type) const
+    {
+        if (BamTypeChar<Type>::VALUE != typeC)
+            return false;
+
+        union {
+            char raw[sizeof(Type)];
+            Type i;
+        } tmp;
+
+        arrayCopyForward(rawIter, rawIter + sizeof(Type), tmp.raw);
+        result = static_cast<TResultType>(tmp.i);
+        return true;
+    }
+};
+
 template <typename TResultValue, typename TId>
 SEQAN_FUNC_ENABLE_IF(Is<IntegerConcept<TResultValue> >, bool)
 extractTagValue(TResultValue & val, BamTagsDict const & tags, TId id)
@@ -585,51 +635,14 @@ extractTagValue(TResultValue & val, BamTagsDict const & tags, TId id)
     typedef Iterator<TInfix, Standard>::Type TIter;
 
     TInfix inf = tags[id];
-    if (length(inf) < 4)
+    if (length(inf) < 4 || inf[2] == 'Z')
         return false;
 
     TIter it = begin(inf, Standard()) + 2;
     char typeC = getValue(it++);
-
-    if (typeC == 'A' || typeC == 'c' || typeC == 'C')
-    {
-        val = static_cast<TResultValue>(getValue(it));
-    }
-    else if (typeC == 's' || typeC == 'S')
-    {
-        if (length(inf) < 5)
-            return false;
-
-        union {
-            char raw[2];
-            short i;
-        } tmp;
-
-        arrayCopyForward(it, it + 2, tmp.raw);
-        val = static_cast<TResultValue>(tmp.i);
-    }
-    else if (typeC == 'i' || typeC == 'I' || typeC == 'f')
-    {
-        if (length(inf) < 7)
-            return false;
-
-        union {
-            char raw[4];
-            int i;
-            float f;
-        } tmp;
-
-        arrayCopyForward(it, it + 4, tmp.raw);
-        if (typeC == 'f')
-            val = static_cast<TResultValue>(tmp.f);
-        else
-            val = static_cast<TResultValue>(tmp.i);
-    }
-    else // variable sized type or invald
-    {
-        return false;
-    }
-    return true;
+    ExtractTagValueHelper_<TResultValue, TIter> func(val, typeC, it);
+    
+    return tagApply(func, BamTagTypes());
 }
 
 template <typename TResultValue, typename TId>
@@ -692,26 +705,6 @@ extractTagValue(TResultValue & val, BamTagsDict const & tags, TId id)
 */
 
 template <typename TValue>
-struct BamTypeChar
-{
-    enum
-    {
-        VALUE =
-            (IsSameType<TValue, char>::VALUE)?      'A':
-            (IsSameType<TValue, __int8>::VALUE)?    'c':
-            (IsSameType<TValue, __uint8>::VALUE)?   'C':
-            (IsSameType<TValue, __int16>::VALUE)?   's':
-            (IsSameType<TValue, __uint16>::VALUE)?  'S':
-            (IsSameType<TValue, __int32>::VALUE)?   'i':
-            (IsSameType<TValue, __uint32>::VALUE)?  'I':
-            (IsSameType<TValue, float>::VALUE)?     'f':
-            (IsSameType<TValue, double>::VALUE)?    'f':
-            (IsSequence<TValue>::VALUE)?            'Z':
-                                                    '?'
-    };
-};
-
-template <typename TValue>
 struct BamTypeChar<TValue const> :
     BamTypeChar<TValue> {};
 
@@ -730,7 +723,7 @@ inline char getBamTypeChar(T const &)
 /*!
  * @fn BamTagsDict#setTagValue
  *
- * @headerfile seqan/bam_io.h
+ * @headerfile <seqan/bam_io.h>
  *
  * @brief Set the value of a tag through a @link BamTagsDict @endlink.
  *
@@ -836,49 +829,51 @@ setTagValue(tags, "XB", y);
 setTagValue(tags, "XA", 9, 'f');    // BOGUS since 9 is not a floating point number.
 */
 
+template <typename TBamValueSequence, typename TValue>
+struct ToBamTagValueHelper_
+{
+    TBamValueSequence &result;
+    TValue val;
+    char typeC;
+    
+    ToBamTagValueHelper_(TBamValueSequence &result, char typeC, TValue val) :
+        result(result),
+        val(val),
+        typeC(typeC)
+    {}
+    
+    template <typename Type>
+    bool operator() (Type) const
+    {
+        if (BamTypeChar<Type>::VALUE != typeC)
+            return false;
+
+        union {
+            char raw[sizeof(Type)];
+            Type i;
+        } tmp;
+
+        tmp.i = static_cast<Type>(val);
+        append(result, toRange(&tmp.raw[0], &tmp.raw[sizeof(Type)]));
+        return true;
+    }
+};
+
 // Convert "atomic" value to BAM tag.  Return whether val was atomic.
 template <typename TBamValueSequence, typename TValue>
 SEQAN_FUNC_ENABLE_IF(Is<IntegerConcept<TValue> >, bool)
 _toBamTagValue(TBamValueSequence & result, TValue const & val, char typeC)
 {
-    appendValue(result, typeC);
-
-    if (typeC == 'A' || typeC == 'c' || typeC == 'C')
-    {
-        appendValue(result, static_cast<char>(val));
-    }
-    else if (typeC == 's' || typeC == 'S')
-    {
-        union {
-            char raw[2];
-            short i;
-        } tmp;
-
-        tmp.i = static_cast<short>(val);
-
-        append(result, toRange(&tmp.raw[0], &tmp.raw[2]));
-    }
-    else if (typeC == 'i' || typeC == 'I' || typeC == 'f')
-    {
-        union {
-            char raw[4];
-            int i;
-            float f;
-        } tmp;
-
-        if (typeC == 'f')
-            tmp.f = static_cast<float>(val);
-        else
-            tmp.i = static_cast<int>(val);
-            
-        append(result, toRange(&tmp.raw[0], &tmp.raw[4]));
-    }
-    else // non-string and variable sized type or invald
-    {
-        resize(result, length(result) - 1);
+    if (typeC == 'Z')
         return false;
-    }
-    return true;
+
+    appendValue(result, typeC);
+    ToBamTagValueHelper_<TBamValueSequence, TValue> func(result, typeC, val);
+    if (tagApply(func, BamTagTypes()))
+        return true;
+
+    resize(result, length(result) - 1);
+    return false;
 }
 
 template <typename TBamValueSequence, typename TValue>
@@ -943,7 +938,7 @@ setTagValue(BamTagsDict & tags, TKey const & key, TValue const & val)
 /*!
  * @fn BamTagsDict#appendTagValue
  *
- * @headerfile seqan/bam_io.h
+ * @headerfile <seqan/bam_io.h>
  *
  * @brief Append a tag/value pair to a @link BamTagsDict @endlink.
  *
@@ -1030,7 +1025,7 @@ appendTagValue(TDictOrString & tags, TKey const & key, TValue const & val)
  */
 
 template <typename TKey>
-inline bool
+inline SEQAN_FUNC_DISABLE_IF(Is<IntegerConcept<TKey> >, bool)
 eraseTag(BamTagsDict & tags, TKey const & key)
 {
     if (!hasIndex(tags))
@@ -1042,6 +1037,24 @@ eraseTag(BamTagsDict & tags, TKey const & key)
 
     erase(host(tags), tags._positions[id], tags._positions[id + 1]);
     clear(tags._positions);
+    return true;
+}
+
+template <typename TId>
+inline SEQAN_FUNC_ENABLE_IF(Is<IntegerConcept<TId> >, bool)
+eraseTag(BamTagsDict & tags, TId const & id)
+{
+    typedef typename Iterator<String<typename BamTagsDict::TPos>, Standard>::Type TIter;
+    if (!hasIndex(tags))
+        buildIndex(tags);
+
+    typename BamTagsDict::TPos delta = tags._positions[id + 1] - tags._positions[id];
+    erase(host(tags), tags._positions[id], tags._positions[id + 1]);
+    erase(tags._positions, id);
+    TIter it = begin(tags._positions, Standard()) + id;
+    TIter itEnd = end(tags._positions, Standard());
+    for (; it != itEnd; ++it)
+        *it -= delta;
     return true;
 }
 

@@ -86,7 +86,7 @@ inline ArgParseArgument & getArgument(ArgumentParser & me, unsigned position);
  * See the documentation of @link ToolDoc @endlink on how to format text.  Wherever possible, formatting is added
  * automatically for you.  You have to use formatting in the following places: (1) usage lines, (2) option help texts,
  * (3) description and additional text sections.
- * 
+ *
  * @section Examples
  *
  * The following gives a simple example of how to use the ArgumentParser class.
@@ -168,11 +168,11 @@ addDescription(parser,
                "based on k-mer counts.");
 
 addOption(parser, ArgParseOption("i", "inputFile", "Name of the multi-FASTA input.",
-                                 ArgParseArgument(ArgParseArgument::INPUTFILE, "IN")));
+                                 ArgParseArgument(ArgParseArgument::INPUT_FILE, "IN")));
 setRequired(parser, "i");
 
 addOption(parser, ArgParseOption("o", "outputFile", "Name of the multi-FASTA input.",
-                                 ArgParseArgument(ArgParseArgument::OUTPUTFILE, "OUT")));
+                                 ArgParseArgument(ArgParseArgument::OUTPUT_FILE, "OUT")));
 setRequired(parser, "o");
 
 addTextSection(parser, "See Also");
@@ -253,7 +253,7 @@ public:
         addOption(*this, ArgParseOption("",
                                         "write-ctd",
                                         "Exports the app's interface description to a .ctd file.",
-                                        ArgParseArgument::OUTPUTFILE));
+                                        ArgParseArgument::OUTPUT_FILE));
         hideOption(*this, "write-ctd", true);
 
         addOption(*this, ArgParseOption("",
@@ -479,6 +479,7 @@ inline void addArgument(ArgumentParser & me, ArgParseArgument const & arg)
         addOption(me, ArgParseOption("", longName, helpText, ArgParseOption::STRING, "EXT",
                                      isListArgument(arg), numberOfAllowedValues(arg)));
         getOption(me, longName.c_str()).tags.push_back("file-ext-override");
+        getOption(me, longName.c_str()).tags.push_back("gkn-ignore");
         // Hide option.
         hideOption(me, longName);
         // Copy valid values, remove leading dots.
@@ -848,7 +849,7 @@ inline bool getOptionValue(TValue & val,
  *
  * @section Overriding File Extension on the Command Line
  *
- * For each option with type <tt>INPUTFILE</tt> and <tt>OUTPUTFILE</tt>, an option with the name
+ * For each option with type <tt>INPUT_FILE</tt> and <tt>OUTPUT_FILE</tt>, an option with the name
  * <tt>${name}-file-ext</tt> is automatically added to the ArgumentParser (where <tt>${name}</tt> is the name
  * of the original option).  The extension can be overridden by specifying the argument.  Thus, the user of
  * the program could give the value "file.ext" to the parameter "fname" and override the extension on the
@@ -1034,7 +1035,7 @@ inline bool getArgumentValue(TValue & value,
  *
  * @section Overriding File Extensions on the Command Line
  *
- * For each argument with type <tt>INPUTFILE</tt> and <tt>OUTPUTFILE</tt>, an option with the index
+ * For each argument with type <tt>INPUT_FILE</tt> and <tt>OUTPUT_FILE</tt>, an option with the index
  * <tt>arg-${idx}-file-ext</tt> is automatically added to the ArgumentParser (where <tt>${idx}</tt> is the index
  * of the original option).  The extension can be overridden by specifying the argument.  Thus, the user of
  * the program could give the value "file.ext" to the parameter "0" and override the extension on the
@@ -1455,11 +1456,11 @@ inline void setHelpText(ArgumentParser & me,
 }
 
 // ----------------------------------------------------------------------------
-// Function getFileFormatExtensions()
+// Function getFileExtensions()
 // ----------------------------------------------------------------------------
 
 /*!
- * @fn ArgumentParser#getFileFormatExtensions
+ * @fn ArgumentParser#getFileExtensions
  * @headerfile <seqan/arg_parse.h>
  * @brief Returns file format extension given a format tag.
  *
@@ -1475,12 +1476,12 @@ inline void setHelpText(ArgumentParser & me,
  */
 
 /**
-.Function.ArgumentParser#getFileFormatExtensions
+.Function.ArgumentParser#getFileExtensions
 ..class:Class.ArgumentParser
 ..summary:Returns file format extensions given a format tag.
-..signature:getFileFormatExtensions(formatTag)
-..signature:getFileFormatExtensions(formatTagList)
-..signature:getFileFormatExtensions(formatTagSelector)
+..signature:getFileExtensions(formatTag)
+..signature:getFileExtensions(formatTagList)
+..signature:getFileExtensions(formatTagSelector)
 ..param.format:A single file format, e.g. @Tag.File Format.tag.Fastq@ or @Tag.Sam@.
 ...type:Tag.Tag
 ..param.formatTagList:A list of file formats.
@@ -1493,10 +1494,10 @@ inline void setHelpText(ArgumentParser & me,
 
 template <typename T>
 inline std::vector<std::string>
-getFileFormatExtensions(T const formatTag)
+getFileExtensions(T const formatTag)
 {
     std::vector<std::string> extensions;
-    _getFileFormatExtensions(extensions, formatTag);
+    _getFileExtensions(extensions, formatTag);
     return extensions;
 }
 

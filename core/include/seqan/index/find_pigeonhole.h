@@ -171,7 +171,7 @@ namespace seqan
  *
  * @tparam TSpec Specifies the type of pigeonhole filter.
  * @tparam THaystack The type of the sequence that should be searched.
- *                   Types: @link SequenceConcept @endlink
+ *                   Types: @link ContainerConcept @endlink
  *
  * Provides a fast filter algorithm that uses the pigeonhole lemma, i.e. if a pattern matches with k errors in the text,
  * every partition into k+1 parts contains one part that matches without error.
@@ -585,14 +585,15 @@ inline bool _pigeonholeProcessQGram(
     Pair<unsigned> ndlPos;
     THit hit;
 
-    register unsigned bktNo = getBucket(index.bucketMap, hash);
-    register TSAIter occ = saBegin + indexDir(index)[bktNo];
-    register TSAIter occEnd = saBegin + indexDir(index)[bktNo + 1];
+    unsigned bktNo = getBucket(index.bucketMap, hash);
+    TSAIter occ = saBegin + indexDir(index)[bktNo];
+    TSAIter occEnd = saBegin + indexDir(index)[bktNo + 1];
 
     for(; occ != occEnd; ++occ)
     {
         posLocalize(ndlPos, *occ, stringSetLimits(index));
-        hit.hstkPos = finder.curPos - getSeqOffset(ndlPos);		// bucket begin in haystack
+        hit.hstkPos = finder.curPos;
+        hit.hstkPos -= getSeqOffset(ndlPos);                    // bucket begin in haystack
         hit.ndlSeqNo = getSeqNo(ndlPos);						// needle seq. number
         if (Pigeonhole<TSpec>::ONE_PER_DIAGONAL)
         {
@@ -1176,22 +1177,23 @@ windowFindNext(
             {
                 hashNext(shape, hostIterator(hostIterator(finder)));
 
-                register unsigned bktNo = getBucket(index.bucketMap, value(shape));
-                register TSAIter occ = saBegin + indexDir(index)[bktNo];
-                register TSAIter occEnd = saBegin + indexDir(index)[bktNo + 1];
+                unsigned bktNo = getBucket(index.bucketMap, value(shape));
+                TSAIter occ = saBegin + indexDir(index)[bktNo];
+                TSAIter occEnd = saBegin + indexDir(index)[bktNo + 1];
 
 				for(; occ != occEnd; ++occ)
 				{
 					posLocalize(ndlPos, *occ, stringSetLimits(index));
-					hit.hstkPos = finder.curPos - getSeqOffset(ndlPos);	// bucket begin in haystack
+					hit.hstkPos = finder.curPos;
+                    hit.hstkPos -= getSeqOffset(ndlPos);                    // bucket begin in haystack
 					hit.ndlSeqNo = getSeqNo(ndlPos);						// needle seq. number
 
 					if (Pigeonhole<TSpec>::ONE_PER_DIAGONAL)
 					{
-						register __int64 lastDiag = pattern.lastSeedDiag[hit.ndlSeqNo];
+						__int64 lastDiag = pattern.lastSeedDiag[hit.ndlSeqNo];
 						if (lastDiag == seqDisabled) continue;
 
-						register __int64 diag = hit.hstkPos + (__int64)pattern.finderPosOffset;
+						__int64 diag = hit.hstkPos + (__int64)pattern.finderPosOffset;
 						if (lastDiag == diag)
 						{
 //							std::cout<<"double hit"<<std::endl;

@@ -47,6 +47,20 @@ namespace seqan {
 // Tags, Classes, Enums
 // ============================================================================
 
+// --------------------------------------------------------------------------
+// Functor LengthLess
+// --------------------------------------------------------------------------
+// Compare two elements (usually segments) by their length.
+
+template <typename T1, typename T2 = T1>
+struct LengthLess
+{
+    bool operator() (T1 const & a, T2 const & b)
+    {
+        return length(a) < length(b);
+    }
+};
+
 // ============================================================================
 // Metafunctions
 // ============================================================================
@@ -106,8 +120,8 @@ inline bool endsWith(TLhs const & lhs, TRhs const & rhs)
  *
  * @signature bool startsWith(str, prefix);
  *
- * @param[in] str    The string to check.
- * @param[in] prefix The prefix to check for.
+ * @param[in] str    The string to check (A @link SequenceConcept sequence @endlink).
+ * @param[in] prefix The prefix to check for (A @link SequenceConcept sequence @endlink)..
  *
  * @return bool <tt>true</tt> if <tt>prefix</tt> is a prefix of <tt>str</tt>.
  */
@@ -133,27 +147,6 @@ inline bool startsWith(TLhs const & lhs, TRhs const & rhs)
     if (length(lhs) < rhsLen)
         return false;
     return prefix(lhs, rhsLen) == rhs;
-}
-
-// ----------------------------------------------------------------------------
-// Function prefixSums<TValue>()
-// ----------------------------------------------------------------------------
-
-template <typename TValue, typename TPrefixSums, typename TText>
-inline void prefixSums(TPrefixSums & sums, TText const & text)
-{
-    typedef typename Concatenator<TText const>::Type        TConcat;
-    typedef typename Iterator<TConcat, Standard>::Type      TIter;
-
-    resize(sums, ValueSize<TValue>::VALUE + 1, 0, Exact());
-
-    // Compute symbol frequencies.
-    TIter itEnd = end(concat(text), Standard());
-    for (TIter it = begin(concat(text), Standard()); it != itEnd; goNext(it))
-        sums[ordValue(static_cast<TValue>(value(it))) + 1]++;
-
-    // Cumulate symbol frequencies.
-    std::partial_sum(begin(sums, Standard()), end(sums, Standard()), begin(sums, Standard()));
 }
 
 }  // namespace seqan

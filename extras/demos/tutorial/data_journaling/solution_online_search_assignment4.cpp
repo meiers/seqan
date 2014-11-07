@@ -169,10 +169,11 @@ void searchPattern(StringSet<String<int> > & hitSet,
                    StringSet<TString, Owner<JournaledSet> > const & journalSet,
                    TPattern const & pattern)
 {
-    typedef typename Host<TString>::Type THost;
+    typedef StringSet<TString, Owner<JournaledSet> > TJournalSet;
+    typedef typename Host<TJournalSet const>::Type THost;
 
     // Check for valid initial state.
-    if (empty(globalReference(journalSet)))
+    if (empty(host(journalSet)))
     {
         std::cout << "No reference set. Aborted search!" << std::endl;
         return;
@@ -182,7 +183,7 @@ void searchPattern(StringSet<String<int> > & hitSet,
     clear(hitSet);
     resize(hitSet, length(journalSet) + 1);
     // Access the reference sequence.
-    THost & globalRef = globalReference(journalSet);
+    THost & globalRef = host(journalSet);
     // Search for pattern in the reference sequence.
     findPatternInReference(hitSet[0], globalRef, pattern);
 
@@ -192,44 +193,35 @@ void searchPattern(StringSet<String<int> > & hitSet,
 }
 
 // FRAGMENT(laodAndJoin)
-template <typename TString, typename TStream, typename TSpec>
+template <typename TString, typename TSpec>
 inline int
 loadAndJoin(StringSet<TString, Owner<JournaledSet> > & journalSet,
-            TStream & stream,
+            SeqFileIn & databaseFile,
             JoinConfig<TSpec> const & joinConfig)
 {
     typedef typename Host<TString>::Type THost;
-
-    RecordReader<std::ifstream, SinglePass<> > reader(stream);
-
+    
     clear(journalSet);
 
     String<char> seqId;
     THost sequence;
 
     // No sequences in the fasta file!
-    if (atEnd(reader))
+    if (atEnd(databaseFile))
     {
         std::cerr << "Empty FASTA file." << std::endl;
         return -1;
     }
     // First read sequence for reference sequence.
-    if (readRecord(seqId, sequence, reader, Fasta()) != 0)
-    {
-        std::cerr << "ERROR reading FASTA." << std::endl;
-        return 1;
-    }
+    readRecord(seqId, sequence, databaseFile);
+
     // We have to create the global reference sequence otherwise we loose the information after this function terminates.
-    createGlobalReference(journalSet, sequence);
+    createHost(journalSet, sequence);
 
     // If there are more
-    while (!atEnd(reader))
+    while (!atEnd(databaseFile))
     {
-        if (readRecord(seqId, sequence, reader, Fasta()) != 0)
-        {
-            std::cerr << "ERROR reading FASTA." << std::endl;
-            return 1;
-        }
+        readRecord(seqId, sequence, databaseFile);
         appendValue(journalSet, TString(sequence));
         join(journalSet, length(journalSet) - 1, joinConfig);
     }
@@ -245,26 +237,19 @@ int main()
     typedef StringSet< TJournal, Owner<JournaledSet> > TJournaledSet;
 
     // Open the stream to the file containing the sequences.
-    String<char> seqDatabasePath =  "/Users/rahn_r/Downloads/sequences.fasta";
-    std::ifstream databaseFile(toCString(seqDatabasePath), std::ios_base::in);
-    if(!databaseFile.good())
-    {
-        std::cerr << "Cannot open file <" << seqDatabasePath << ">!" << std::endl;
-    }
-
+    CharString seqDatabasePath = "/path/to/your/fasta/file/sequences.fasta";
+    SeqFileIn databaseFile(toCString(seqDatabasePath));
 
     // Reading each sequence and journal them.
     TJournaledSet journalSet;
     JoinConfig<GlobalAlign<JournaledCompact> > joinConfig;
     loadAndJoin(journalSet, databaseFile, joinConfig);
-    databaseFile.close();
 
     // Define a pattern and start search.
     StringSet<String<int> > hitSet;
     TSequence pattern = "GTGGT";
     std::cout << "Search for: " << pattern << ":\n";
     searchPattern(hitSet, journalSet, pattern);
-
 
     // FRAGMENT(printResult)
     if (empty(hitSet[0]))
@@ -275,7 +260,7 @@ int main()
     {
         std::cout << "Hit in reference " << " at ";
         for (unsigned j = 0; j < length(hitSet[0]); ++j)
-            std::cout << hitSet[0][j] << ": " << infix(globalReference(journalSet), hitSet[0][j],hitSet[0][j] + length(pattern)) << "\t";
+            std::cout << hitSet[0][j] << ": " << infix(host(journalSet), hitSet[0][j],hitSet[0][j] + length(pattern)) << "\t";
     }
     std::cout << std::endl;
 

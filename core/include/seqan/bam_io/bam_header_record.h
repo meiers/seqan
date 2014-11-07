@@ -229,8 +229,19 @@ public:
     BamHeaderRecordType type;
     String<Pair<TTagName, TTagValue> > tags;
 
-    BamHeaderRecord() {}
+    BamHeaderRecord() : type(BAM_HEADER_FIRST) {}
 };
+
+// ----------------------------------------------------------------------------
+// Function std::swap()
+// ----------------------------------------------------------------------------
+
+inline void
+swap(BamHeaderRecord &a, BamHeaderRecord &b)
+{
+    std::swap(a.type, b.type);
+    swap(a.tags, b.tags);
+}
 
 /*!
  * @class BamHeader
@@ -281,14 +292,7 @@ public:
 ..type:nolink:$String<BamHeaderRecord>$
 */
 
-class BamHeader
-{
-public:
-    typedef Pair<CharString, __int32> TSequenceInfo;
-
-    String<Pair<CharString, __int32> > sequenceInfos;
-    String<BamHeaderRecord> records;
-};
+typedef String<BamHeaderRecord> BamHeader;
 
 // ============================================================================
 // Metafunctions
@@ -511,11 +515,9 @@ searchRecord(unsigned & recordIdx,
              BamHeaderRecordType recordType,
              unsigned startIdx)
 {
-    for (recordIdx = startIdx; recordIdx < length(header.records); ++recordIdx)
-    {
-        if (header.records[recordIdx].type == recordType)
+    for (recordIdx = startIdx; recordIdx < length(header); ++recordIdx)
+        if (header[recordIdx].type == recordType)
             return true;
-    }
     return false;
 }
 
@@ -527,13 +529,57 @@ searchRecord(unsigned & recordIdx,
     return searchRecord(recordIdx, header, recordType, 0);
 }
 
+
+struct BamHeaderRecordTypeLess
+{
+    bool operator() (BamHeaderRecord const &a, BamHeaderRecord const &b) const
+    {
+        return a.type < b.type;
+    }
+};
+
+struct BamHeaderRecordEqual
+{
+    bool operator() (BamHeaderRecord const &a, BamHeaderRecord const &b) const
+    {
+        return a.type == b.type && a.tags == b.tags;
+    }
+};
+
+
+inline void
+removeDuplicates(BamHeader & header)
+{
+    BamHeaderRecordTypeLess less;
+    BamHeaderRecordEqual pred;
+
+    std::stable_sort(begin(header, Standard()), end(header, Standard()), less);
+
+    for (size_t uniqueBegin = 0, uniqueEnd = 1; uniqueEnd < length(header);)
+    {
+        if (less(header[uniqueBegin], header[uniqueEnd]))
+            uniqueBegin = uniqueEnd;
+
+        size_t j;
+        for (j = uniqueBegin; j < uniqueEnd; ++j)
+            if (pred(header[j], header[uniqueEnd]))
+            {
+                erase(header, uniqueEnd);
+                break;
+            }
+
+        if (j == uniqueEnd)
+            ++uniqueEnd;
+    }
+}
+
 inline BamSortOrder
 getSortOrder(BamHeader const & header)
 {
     CharString soString;
     for (unsigned recIdx = 0; searchRecord(recIdx, header, BAM_HEADER_FIRST, recIdx); ++recIdx)
     {
-        if (getTagValue(soString, "SO", header.records[recIdx]))
+        if (getTagValue(soString, "SO", header[recIdx]))
         {
             if (soString == "unsorted")
                 return BAM_SORT_UNSORTED;
@@ -551,47 +597,53 @@ getSortOrder(BamHeader const & header)
 inline void
 setSortOrder(BamHeader & header, BamSortOrder sortOrder)
 {
+    char const * soString;
+    switch (sortOrder)
+    {
+        case BAM_SORT_UNSORTED:
+            soString = "unsorted";
+            break;
+
+        case BAM_SORT_QUERYNAME:
+            soString = "queryname";
+            break;
+
+        case BAM_SORT_COORDINATE:
+            soString = "coordinate";
+            break;
+
+        default:
+            soString = "unknown";
+    }
+
+    bool notFound = true;
     for (unsigned recIdx = 0; searchRecord(recIdx, header, BAM_HEADER_FIRST, recIdx); ++recIdx)
     {
         unsigned idx = 0;
-        if (findTagKey(idx, "SO", header.records[recIdx]))
+        if (findTagKey(idx, "SO", header[recIdx]))
         {
-            CharString soString;
-            switch (sortOrder)
-            {
-                case BAM_SORT_UNSORTED:
-                    soString = "unsorted";
-                    break;
+            notFound = false;
+            setTagValue(idx, soString, header[recIdx]);
+        }
+    }
 
-                case BAM_SORT_QUERYNAME:
-                    soString = "queryname";
-                    break;
-
-                case BAM_SORT_COORDINATE:
-                    soString = "coordinate";
-                    break;
-
-                default:
-                    soString = "unknown";
-            }
-            setTagValue(idx, soString, header.records[recIdx]);
+    if (notFound)
+    {
+        unsigned recIdx = 0;
+        if (searchRecord(recIdx, header, BAM_HEADER_FIRST))
+        {
+            setTagValue("SO", soString, header[recIdx]);
+        }
+        else
+        {
+            BamHeaderRecord rec;
+            rec.type = BAM_HEADER_FIRST;
+            setTagValue("VN", "1.4", rec);
+            setTagValue("SO", soString, rec);
+            insert(header, 0, rec);
         }
     }
 }
-
-// ----------------------------------------------------------------------------
-// Function clear()
-// ----------------------------------------------------------------------------
-
-///.Function.clear.param.object.type:Class.BamHeader
-
-inline void
-clear(BamHeader & header)
-{
-    clear(header.sequenceInfos);
-    clear(header.records);
-}
-
 
 }  // namespace seqan
 

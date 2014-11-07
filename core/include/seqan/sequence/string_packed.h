@@ -808,6 +808,43 @@ shrinkToFit(String<TValue, Packed<THostspec> > & me)
     shrinkToFit(host(me));
 }
 
+// --------------------------------------------------------------------------
+// Function _clearUnusedBits()
+// --------------------------------------------------------------------------
+
+template <typename TValue, typename THostspec>
+inline void 
+_clearUnusedBits(String<TValue, Packed<THostspec> > & me)
+{
+    typedef String<TValue, Packed<THostspec> > TPackedString;
+    typedef PackedTraits_<TPackedString> TTraits;
+
+    typedef typename Host<TPackedString>::Type THost;
+    typedef typename Iterator<THost, Standard>::Type THostIterator;
+
+    typedef typename TTraits::THostValue THostValue;
+    typedef typename THostValue::TBitVector TBitVector;
+    typedef typename Size<TPackedString>::Type TSize;
+
+    static const TBitVector ALL_ONE = ~(TBitVector)0 >> TTraits::WASTED_BITS;
+
+    THostIterator it = begin(host(me), Standard());
+    THostIterator itEnd = end(host(me), Standard());
+
+    if (it == itEnd)
+        return;
+
+    // zero all wasted bits
+    if (TTraits::WASTED_BITS != 0)
+        for (++it; it != itEnd; ++it)
+            it->i &= ALL_ONE;
+
+    // zero the last half-filled tuple
+    TSize lastValues = length(me) % TTraits::VALUES_PER_HOST_VALUE;
+    if (lastValues != 0)
+        back(host(me)).i &= ALL_ONE & ~(ALL_ONE >> (lastValues * TTraits::BITS_PER_VALUE));
+}
+
 /*
 
 template<typename TTarget, typename TSource1, typename TSource2>
@@ -873,22 +910,22 @@ arrayCopyForward(Iter<TPackedString, Packed<TSpec> > source_begin,
         }
 
         // now copy whole words
-        register int leftShift = source_begin.localPos;
+        int leftShift = source_begin.localPos;
         if (leftShift != 0)
         {
             THostIter source_lastWord = hostIterator(source_end);
             if (source_end.localPos < source_begin.localPos)
                 --source_lastWord;
 
-            register typename THostValue::TBitVector prevWord = hostIterator(source_begin)->i;
-            register int rightShift = TTraits::VALUES_PER_HOST_VALUE - leftShift;
+            typename THostValue::TBitVector prevWord = hostIterator(source_begin)->i;
+            int rightShift = TTraits::VALUES_PER_HOST_VALUE - leftShift;
             leftShift *= TTraits::BITS_PER_VALUE;
             rightShift *= TTraits::BITS_PER_VALUE;
             for (; hostIterator(source_begin) != source_lastWord; ++hostIterator(target_begin))
             {
                 // words must be shifted and or'ed (BB|CCCC in the figure)
                 ++hostIterator(source_begin);
-                register typename THostValue::TBitVector curWord = hostIterator(source_begin)->i;
+                typename THostValue::TBitVector curWord = hostIterator(source_begin)->i;
                 hostIterator(target_begin)->i = (prevWord << leftShift) | (curWord >> rightShift);
                 prevWord = curWord;
             }
@@ -955,11 +992,11 @@ arrayCopyBackward(Iter<TPackedString, Packed<TSpec> > source_begin,
         }
 
         // now copy whole words
-        register int leftShift = source_end.localPos;
+        int leftShift = source_end.localPos;
         if (leftShift != 0)
         {
-            register typename THostValue::TBitVector prevWord = hostIterator(source_end)->i;
-            register int rightShift = TTraits::VALUES_PER_HOST_VALUE - leftShift;
+            typename THostValue::TBitVector prevWord = hostIterator(source_end)->i;
+            int rightShift = TTraits::VALUES_PER_HOST_VALUE - leftShift;
             leftShift *= TTraits::BITS_PER_VALUE;
             rightShift *= TTraits::BITS_PER_VALUE;
             while (hostIterator(target_begin) != target_firstWord)
@@ -968,7 +1005,7 @@ arrayCopyBackward(Iter<TPackedString, Packed<TSpec> > source_begin,
                 --hostIterator(target_begin);
 
                 // words must be shifted and or'ed (BB|CCCC in the figure)
-                register typename THostValue::TBitVector curWord = hostIterator(source_end)->i;
+                typename THostValue::TBitVector curWord = hostIterator(source_end)->i;
                 hostIterator(target_begin)->i = (curWord << leftShift) | (prevWord >> rightShift);
                 prevWord = curWord;
             }
@@ -1423,11 +1460,12 @@ valueConstruct(Iter<TPackedString, Packed<THostspec> > const & /*it*/)
 template <typename TPackedString, typename THostspec, typename TParam>
 inline void
 valueConstruct(Iter<TPackedString, Packed<THostspec> > const & it,
-               TParam const & param_)
+               TParam SEQAN_FORWARD_CARG param_)
 {
-    assignValue(it, param_);
+    assignValue(it, SEQAN_FORWARD(TParam, param_));
 }
 
+#ifndef SEQAN_CXX11_STANDARD
 template <typename TPackedString, typename THostspec, typename TParam>
 inline void
 valueConstruct(Iter<TPackedString, Packed<THostspec> > const & it,
@@ -1436,6 +1474,7 @@ valueConstruct(Iter<TPackedString, Packed<THostspec> > const & it,
 {
     moveValue(it, param_);
 }
+#endif
 
 // --------------------------------------------------------------------------
 // Function valueDestruct()
@@ -1553,32 +1592,6 @@ operator--(Iter<TPackedString, Packed<THostspec> > & me)
     return me;
 }
 
-// ----------------------------------------------------------------------------
-// Helper Function _helperIsNegative()
-// ----------------------------------------------------------------------------
-
-// to remove '... < 0 is always false' warning
-template <typename T>
-inline bool
-_isNegative(T, False)
-{
-    return false;
-}
-
-template <typename T>
-inline bool
-_isNegative(T t, True)
-{
-    return t < 0;
-}
-
-template <typename T>
-inline bool
-_isNegative(T t)
-{
-    return _isNegative(t, typename IsSameType<T, typename MakeSigned_<T>::Type>::Type());
-}
-
 // --------------------------------------------------------------------------
 // Function operator+() for (iter, integral)
 // --------------------------------------------------------------------------
@@ -1590,7 +1603,7 @@ operator+(Iter<TPackedString, Packed<THostspec> > const & iter,
 {
     typedef PackedTraits_<TPackedString> TTraits;
 
-    if (_isNegative(delta))
+    if (isNegative(delta))
         return iter - (-(typename MakeSigned<TIntegral>::Type)delta);
 
     TIntegral ofs = (TIntegral)iter.localPos + delta;
@@ -1606,7 +1619,7 @@ operator+(TIntegral const & delta,
 {
     typedef PackedTraits_<TPackedString> TTraits;
 
-    if (_isNegative(delta))
+    if (isNegative(delta))
         return iter - (-(typename MakeSigned<TIntegral>::Type)delta);
 
     TIntegral ofs = (TIntegral)iter.localPos + delta;
@@ -1626,7 +1639,7 @@ operator+=(Iter<TPackedString, Packed<THostspec> > & iter,
 {
     typedef PackedTraits_<TPackedString> TTraits;
 
-    if (_isNegative(delta))
+    if (isNegative(delta))
         return iter -= -(typename MakeSigned<TIntegral>::Type)delta;
 
     TIntegral ofs = (TIntegral)iter.localPos + delta;
@@ -1646,7 +1659,7 @@ operator-(Iter<TPackedString, Packed<THostspec> > const & iter,
 {
     typedef PackedTraits_<TPackedString> TTraits;
 
-    if (_isNegative(delta))
+    if (isNegative(delta))
         return iter + (-(typename MakeSigned<TIntegral>::Type)delta);
 
     TIntegral ofs = delta + (TIntegral)(TTraits::VALUES_PER_HOST_VALUE - 1) - (TIntegral)iter.localPos;
@@ -1666,7 +1679,7 @@ operator-=(Iter<TPackedString, Packed<THostspec> > & iter,
 {
     typedef PackedTraits_<TPackedString> TTraits;
 
-    if (_isNegative(delta))
+    if (isNegative(delta))
         return iter += -(typename MakeSigned<TIntegral>::Type)delta;
 
     TIntegral ofs = delta + (TIntegral)(TTraits::VALUES_PER_HOST_VALUE - 1) - (TIntegral)iter.localPos;
@@ -1737,7 +1750,7 @@ template <typename THostSpec>
 inline typename Position<String<bool, Packed<THostSpec> > >::Type
 bitScanForward(String<bool, Packed<THostSpec> > const & obj)
 {
-    typedef String<bool, Packed<THostSpec> >  TPackedString;
+    typedef String<bool, Packed<THostSpec> > TPackedString;
     typedef typename Position<TPackedString>::Type TPosition;
     typedef typename Host<TPackedString>::Type TPackedHost;
     typedef typename Iterator<TPackedHost const, Standard>::Type TConstPackedHostIterator;
@@ -1945,10 +1958,10 @@ inline bool
 testAllZeros(String<bool, Packed<THostSpec> > const & obj)
 {
     typedef String<bool, Packed<THostSpec> > TPackedString;
-    typedef PackedTraits_<TPackedString> TPackedTraits;
+    typedef PackedTraits_<TPackedString> TTraits;
 
-    return _packedStringTestAll(obj, FunctorTestAllZeros<TPackedString>((TPackedTraits::VALUES_PER_HOST_VALUE -
-                                     (length(obj) % TPackedTraits::VALUES_PER_HOST_VALUE))));
+    return _packedStringTestAll(obj, FunctorTestAllZeros<TPackedString>((TTraits::VALUES_PER_HOST_VALUE -
+                                     (length(obj) % TTraits::VALUES_PER_HOST_VALUE))));
 }
 
 // ----------------------------------------------------------------------------
@@ -1960,10 +1973,10 @@ inline bool
 testAllOnes(String<bool, Packed<THostSpec> > const & obj)
 {
     typedef String<bool, Packed<THostSpec> > TPackedString;
-    typedef PackedTraits_<TPackedString> TPackedTraits;
+    typedef PackedTraits_<TPackedString> TTraits;
 
-    return _packedStringTestAll(obj, FunctorTestAllOnes<TPackedString>((TPackedTraits::VALUES_PER_HOST_VALUE -
-                                     (length(obj) % TPackedTraits::VALUES_PER_HOST_VALUE))));
+    return _packedStringTestAll(obj, FunctorTestAllOnes<TPackedString>((TTraits::VALUES_PER_HOST_VALUE -
+                                     (length(obj) % TTraits::VALUES_PER_HOST_VALUE))));
 }
 
 // ----------------------------------------------------------------------------
@@ -1983,6 +1996,8 @@ inline bool open(String<TValue, Packed<THostspec> > & me, const char *fileName, 
 template <typename TValue, typename THostspec>
 inline bool save(String<TValue, Packed<THostspec> > const & me, const char *fileName, int openMode)
 {
+    // the visible part of the string is kept untouched and the function is thread-safe
+    _clearUnusedBits(const_cast<String<TValue, Packed<THostspec> > &>(me));
     return save(host(me), fileName, openMode);
 }
 

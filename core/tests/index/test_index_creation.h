@@ -35,6 +35,8 @@
 #ifndef TESTS_INDEX_TEST_INDEX_CREATION_H
 #define TESTS_INDEX_TEST_INDEX_CREATION_H
 
+#include <seqan/random.h>
+
 #define SEQAN_PROFILE
 //#define SEQAN_DEBUG
 //#define SEQAN_DEBUG_INDEX
@@ -49,222 +51,327 @@
 namespace SEQAN_NAMESPACE_MAIN
 {
 
+SEQAN_DEFINE_TEST(testIndexModifiedStringReverseEsa)
+{
+    typedef String<AminoAcid> TString;
+    typedef ModifiedString<TString, ModReverse> TReverse;
+    typedef Index<TReverse> TIndex;
+
+    TString org("ACGXN");
+    TReverse rev(org);
+
+    TIndex index(rev);
+    Iterator<TIndex, TopDown<> >::Type iter(index);
+}
+
+SEQAN_DEFINE_TEST(testIndexModifiedStringReverseFM)
+{
+    typedef String<AminoAcid> TString;
+    typedef ModifiedString<TString, ModReverse> TReverse;
+    typedef Index<TReverse, FMIndex<> > TIndex;
+
+    TString org("ACGXN");
+    TReverse rev(org);
+
+    TIndex index(rev);
+    Iterator<TIndex, TopDown<> >::Type iter(index);
+}
+
+SEQAN_DEFINE_TEST(testIndexModifiedStringViewEsa)
+{
+    typedef String<AminoAcid> TString;
+    typedef ModifiedString<TString, FunctorConvert<AminoAcid, char> > TConvert;
+    typedef Index<TConvert> TIndex;
+
+    TString org("ACGXN");
+    TConvert conv(org);
+
+    TIndex index(conv);
+    Iterator<TIndex, TopDown<> >::Type iter(index);
+}
+
+SEQAN_DEFINE_TEST(testIndexModifiedStringViewFM)
+{
+    typedef String<AminoAcid> TString;
+    typedef ModifiedString<TString, FunctorConvert<AminoAcid, char> > TConvert;
+    typedef Index<TConvert, FMIndex<> > TIndex;
+
+    TString org("ACGXN");
+    TConvert conv(org);
+
+    TIndex index(conv);
+    Iterator<TIndex, TopDown<> >::Type iter(index);
+}
+
+SEQAN_DEFINE_TEST(testIssue519)
+{
+    // Originally from Sascha on Trac
+    // Bug in SAQSort: For StringSets, the sorting method gives a wrong order.
+    CharString text = "bananamama";
+    CharString text2 = "bananajoe";
+    CharString text3 = "joesmama";
+
+    StringSet<CharString> strSet;
+    appendValue(strSet, text); appendValue(strSet, text2); appendValue(strSet, text3);
+    Index<StringSet<CharString>, IndexEsa<> > index1(strSet);
+    Index<StringSet<CharString>, IndexEsa<> > index2(strSet);
+
+    indexCreate(index1, EsaSA(), Skew7());
+    indexCreate(index2, EsaSA(), SAQSort());
+
+    SEQAN_ASSERT_EQ(indexSA(index1), indexSA(index2));
+
+//    Iterator<String<SAValue<StringSet<CharString> >::Type> >::Type iterSet = begin(indexSA(index2));
+//    std::cout << "Suffix Array: " << std::endl;
+//    for(; iterSet != end(indexSA(index2)); ++iterSet)
+//        std::cout << getSeqNo(*iterSet) << "," << getSeqOffset(*iterSet) << "\t"
+//                  << suffix(getValue(strSet, getSeqNo(*iterSet)), getSeqOffset(*iterSet)) << std::endl;
+}
+
 SEQAN_DEFINE_TEST(testIndexCreation)
 {
-		typedef String<char> TText;
-		typedef String<unsigned> TArray;
+    Rng<> rng(/*seed=*/1);
 
-		TText	text;
-		TArray	sa;
-		TArray	lcp;
-		TArray	child, childExt;
-		TText	bwt;
+        typedef String<char> TText;
+        typedef String<unsigned> TArray;
 
-		const int runs = 2;					// conduct 10 test runs 
-		const int maxSize = 20 * 1024 * 1024;	// max text size is 20 megabyte
-		bool result = true;
+        TText   text;
+        TArray  sa;
+        TArray  isa;
+        TArray  lcp;
+        TArray  child, childExt;
+        TText   bwt;
+
+        const int runs = 2;                     // conduct 10 test runs
+        const int maxSize = 20 * 1024 * 1024;	// max text size is 20 megabyte
+        bool result = true;
         (void)result;  // Is never read...
 
-		_proFloat timeDelta[12];
-		_proFloat timeSum[12];
-		for(int i = 0; i < 10; ++i)
-			timeSum[i] = 0;
-		__int64 textSum = 0;
+        _proFloat timeDelta[14];
+        _proFloat timeSum[14];
+        for(int i = 0; i < 10; ++i)
+            timeSum[i] = 0;
+        __int64 textSum = 0;
 
-		static const char* algNames[] = {
-			"Skew3        ", 
-			"Skew7        ", 
-			"ManberMyers  ", 
-			"LarssonSadake", 
-			"SAQSort      ", 
-			"SAQSortQGSR  ", 
-			"Skew3Ext     ", 
-			"Skew7Ext     ",
-			"Kasai        ",
-			"KasaiInPlace ",
-			"KasaiExt     ",
-			"Childtab     ",
-			"ChildTabExt  "
-		};
+        static const char* algNames[] = {
+            "Skew3         ",
+            "Skew7         ",
+            "ManberMyers   ",
+            "LarssonSadake ",
+            "SAQSort       ",
+            "Skew3Ext      ",
+            "Skew7Ext      ",
+            "InvSA         ",
+            "InvSA Parallel",
+            "Kasai         ",
+            "KasaiInPlace  ",
+            "KasaiExt      ",
+            "Childtab      ",
+            "ChildTabExt   "
+        };
 
-		int TI;
-		for(int i = 0; i < runs; ++i) {
+        int TI;
+        for(int i = 0; i < runs; ++i) {
 
-			std::cout << "*** RUN " << i << " ***";
-			
-			int size = rand() % maxSize;
-			TI = 0;
+            std::cout << "*** RUN " << i << " ***";
+
+            Pdf<Uniform<int> > pdf(0, maxSize);
+            int size = pickRandomNumber(rng, pdf);
+            TI = 0;
 
 //___randomize_text___________________________________________________________
 
-			resize(text,size);
-/*			if (i < runs/2)
-				randomize(text);
-			else
-*/				textRandomize(text);
-/*			String<char,External<> > errorText;	// read in text causing an error
-			open(errorText,"error.txt");
-			text = errorText;
+            resize(text,size);
+/*          if (i < runs/2)
+                randomize(text);
+            else
+*/          textRandomize(text);
+/*          String<char,External<> > errorText;	// read in text causing an error
+            open(errorText,"error.txt");
+            text = errorText;
 */
-/*			text = "MISSISSIPPI";
-			size = length(text);
-			std::cout << "text created (n=" << size << ")" << std::endl;
+/*          text = "MISSISSIPPI";
+            size = length(text);
+            std::cout << "text created (n=" << size << ")" << std::endl;
 */
-			std::cout << "   textSize: " << length(text) << std::endl;
+            std::cout << "   textSize: " << length(text) << std::endl;
 
 //___create_suffix_array______________________________________________________
 
-			resize(sa, size);
-/*			timeDelta[TI] = -SEQAN_PROGETTIME;
-			createSuffixArray(sa, text, Skew3());
-			timeDelta[TI++] += SEQAN_PROGETTIME;
-			if (!isSuffixArray(sa, text)) {
-				std::cout << "suffix array creation (internal Skew3) failed" << std::endl;
-				result = false;
-			}
-*/			std::cout << "."; std::cout.flush();
+            resize(sa, size);
+            timeDelta[TI] = -SEQAN_PROGETTIME;
+            createSuffixArray(sa, text, Skew3());
+            timeDelta[TI++] += SEQAN_PROGETTIME;
+            if (!isSuffixArray(sa, text)) {
+                std::cout << "suffix array creation (internal Skew3) failed" << std::endl;
+                result = false;
+            }
+            std::cout << "."; std::cout.flush();
 
-			blank(sa);
-/*			timeDelta[TI] = -SEQAN_PROGETTIME;
-			createSuffixArray(sa, text, Skew7());
-			timeDelta[TI++] += SEQAN_PROGETTIME;
-			if (!isSuffixArray(sa, text)) {
-				std::cout << "suffix array creation (internal Skew7) failed" << std::endl;
-				result = false;
-			}
-*/			std::cout << "."; std::cout.flush();
+            blank(sa);
+            timeDelta[TI] = -SEQAN_PROGETTIME;
+            createSuffixArray(sa, text, Skew7());
+            timeDelta[TI++] += SEQAN_PROGETTIME;
+            if (!isSuffixArray(sa, text)) {
+                std::cout << "suffix array creation (internal Skew7) failed" << std::endl;
+                result = false;
+            }
+            std::cout << "."; std::cout.flush();
 
-			blank(sa);
-/*			timeDelta[TI] = -SEQAN_PROGETTIME;
-			createSuffixArray(sa, text, ManberMyers());
-			timeDelta[TI++] += SEQAN_PROGETTIME;
-			if (!isSuffixArray(sa, text)) {
-				std::cout << "suffix array creation (internal ManberMyers) failed" << std::endl;
-				result = false;
-			}
-*/			std::cout << "."; std::cout.flush();
+            blank(sa);
+            timeDelta[TI] = -SEQAN_PROGETTIME;
+            createSuffixArray(sa, text, ManberMyers());
+            timeDelta[TI++] += SEQAN_PROGETTIME;
+            if (!isSuffixArray(sa, text)) {
+                std::cout << "suffix array creation (internal ManberMyers) failed" << std::endl;
+                result = false;
+            }
+            std::cout << "."; std::cout.flush();
 
-			blank(sa);
-/*			timeDelta[TI] = -SEQAN_PROGETTIME;
-			createSuffixArrayExt(sa, text, LarssonSadakane());
-			timeDelta[TI++] += SEQAN_PROGETTIME;
-			if (!isSuffixArray(sa, text)) {
-				std::cout << "suffix array creation (external LarssonSadakane) failed" << std::endl;
-				result = false;
-			}
-*/			std::cout << "."; std::cout.flush();
+            blank(sa);
+            timeDelta[TI] = -SEQAN_PROGETTIME;
+            _createSuffixArrayPipelining(sa, text, LarssonSadakane());
+            timeDelta[TI++] += SEQAN_PROGETTIME;
+            if (!isSuffixArray(sa, text)) {
+                std::cout << "suffix array creation (external LarssonSadakane) failed" << std::endl;
+                result = false;
+            }
+            std::cout << "."; std::cout.flush();
 
-			blank(sa);
-			timeDelta[TI] = -SEQAN_PROGETTIME;
-			createSuffixArray(sa, text, SAQSort());
-			timeDelta[TI++] += SEQAN_PROGETTIME;
-			if (!isSuffixArray(sa, text)) {
-				std::cout << "suffix array creation (internal SAQSort) failed" << std::endl;
-				result = false;
-			}
-			std::cout << "."; std::cout.flush();
-/*
-			blank(sa);
-			timeDelta[TI] = -SEQAN_PROGETTIME;
-			createSuffixArray(sa, text, QSQGSR(), 3);
-			timeDelta[TI++] += SEQAN_PROGETTIME;
-			if (!isSuffixArray(sa, text)) {
-				std::cout << "suffix array creation (internal QSQGSR) failed" << std::endl;
-				result = false;
-			}
-			std::cout << "."; std::cout.flush();
+            blank(sa);
+            timeDelta[TI] = -SEQAN_PROGETTIME;
+            createSuffixArray(sa, text, SAQSort());
+            timeDelta[TI++] += SEQAN_PROGETTIME;
+            if (!isSuffixArray(sa, text)) {
+                std::cout << "suffix array creation (internal SAQSort) failed" << std::endl;
+                result = false;
+            }
+            std::cout << "."; std::cout.flush();
+
+/*            blank(sa);
+            timeDelta[TI] = -SEQAN_PROGETTIME;
+            createSuffixArray(sa, text, QSQGSR(), 3);
+            timeDelta[TI++] += SEQAN_PROGETTIME;
+            if (!isSuffixArray(sa, text)) {
+                std::cout << "suffix array creation (internal QSQGSR) failed" << std::endl;
+                result = false;
+            }
+            std::cout << "."; std::cout.flush();
 */
-			blank(sa);
-/*			timeDelta[TI] = -SEQAN_PROGETTIME;
-			createSuffixArrayExt(sa, text, Skew3());
-			timeDelta[TI++] += SEQAN_PROGETTIME;
-			if (!isSuffixArray(sa, text)) {
-				std::cout << "suffix array creation (external Skew3) failed" << std::endl;
-				result = false;
-			}
-			std::cout << "."; std::cout.flush();
+            blank(sa);
+            timeDelta[TI] = -SEQAN_PROGETTIME;
+            _createSuffixArrayPipelining(sa, text, Skew3());
+            timeDelta[TI++] += SEQAN_PROGETTIME;
+            if (!isSuffixArray(sa, text)) {
+                std::cout << "suffix array creation (external Skew3) failed" << std::endl;
+                result = false;
+            }
+            std::cout << "."; std::cout.flush();
 
-			blank(sa);
-			timeDelta[TI] = -SEQAN_PROGETTIME;
-			createSuffixArrayExt(sa, text, Skew7());
-			timeDelta[TI++] += SEQAN_PROGETTIME;
-			if (!isSuffixArray(sa, text)) {
-				std::cout << "suffix array creation (external Skew7) failed" << std::endl;
-				result = false;
-			}
-			std::cout << "."; std::cout.flush();
+            blank(sa);
+            timeDelta[TI] = -SEQAN_PROGETTIME;
+            _createSuffixArrayPipelining(sa, text, Skew7());
+            timeDelta[TI++] += SEQAN_PROGETTIME;
+            if (!isSuffixArray(sa, text)) {
+                std::cout << "suffix array creation (external Skew7) failed" << std::endl;
+                result = false;
+            }
+            std::cout << "."; std::cout.flush();
+
+//___create_inverse_suffix_array______________________________________________
+
+            resize(isa, size);
+            timeDelta[TI] = -SEQAN_PROGETTIME;
+            createInvSuffixArray(isa, sa, FromSortedSa<Serial>());
+            timeDelta[TI++] += SEQAN_PROGETTIME;
+            if (!isInvSuffixArray(isa, sa, text)) {
+                std::cout << "inverse suffix array creation (in-memory) failed" << std::endl;
+                result = false;
+            }
+            std::cout << "."; std::cout.flush();
+            blank(isa);
+
+            timeDelta[TI] = -SEQAN_PROGETTIME;
+            createInvSuffixArray(isa, sa, FromSortedSa<Parallel>());
+            timeDelta[TI++] += SEQAN_PROGETTIME;
+            if (!isInvSuffixArray(isa, sa, text)) {
+                std::cout << "parallel inverse suffix array creation (in-memory) failed" << std::endl;
+                result = false;
+            }
+            std::cout << "."; std::cout.flush();
+            blank(isa);
 
 //___create_lcp_table_________________________________________________________
 
-			resize(lcp, size);
-			timeDelta[TI] = -SEQAN_PROGETTIME;
-			createLcpTable(lcp, text, sa, KasaiOriginal());
-			timeDelta[TI++] += SEQAN_PROGETTIME;
-			if (!isLCPTable(lcp, sa, text)) {
-				std::cout << "suffix array creation (internal Kasai) failed" << std::endl;
-				result = false;
-			}
-			std::cout << "."; std::cout.flush();
+            resize(lcp, size);
+            timeDelta[TI] = -SEQAN_PROGETTIME;
+            createLcpTable(lcp, text, sa, KasaiOriginal());
+            timeDelta[TI++] += SEQAN_PROGETTIME;
+            if (!isLCPTable(lcp, sa, text)) {
+                std::cout << "suffix array creation (internal Kasai) failed" << std::endl;
+                result = false;
+            }
+            std::cout << "."; std::cout.flush();
 
-			blank(lcp);
-			timeDelta[TI] = -SEQAN_PROGETTIME;
-			createLcpTable(lcp, text, sa, Kasai());
-			timeDelta[TI++] += SEQAN_PROGETTIME;
-			if (!isLCPTable(lcp, sa, text)) {
-				std::cout << "suffix array creation (internal in-place Kasai) failed" << std::endl;
-				result = false;
-			}
-			std::cout << "."; std::cout.flush();
+            blank(lcp);
+            timeDelta[TI] = -SEQAN_PROGETTIME;
+            createLcpTable(lcp, text, sa, Kasai());
+            timeDelta[TI++] += SEQAN_PROGETTIME;
+            if (!isLCPTable(lcp, sa, text)) {
+                std::cout << "suffix array creation (internal in-place Kasai) failed" << std::endl;
+                result = false;
+            }
+            std::cout << "."; std::cout.flush();
 
-			blank(lcp);
-			timeDelta[TI] = -SEQAN_PROGETTIME;
-			createLcpTableExt(lcp, text, sa, Kasai());
-			timeDelta[TI++] += SEQAN_PROGETTIME;
-			if (!isLCPTable(lcp, sa, text)) {
-				std::cout << "suffix array creation (external Kasai) failed" << std::endl;
-				result = false;
-			}
-			std::cout << "."; std::cout.flush();
+            blank(lcp);
+            timeDelta[TI] = -SEQAN_PROGETTIME;
+            _createLCPTablePipelining(lcp, text, sa, Kasai());
+            timeDelta[TI++] += SEQAN_PROGETTIME;
+            if (!isLCPTable(lcp, sa, text)) {
+                std::cout << "suffix array creation (external Kasai) failed" << std::endl;
+                result = false;
+            }
+            std::cout << "."; std::cout.flush();
 
 //___create_child_table_______________________________________________________
 
-			resize(child, size);
-			for(int i=0; i<size; ++i)
-				child[i] = maxValue<unsigned>();
-			timeDelta[TI] = -SEQAN_PROGETTIME;
-			createChildtab(child, lcp);
-			timeDelta[TI++] += SEQAN_PROGETTIME;
-			std::cout << "."; std::cout.flush();
+            resize(child, size);
+            for(int i=0; i<size; ++i)
+                child[i] = maxValue<unsigned>();
+            timeDelta[TI] = -SEQAN_PROGETTIME;
+            createChildtab(child, lcp);
+            timeDelta[TI++] += SEQAN_PROGETTIME;
+            std::cout << "."; std::cout.flush();
 
-			unsigned undefs=0;
-			for(int i=0; i<size; ++i)
-				if (child[i] == maxValue<unsigned>()) ++undefs;
-			if (undefs) ::std::cout << undefs << " undefined values";
+            unsigned undefs=0;
+            for(int i=0; i<size; ++i)
+                if (child[i] == maxValue<unsigned>()) ++undefs;
+            if (undefs) ::std::cout << undefs << " undefined values";
 
-			resize(childExt, size);
-			timeDelta[TI] = -SEQAN_PROGETTIME;
-			createChildtabExt(childExt, lcp);
-			timeDelta[TI++] += SEQAN_PROGETTIME;
-			std::cout << "."; std::cout.flush();
+            resize(childExt, size);
+            timeDelta[TI] = -SEQAN_PROGETTIME;
+            createChildtabExt(childExt, lcp);
+            timeDelta[TI++] += SEQAN_PROGETTIME;
+            std::cout << "."; std::cout.flush();
 
-			if (!isEqual(child, childExt)) {
-				std::cout << "child table creation failed" << std::endl;
-				result = false;
-			}
-*/
+            if (!isEqual(child, childExt)) {
+                std::cout << "child table creation failed" << std::endl;
+                result = false;
+            }
+
 //___update_performance_table_________________________________________________
 
-			for(int i=0; i<TI; ++i) {
-				timeSum[i] += timeDelta[i];
-				textSum += length(text);
-			}
+            for(int i=0; i<TI; ++i) {
+                timeSum[i] += timeDelta[i];
+                textSum += length(text);
+            }
 
-			std::cout << " OK!" << std::endl;
+            std::cout << " OK!" << std::endl;
 
-		}
-		std::cout << "*** TIME RESULTS (sec/MB) ***" << std::endl;
-		for(int i=0; i<TI; ++i)
-			std::cout << algNames[i] << " " << 1024.0*1024.0 * timeSum[i] / textSum << std::endl;
+        }
+        std::cout << "*** TIME RESULTS (sec/MB) ***" << std::endl;
+        for(int i=0; i<TI; ++i)
+            std::cout << algNames[i] << " " << 1024.0*1024.0 * timeSum[i] / textSum << std::endl;
 }
 
 //////////////////////////////////////////////////////////////////////////////

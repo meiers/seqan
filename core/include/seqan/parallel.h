@@ -45,6 +45,16 @@
 #include <seqan/basic.h>
 #include <seqan/sequence.h>
 
+#ifdef PLATFORM_WINDOWS
+#include <windows.h>
+#else
+#include <pthread.h>
+#include <errno.h>
+#endif
+
+#include <seqan/system/system_critical_section.h>   // Suspendable Queue
+#include <seqan/system/system_condition.h>          // Suspendable Queue
+
 // ----------------------------------------------------------------------------
 // STL
 // ----------------------------------------------------------------------------
@@ -58,6 +68,11 @@
 #include <numeric>
 #endif // PLATFORM_GCC
 
+#ifdef SEQAN_CXX11_STL
+#include <atomic>
+#include <thread>
+#endif
+
 // ============================================================================
 // Module Headers
 // ============================================================================
@@ -69,6 +84,7 @@
 // Atomic operations.
 #include <seqan/parallel/parallel_atomic_primitives.h>
 #include <seqan/parallel/parallel_atomic_misc.h>
+#include <seqan/parallel/parallel_lock.h>
 
 // Splitting.
 #include <seqan/parallel/parallel_splitting.h>
@@ -76,7 +92,11 @@
 // Parallel variants of basic algorithms
 #include <seqan/parallel/parallel_algorithms.h>
 
-// Thread-safe / lock-free sequence operations.
+// Thread-safe / lock-free container operations.
 #include <seqan/parallel/parallel_sequence.h>
+#include <seqan/parallel/parallel_queue.h>
+#include <seqan/parallel/parallel_queue_suspendable.h>
+#include <seqan/parallel/parallel_resource_pool.h>
+#include <seqan/parallel/parallel_serializer.h>
 
 #endif  // SEQAN_PARALLEL_H_

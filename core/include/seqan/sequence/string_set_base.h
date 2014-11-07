@@ -51,7 +51,7 @@ struct Owner {};
 
 /*!
  * @class StringSet
- * @implements SequenceConcept
+ * @implements StringConcept
  * @implements TextConcept
  * @implements SegmentableConcept
  * @headerfile <seqan/sequence.h>
@@ -202,6 +202,9 @@ struct StringSetPosition
 {
     typedef typename Size<TString>::Type Type;
 };
+
+template <typename TString>
+struct StringSetPosition<TString const> : StringSetPosition<TString> {};
 
 template <typename TString, typename TSpec>
 struct StringSetPosition<StringSet<TString, TSpec> >
@@ -384,6 +387,16 @@ struct DefaultOverflowImplicit<StringSet< TString, TSpec> const>
 {
     typedef Generous Type;
 };
+
+// ----------------------------------------------------------------------------
+// Concept StringConcept
+// ----------------------------------------------------------------------------
+
+template <typename TString, typename TSpec>
+SEQAN_CONCEPT_IMPL((StringSet<TString, TSpec>), (StringConcept));           // resizable container
+
+template <typename TString, typename TSpec>
+SEQAN_CONCEPT_IMPL((StringSet<TString, TSpec> const), (ContainerConcept));  // read-only container
 
 // ============================================================================
 // Functions
@@ -1359,6 +1372,50 @@ _countNonZeroValues(String<TValue, TSpec> const & me, TPos i)
 }
 
 // --------------------------------------------------------------------------
+// Function maxLength()
+// --------------------------------------------------------------------------
+// Returns the length of the longest string in the set.
+
+template <typename TString, typename TSpec, typename TParallel>
+inline typename Size<TString>::Type
+maxLength(StringSet<TString, TSpec> const & me, Tag<TParallel> const & tag)
+{
+    typedef StringSet<TString, TSpec>               TStringSet;
+    typedef typename Value<TStringSet const>::Type  TValue;
+
+    return empty(me) ? 0 : length(maxElement(me, LengthLess<TValue>(), tag));
+}
+
+template <typename TString, typename TSpec>
+inline typename Size<TString>::Type
+maxLength(StringSet<TString, TSpec> const & me)
+{
+    return maxLength(me, Serial());
+}
+
+// --------------------------------------------------------------------------
+// Function minLength()
+// --------------------------------------------------------------------------
+// Returns the length of the shortest string in the set.
+
+template <typename TString, typename TSpec, typename TParallel>
+inline typename Size<StringSet<TString, TSpec> const>::Type
+minLength(StringSet<TString, TSpec> const & me, Tag<TParallel> const & tag)
+{
+    typedef StringSet<TString, TSpec>               TStringSet;
+    typedef typename Value<TStringSet const>::Type  TValue;
+
+    return empty(me) ? 0 : length(minElement(me, LengthLess<TValue>(), tag));
+}
+
+template <typename TString, typename TSpec>
+inline typename Size<StringSet<TString, TSpec> const>::Type
+minLength(StringSet<TString, TSpec> const & me)
+{
+    return minLength(me, Serial());
+}
+
+// --------------------------------------------------------------------------
 // Function lengthSum()
 // --------------------------------------------------------------------------
 
@@ -1864,106 +1921,57 @@ concat(StringSet<TString, TSpec> const & constMe)
     return me.concat;
 }
 
-// --------------------------------------------------------------------------
-// Function strSplit()
-// --------------------------------------------------------------------------
-
-/*!
- * @fn StringSet#strSplit
- * @brief Append a list of the words in the string, using sep as the delimiter string @link StringSet @endlink.
- *
- * @signature void strSplit(result, sequence[, sep[, allowEmptyStrings[, maxSplit]]]);
- *
- * @param[out] result           The resulting string set.
- * @param[in]  sequence         The sequence to split.
- * @param[in]  sep              The splitter to use (default <tt>' '</tt>).
- * @param[in]  allowEmptyString Whether or not to allow empty strings (<tt>bool</tt>, defaults to <tt>true</tt> iff
- *                              <tt>sep</tt> is given).
- * @param[in]  maxSplit         The maximal number of split operations to do if given.
- */
-
-/**
-.Function.stringSplit:
-..summary:Append a list of the words in the string, using sep as the delimiter string @Class.StringSet@.
-..cat:Sequences
-..class:Class.StringSet
-..signature:strSplit(stringSet, sequence)
-..signature:strSplit(stringSet, sequence, sep)
-..signature:strSplit(stringSet, sequence, sep, allowEmptyStrings)
-..signature:strSplit(stringSet, sequence, sep, allowEmptyStrings, maxSplit)
-..param.stringSet:The @Class.StringSet@ object the words are appended to.
-...type:Class.StringSet
-..param.sequence:A sequence of words.
-..param.sep:Word separator (default: ' ').
-..param.allowEmptyStrings:Boolean to specify whether empty words should be considered (default: true, iff sep is given).
-..param.maxSplit:If maxsplit is given, at most maxsplit splits are done.
-..include:seqan/sequence.h
-*/
-
-template <typename TString, typename TSpec, typename TSequence, typename TSeparator, typename TSize>
-inline void
-strSplit(StringSet<TString, TSpec> & result, TSequence const &sequence, TSeparator sep, bool allowEmptyStrings, TSize maxSplit)
+template <typename TStrings, typename TDelim>
+inline String<typename Value<typename Value<TStrings>::Type>::Type>
+concat(TStrings const & strings, TDelim const & delimiter, bool ignoreEmptyStrings = false)
 {
-    typedef typename Iterator<TSequence const, Standard>::Type TIter;
-    
-    TIter itBeg = begin(sequence, Standard());
-    TIter itEnd = end(sequence, Standard());
-    TIter itFrom = itBeg;
-    
-    if (maxSplit == 0)
+    String<typename Value<typename Value<TStrings>::Type>::Type> tmp;
+
+    if (empty(strings))
+        return tmp;
+
+    if (ignoreEmptyStrings)
     {
-        appendValue(result, sequence);
-        return;
-    }
-    
-    for (TIter it = itBeg; it != itEnd; ++it)
-        if (*it == sep)
+        for (size_t i = 0; i < length(strings); ++i)
         {
-            if (allowEmptyStrings || itFrom != it)
-            {
-                appendValue(result, infix(sequence, itFrom - itBeg, it - itBeg));
-                if (--maxSplit == 0)
-                {
-                    if (!allowEmptyStrings)
-                    {
-                        while (it != itEnd && *it == sep)
-                            ++it;
-                    }
-                    else
-                        ++it;
-                    
-                    if (it != itEnd)
-                        appendValue(result, infix(sequence, it - itBeg, itEnd - itBeg));
-                    
-                    return;
-                }
-            }
-            itFrom = it + 1;
+            if (empty(strings[i]))
+                continue;
+            if (!empty(tmp))
+                append(tmp, delimiter);
+            append(tmp, strings[i]);
         }
-    
-    if (allowEmptyStrings || itFrom != itEnd)
-        appendValue(result, infix(sequence, itFrom - itBeg, itEnd - itBeg));
+    }
+    else
+    {
+        tmp = front(strings);
+        for (size_t i = 1; i < length(strings); ++i)
+        {
+            append(tmp, delimiter);
+            append(tmp, strings[i]);
+        }
+    }
+    return tmp;
 }
 
-template <typename TString, typename TSpec, typename TSequence, typename TSeparator>
-inline void
-strSplit(StringSet<TString, TSpec> & result, TSequence const &sequence, TSeparator sep, bool allowEmptyStrings)
-{
-    strSplit(result, sequence, sep, allowEmptyStrings, maxValue<typename Size<TSequence>::Type>());
-}
+// ----------------------------------------------------------------------------
+// Function prefixSums<TValue>()
+// ----------------------------------------------------------------------------
 
-template <typename TString, typename TSpec, typename TSequence, typename TSeparator>
-inline void
-strSplit(StringSet<TString, TSpec> & result, TSequence const &sequence, TSeparator sep)
+template <typename TValue, typename TPrefixSums, typename TText>
+inline void prefixSums(TPrefixSums & sums, TText const & text)
 {
-    strSplit(result, sequence, sep, true);
-}
+    typedef typename Concatenator<TText const>::Type        TConcat;
+    typedef typename Iterator<TConcat, Standard>::Type      TIter;
 
-template <typename TString, typename TSpec, typename TSequence>
-inline void
-strSplit(StringSet<TString, TSpec> & result, TSequence const &sequence)
-{
-    strSplit(result, sequence, ' ', false);
+    resize(sums, ValueSize<TValue>::VALUE + 1, 0, Exact());
+
+    // Compute symbol frequencies.
+    TIter itEnd = end(concat(text), Standard());
+    for (TIter it = begin(concat(text), Standard()); it != itEnd; goNext(it))
+        sums[ordValue(static_cast<TValue>(value(it))) + 1]++;
+
+    // Cumulate symbol frequencies.
+    partialSum(sums);
 }
 
 // --------------------------------------------------------------------------
@@ -2103,6 +2111,58 @@ operator!=(StringSet<TLeftString, TLeftSpec> const & left,
 {
     typename Comparator<StringSet<TLeftString, TLeftSpec> >::Type _lex(left, right);
     return isNotEqual(_lex);
+}
+
+// ----------------------------------------------------------------------------
+// Function write(StringSet)
+// ----------------------------------------------------------------------------
+
+template <typename TTarget, typename TSequence, typename TSpec>
+inline void
+write(TTarget &target, StringSet<TSequence, TSpec> &seqs)
+{
+    typedef typename Size<StringSet<TSequence, TSpec> >::Type TSize;
+    for (TSize i = 0; i < length(seqs); ++i)
+    {
+        write(target, seqs[i]);
+        writeValue(target, '\n');
+    }
+}
+
+template <typename TTarget, typename TSequence, typename TSpec>
+inline void
+write(TTarget &target, StringSet<TSequence, TSpec> const &seqs)
+{
+    typedef typename Size<StringSet<TSequence, TSpec> const>::Type TSize;
+    for (TSize i = 0; i < length(seqs); ++i)
+    {
+        write(target, seqs[i]);
+        writeValue(target, '\n');
+    }
+}
+
+template <typename TTarget, typename TSequence, typename TSpec>
+inline SEQAN_FUNC_ENABLE_IF(Is<ContainerConcept<TSequence> >, void)
+write(TTarget &target, String<TSequence, TSpec> &seqs)
+{
+    typedef typename Size<String<TSequence, TSpec> >::Type TSize;
+    for (TSize i = 0; i < length(seqs); ++i)
+    {
+        write(target, seqs[i]);
+        writeValue(target, '\n');
+    }
+}
+
+template <typename TTarget, typename TSequence, typename TSpec>
+inline SEQAN_FUNC_ENABLE_IF(Is<ContainerConcept<TSequence> >, void)
+write(TTarget &target, String<TSequence, TSpec> const &seqs)
+{
+    typedef typename Size<String<TSequence, TSpec> const>::Type TSize;
+    for (TSize i = 0; i < length(seqs); ++i)
+    {
+        write(target, seqs[i]);
+        writeValue(target, '\n');
+    }
 }
 
 

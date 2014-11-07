@@ -112,7 +112,7 @@ struct SuffixLess_<TSAValue, StringSet<TString, TSetSpec> const, void > :
 
     SuffixLess_(TText &text):
         _text(text), _offset(0) {}
-        
+
     // skip the first <offset> characters
     template <typename TSize>
     SuffixLess_(TText &text, TSize offset):
@@ -150,6 +150,47 @@ struct SuffixLess_<TSAValue, StringSet<TString, TSetSpec> const, void > :
         }
     }
 };
+    
+/* old version. If mine breaks, I might need that code
+ 
+		typename Size<TString>::Type _offset;
+		TText &_text;
+
+		SuffixLess_(TText &text):
+			_text(text) {}
+			
+		// skip the first <offset> characters
+		template <typename TSize>
+		SuffixLess_(TText &text, TSize offset):
+			_text(text),
+			_offset(offset) {}
+		
+		inline bool operator() (TSAValue const a, TSAValue const b) const 
+		{
+			typedef typename Iterator<TString const, Standard>::Type TIter;
+			if (a == b) return false;
+			TIter itA = begin(getValue(_text, getSeqNo(a)), Standard()) + getSeqOffset(a);
+			TIter itB = begin(getValue(_text, getSeqNo(b)), Standard()) + getSeqOffset(b);
+			TIter itAEnd = end(getValue(_text, getSeqNo(a)), Standard());
+			TIter itBEnd = end(getValue(_text, getSeqNo(b)), Standard());
+			if (itAEnd - itA < itBEnd - itB) {
+				for(; itA != itAEnd; ++itA, ++itB) {
+					if (ordLess(*itA, *itB)) return true;
+					if (ordLess(*itB, *itA)) return false;
+				}
+				return true;
+			} else {
+				for(; itB != itBEnd; ++itB, ++itA) {
+					if (ordLess(*itA, *itB)) return true;
+					if (ordLess(*itB, *itA)) return false;
+				}
+                if (itA != itAEnd)
+                    return false;
+				return getSeqNo(a) > getSeqNo(b);
+			}
+		}	
+	};
+*/
 
 
 // --------------------------------------------------------------------------

@@ -51,6 +51,20 @@ namespace seqan {
  */
 
 // ===========================================================================
+// Concepts
+// ===========================================================================
+
+// ----------------------------------------------------------------------------
+// Concept StringConcept
+// ----------------------------------------------------------------------------
+
+template <typename TChar, typename TAlloc>
+SEQAN_CONCEPT_IMPL((std::vector<TChar, TAlloc>), (StringConcept));          // resizable container
+
+template <typename TChar, typename TAlloc>
+SEQAN_CONCEPT_IMPL((std::vector<TChar, TAlloc> const), (ContainerConcept)); // read-only container
+
+// ===========================================================================
 // Metafunctions
 // ===========================================================================
 
@@ -193,6 +207,12 @@ struct StdContainerIterator< std::vector<TChar, TAlloc> const>
     typedef std::vector<TChar, TAlloc> TContainer_;
     typedef typename TContainer_::const_iterator Type;
 };
+
+///.Metafunction.IsSequence.param.T.type:Adaption.std::vector
+///.Metafunction.IsSequence.class:Adaption.std::vector
+
+template <typename TChar, typename TAlloc>
+struct IsSequence<std::vector<TChar, TAlloc> > : True {};
 
 // ===========================================================================
 // Functions

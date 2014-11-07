@@ -1,5 +1,5 @@
 #include <iostream>
-#include <seqan/file.h>
+#include <seqan/stream.h>
 #include <seqan/bam_io.h>
 
 using namespace seqan;
@@ -18,14 +18,14 @@ int main()
 	    {
 	        __int32 x = 0;
 	        bool res = extractTagValue(x, tags, id);
-	        SEQAN_ASSERT_MSG(res, "Not a valid integer at pos %u!", i);
+	        SEQAN_ASSERT_MSG(res, "Not a valid integer at pos %u!", id);
 	        std::cout << x;
 	    }
 	    if (getTagType(tags, id) == 'Z')  // is string
 	    {
 	        CharString str;
 	        bool res = extractTagValue(str, tags, id);
-	        SEQAN_ASSERT_MSG(res, "Not a valid string at pos %u!", i);
+	        SEQAN_ASSERT_MSG(res, "Not a valid string at pos %u!", id);
 	        std::cout << '"' << str << '"';
 	    }
 

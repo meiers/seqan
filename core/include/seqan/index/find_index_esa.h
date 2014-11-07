@@ -43,7 +43,7 @@ namespace SEQAN_NAMESPACE_MAIN
 
 	template < typename TText, typename TSpec >
 	struct DefaultFinder< Index<TText, IndexEsa<TSpec> > > {
-        typedef EsaFindMlr Type;	// standard suffix array finder is mlr-heuristic
+        typedef FinderMlr Type;	// standard suffix array finder is mlr-heuristic
     };
 
 //////////////////////////////////////////////////////////////////////////////
@@ -54,10 +54,10 @@ namespace SEQAN_NAMESPACE_MAIN
 	_findFirstIndex(
 		Finder< Index<TText, TSpec>, TSpecFinder > &finder,
 		TPattern const &pattern,
-		EsaFindMlr const)
+		FinderMlr const)
 	{
 		Index<TText, TSpec> &index = haystack(finder);
-		indexRequire(index, EsaSA());
+		indexRequire(index, FibreSA());
         typedef typename SAValue<Index<TText, TSpec> >::Type TSAValue;
         SuffixFunctor<Index<TText, TSpec>,  TSAValue> dereferer(index);
 		finder.range = equalRangeSAIterator(dereferer, indexSA(index), pattern);
@@ -68,11 +68,11 @@ namespace SEQAN_NAMESPACE_MAIN
 	_findFirstIndex(
 		Finder< Index<TText, TSpec>, TSpecFinder > &finder,
 		TPattern const &pattern,
-		EsaFindLcpe const)
+		FinderLcpe const)
 	{
 		Index<TText, TSpec> &index = haystack(finder);
-		indexRequire(index, EsaSA());
-		indexRequire(index, EsaLcpe());
+		indexRequire(index, FibreSA());
+		indexRequire(index, FibreLcpe());
         
         typedef typename SAValue<Index<TText, TSpec> >::Type TSAValue;
         SuffixFunctor<Index<TText, TSpec>,  TSAValue> dereferer(index);

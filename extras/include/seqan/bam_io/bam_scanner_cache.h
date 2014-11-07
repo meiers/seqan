@@ -61,20 +61,23 @@ using namespace std::tr1;
 
 struct BamScannerCacheKey_
 {
-    __int32  rID;
-    __int32  beginPos;
+    __int32     rID;
+    __int32     beginPos;
+    __uint64    qnameHash;
 
     bool operator== (BamScannerCacheKey_ const &other) const
     {
-        return rID == other.rID && beginPos == other.beginPos;
+        return rID == other.rID && beginPos == other.beginPos && qnameHash == other.qnameHash;
     }
 };
 
 struct BamScannerCacheSearchKey_    
 {
+    typedef __uint16 TFlag;
+	
     BamScannerCacheKey_ cacheKey;
-    __uint16 flags;
-    __uint16 flagsMask;
+    TFlag flags;
+    TFlag flagsMask;
 };
 
 struct BamScannerCacheHash_ :
@@ -82,7 +85,7 @@ struct BamScannerCacheHash_ :
 {    
     size_t operator()(BamScannerCacheKey_ const &v) const
     {
-        return hash<__int32>()(v.rID) ^ hash<__int32>()(v.beginPos);
+        return std::hash<__int32>()(v.rID) ^ std::hash<__int32>()(v.beginPos) ^ std::hash<__uint64>()(v.qnameHash);
     }
 };
 
@@ -115,6 +118,36 @@ public:
 // Functions
 // ============================================================================
 
+template <typename TSequence>
+__uint64 _suffixHash(TSequence const &sequence)
+{
+    typedef typename Iterator<TSequence const, Standard>::Type  TIter;
+    typedef typename Value<TSequence>::Type                     TValue;
+    typedef typename Size<TSequence>::Type                      TSize;
+
+    const __uint64 ALPH_SIZE = ValueSize<TValue>::VALUE;
+    const unsigned MAX_LEN = LogN<~(ALPH_SIZE - 1) / ALPH_SIZE, ALPH_SIZE>::VALUE + 1;
+
+    TSize len = length(sequence);
+    TIter itEnd = end(sequence, Standard());
+
+    if (len > 2 && (sequence[len - 2] == ':' || sequence[len - 2] == '/'))
+    {
+        len -= 2;
+        itEnd -= 2;
+    }
+
+    if (len > MAX_LEN)
+        len = MAX_LEN;
+
+    TIter it = itEnd - len;
+
+    __uint64 hash = 0;
+    for (; it != itEnd; ++it)
+        hash = hash * ALPH_SIZE + ordValue(*it);
+    return hash;
+}
+
 inline void
 insertRecord(BamScannerCache &cache, seqan::BamAlignmentRecord const &record)
 {
@@ -131,9 +164,9 @@ insertRecord(BamScannerCache &cache, seqan::BamAlignmentRecord const &record)
         cache.records[_id] = record;
     }
 
-    BamScannerCache::TKey key = { record.rID, record.beginPos };
+    BamScannerCache::TKey key = { record.rID, record.beginPos, _suffixHash(record.qName) };
     cache.map.insert(std::make_pair(key, _id));
-}   
+}
 
 template <typename TQName1, typename TQName2>
 inline bool
@@ -164,6 +197,7 @@ _recursivelyFindSegmentGraph(
     BamScannerCache &cache)
 {
     typedef BamScannerCache::TMapIter TMapIter;
+    typedef BamScannerCacheSearchKey_::TFlag TFlag;
     
     // search for segment using contigId, position
     std::pair<TMapIter, TMapIter> range = cache.map.equal_range(searchKey.cacheKey);
@@ -197,12 +231,12 @@ _recursivelyFindSegmentGraph(
         if ((record.flag & searchKey.flagsMask) == searchKey.flags &&
             _qNamesEqual(record.qName, records[0].qName))
         {
-            BamScannerCacheSearchKey_ searchKey = {
-                { record.rNextId, record.pNext },
-                (record.flag & BAM_FLAG_MULTIPLE) | ((record.flag & BAM_FLAG_NEXT_RC) >> 1),
+            BamScannerCacheSearchKey_ newSearchKey = {
+                { record.rNextId, record.pNext, searchKey.cacheKey.qnameHash },
+                static_cast<TFlag>((record.flag & BAM_FLAG_MULTIPLE) | ((record.flag & BAM_FLAG_NEXT_RC) >> 1)),
                 BAM_FLAG_MULTIPLE | BAM_FLAG_RC
             };
-            if (_recursivelyFindSegmentGraph(records, searchKey, segmentNo + 1, cache))
+            if (_recursivelyFindSegmentGraph(records, newSearchKey, segmentNo + 1, cache))
             {
                 records[segmentNo] = record;
                 appendValue(cache.unusedIds, range.first->second);
@@ -216,21 +250,19 @@ _recursivelyFindSegmentGraph(
 }
 
 
-inline int
-readMultiRecords(String<BamAlignmentRecord> &records, BamStream &bamStream, BamScannerCache &cache)
+inline void
+readMultiRecords(String<BamAlignmentRecord> &records, BamFileIn &bamFile, BamScannerCache &cache)
 {
-    typedef BamScannerCache::TMapIter TMapIter;
+    typedef BamScannerCacheSearchKey_::TFlag TFlag;
 
     if (empty(records))
         resize(records, 1);
 
-    while (!atEnd(bamStream))
+    while (!atEnd(bamFile))
     {
         // read next record
         BamAlignmentRecord &record = records[0];
-        int result = readRecord(record, bamStream);
-        if (result != 0)
-            return result;
+        readRecord(record, bamFile);
 
         // is this a single-end read or single alignment?
         if (!hasFlagMultiple(record) ||
@@ -240,7 +272,7 @@ readMultiRecords(String<BamAlignmentRecord> &records, BamStream &bamStream, BamS
             record.pNext == BamAlignmentRecord::INVALID_POS)
         {
             resize(records, 1);
-            return 0;
+            return;
         }
 
         if (record.rID < record.rNextId || (record.rID == record.rNextId && record.beginPos < record.pNext))
@@ -252,8 +284,8 @@ readMultiRecords(String<BamAlignmentRecord> &records, BamStream &bamStream, BamS
 
         // search mates in case of multiple templates
         BamScannerCacheSearchKey_ searchKey = {
-            { record.rNextId, record.pNext },
-            (record.flag & BAM_FLAG_MULTIPLE) | ((record.flag & BAM_FLAG_NEXT_RC) >> 1),
+            { record.rNextId, record.pNext, _suffixHash(record.qName) },
+            static_cast<TFlag>((record.flag & BAM_FLAG_MULTIPLE) | ((record.flag & BAM_FLAG_NEXT_RC) >> 1)),
             BAM_FLAG_MULTIPLE | BAM_FLAG_RC
         };
         if (_recursivelyFindSegmentGraph(records, searchKey, 0, cache))
@@ -264,7 +296,7 @@ readMultiRecords(String<BamAlignmentRecord> &records, BamStream &bamStream, BamS
 //                if (hasFlagLast(records[0]))
 //                    std::swap(records[0], records[1]);
 //            }
-            return 0;
+            return;
         }
         else
         {
@@ -273,13 +305,12 @@ readMultiRecords(String<BamAlignmentRecord> &records, BamStream &bamStream, BamS
             if (records[0].beginPos != records[0].pNext)
             {
                 std::cerr << "WARNING: Mate could not be found for:\n";
-                write2(std::cerr, records[0], bamStream.bamIOContext, seqan::Sam());
+                write(std::cerr, records[0], context(bamFile), seqan::Sam());
             }
             insertRecord(cache, records[0]);
         }
     }
     clear(records);
-    return 0;
 }
 
 }  // namespace seqan;

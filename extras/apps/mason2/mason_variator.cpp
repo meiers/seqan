@@ -143,7 +143,7 @@ struct MasonVariatorOptions
     MethylationLevelSimulatorOptions methSimOptions;
 
     MasonVariatorOptions() :
-            verbosity(1), seed(0), genVarIDs(true),
+            verbosity(1), seed(0), genVarIDs(true), numHaplotypes(0),
             snpRate(0), smallIndelRate(0), minSmallIndelSize(0), maxSmallIndelSize(0), svIndelRate(0),
             svInversionRate(0), svTranslocationRate(0), svDuplicationRate(0), minSVSize(0), maxSVSize(0)
     {}
@@ -189,6 +189,35 @@ void print(std::ostream & out, MasonVariatorOptions const & options)
         << "  CHH MU             \t" << options.methSimOptions.methMuCHH << "\n"
         << "  CHH SIGMA          \t" << options.methSimOptions.methSigmaCHH << "\n"
         << "\n";
+}
+
+// --------------------------------------------------------------------------
+// Function isNearN()
+// --------------------------------------------------------------------------
+
+// Returns true if the position is next to an N.
+bool isNearN(seqan::CharString const & seq, unsigned pos)
+{
+    if (pos == 0u || pos + 1u >= length(seq))
+        return true;  // too close to end
+    if (seq[pos - 1] == 'N' || seq[pos] == 'N' || seq[pos + 1] == 'N')
+        return true;
+    return false;
+}
+
+// --------------------------------------------------------------------------
+// Function overlapsWithN()
+// --------------------------------------------------------------------------
+
+// Returns true if the interval [beginPos, endPos) overlaps with an N or is next to one.
+bool overlapsWithN(seqan::CharString const & seq, unsigned beginPos, unsigned endPos)
+{
+    if (endPos + 1 >= length(seq) || beginPos == 0u)
+        return true;  // too close to end
+    for (unsigned i = beginPos - 1; i < endPos + 1; ++i)
+        if (seq[i] == 'N')
+            return true;  // overlaps with an N
+    return false;
 }
 
 // --------------------------------------------------------------------------
@@ -261,11 +290,7 @@ public:
     void simulateContig(Variants & variants, unsigned rId, int haploCount)
     {
         seqan::CharString seq;
-        if (readSequence(seq, faiIndex, rId) != 0)
-        {
-            std::cerr << "ERROR: Could not read sequence " << rId << " from FASTA file!\n";
-            return;
-        }
+        readSequence(seq, faiIndex, rId);
 
         if (!empty(options.inputSVSizeFile))
             _simulateFromSizes(variants, rId, haploCount, seq);
@@ -303,25 +328,25 @@ public:
                     case VariationSizeRecord::INDEL:
                         if (empty(record.seq))
                         {
-                            if (!simulateSVIndel(variants, haploCount, rId, pos, record.size))
+                            if (!simulateSVIndel(variants, haploCount, rId, pos, record.size, seq))
                                 continue;
                         }
                         else
                         {
-                            if (!simulateSVIndel(variants, haploCount, rId, pos, record.size, record.seq))
+                            if (!simulateSVIndel(variants, haploCount, rId, pos, record.size, seq, record.seq))
                                 continue;
                         }
                         break;
                     case VariationSizeRecord::INVERSION:
-                        if (!simulateInversion(variants, haploCount, rId, pos, record.size))
+                        if (!simulateInversion(variants, haploCount, rId, pos, record.size, seq))
                             continue;
                         break;
                     case VariationSizeRecord::TRANSLOCATION:
-                        if (!simulateTranslocation(variants, haploCount, rId, pos, record.size))
+                        if (!simulateTranslocation(variants, haploCount, rId, pos, record.size, seq))
                             continue;
                         break;
                     case VariationSizeRecord::DUPLICATION:
-                        if (!simulateDuplication(variants, haploCount, rId, pos, record.size))
+                        if (!simulateDuplication(variants, haploCount, rId, pos, record.size, seq))
                             continue;
                         break;
                     default:
@@ -406,26 +431,26 @@ public:
             {
                 if (pickRandomNumber(rng, seqan::Pdf<seqan::Uniform<int> >(0, 1)))
                     size = -size;
-                if (!simulateSVIndel(variants, haploCount, rId, pos, size))
+                if (!simulateSVIndel(variants, haploCount, rId, pos, size, seq))
                     continue;
                 if (back(variants.svRecords).size < 0)
                     pos += -back(variants.svRecords).size + 1;
             }
             else if (isInversion)
             {
-                if (!simulateInversion(variants, haploCount, rId, pos, size))
+                if (!simulateInversion(variants, haploCount, rId, pos, size, seq))
                     continue;
                 pos += back(variants.svRecords).size + 1;
             }
             else if (isTranslocation)
             {
-                if (!simulateTranslocation(variants, haploCount, rId, pos, size))
+                if (!simulateTranslocation(variants, haploCount, rId, pos, size, seq))
                     continue;
                 pos = back(variants.svRecords).targetPos + 1;
             }
             else if (isDuplication)
             {
-                if (!simulateDuplication(variants, haploCount, rId, pos, size))
+                if (!simulateDuplication(variants, haploCount, rId, pos, size, seq))
                     continue;
                 pos = back(variants.svRecords).targetPos + 1;
             }
@@ -439,15 +464,18 @@ public:
         }
     }
 
-    bool simulateSVIndel(Variants & variants, int haploCount, int rId, unsigned pos, int size, seqan::CharString const & seq)
+    bool simulateSVIndel(Variants & variants, int haploCount, int rId, unsigned pos, int size,
+                         seqan::CharString const & seq, seqan::CharString const & indelSeq)
     {
         if (options.verbosity >= 2)
-            std::cerr << "Simulating SV INDEL seq = " << seq << '\n';
+            std::cerr << "Simulating SV INDEL indelSeq = " << indelSeq << '\n';
+        if (isNearN(seq, pos))
+            return false;  // do not allow insertion into gap
 
         int hId = pickRandomNumber(rng, seqan::Pdf<seqan::Uniform<int> >(0, haploCount - 1));
         appendValue(variants.svRecords, StructuralVariantRecord(
                 StructuralVariantRecord::INDEL, hId, rId, pos, size));
-        back(variants.svRecords).seq = seq;
+        back(variants.svRecords).seq = indelSeq;
         if (options.genVarIDs)
         {
             // Add name.
@@ -459,7 +487,8 @@ public:
         return true;
     }
 
-    bool simulateSVIndel(Variants & variants, int haploCount, int rId, unsigned pos, int size)
+    bool simulateSVIndel(Variants & variants, int haploCount, int rId, unsigned pos, int size,
+                         seqan::CharString const & seq)
     {
         // Indels are simulated for one haplotype only.
         if (options.verbosity >= 2)
@@ -469,17 +498,24 @@ public:
         bool deletion = (size < 0);
         if (deletion && (pos - size) > sequenceLength(faiIndex, rId))
             return false;  // not enough space at the end
+        else if (deletion && overlapsWithN(seq, pos, pos - size))
+            return false;  // do not allow deletion to overlap with gap
+        else if (!deletion && isNearN(seq, pos))
+            return false;  // do not allow insertion into gap
         seqan::Pdf<seqan::Uniform<int> > pdf(0, 3);
         for (int i = 0; i < size; ++i)  // not executed in case of deleted sequence
             appendValue(indelSeq, seqan::Dna5(pickRandomNumber(rng, pdf)));
 
-        return simulateSVIndel(variants, haploCount, rId, pos, size, indelSeq);
+        return simulateSVIndel(variants, haploCount, rId, pos, size, seq, indelSeq);
     }
 
-    bool simulateInversion(Variants & variants, int haploCount, int rId, unsigned pos, int size)
+    bool simulateInversion(Variants & variants, int haploCount, int rId, unsigned pos, int size,
+                           seqan::CharString const & seq)
     {
         if (pos + size >= sequenceLength(faiIndex, rId))
             return false;
+        if (overlapsWithN(seq, pos, pos + size))
+            return false;  // do not allow segment to overlap with stretch
         int hId = pickRandomNumber(rng, seqan::Pdf<seqan::Uniform<int> >(0, haploCount - 1));
         appendValue(variants.svRecords, StructuralVariantRecord(
                 StructuralVariantRecord::INVERSION, hId, rId, pos, size));
@@ -494,13 +530,16 @@ public:
         return true;
     }
 
-    bool simulateTranslocation(Variants & variants, int haploCount, int rId, unsigned pos, int size)
+    bool simulateTranslocation(Variants & variants, int haploCount, int rId, unsigned pos, int size,
+                               seqan::CharString const & seq)
     {
         int hId = pickRandomNumber(rng, seqan::Pdf<seqan::Uniform<int> >(0, haploCount - 1));
         int tPos = pickRandomNumber(rng, seqan::Pdf<seqan::Uniform<int> >(pos + size + options.minSVSize,
                                                                           pos + size + options.maxSVSize));
         if (tPos >= (int)sequenceLength(faiIndex, rId))
             return false;
+        if (overlapsWithN(seq, pos, pos + size) || isNearN(seq, tPos))
+            return false;  // do not allow segment to overlap with strecht of Ns and target to be next to an N
         appendValue(variants.svRecords, StructuralVariantRecord(
                 StructuralVariantRecord::TRANSLOCATION, hId, rId, pos, size, rId, tPos));
         if (options.genVarIDs)
@@ -514,9 +553,10 @@ public:
         return true;
     }
 
-    bool simulateDuplication(Variants & variants, int haploCount, int rId, unsigned pos, int size)
+    bool simulateDuplication(Variants & variants, int haploCount, int rId, unsigned pos, int size,
+                             seqan::CharString const & seq)
     {
-        if (!simulateTranslocation(variants, haploCount, rId, pos, size))
+        if (!simulateTranslocation(variants, haploCount, rId, pos, size, seq))
             return false;
         back(variants.svRecords).kind = StructuralVariantRecord::DUPLICATION;
         if (options.genVarIDs)
@@ -566,11 +606,7 @@ public:
     void simulateContig(Variants & variants, unsigned rId, int haploCount)
     {
         seqan::CharString seq;
-        if (readSequence(seq, faiIndex, rId) != 0)
-        {
-            std::cerr << "ERROR: Could not read sequence " << rId << " from FASTA file!\n";
-            return;
-        }
+        readSequence(seq, faiIndex, rId);
 
         // Index into variants.svRecords.
         unsigned svIdx = 0;
@@ -583,7 +619,7 @@ public:
         {
             // Seek next possible SV record that could have pos close to its breakends.
             bool skip = false;  // marker in case we switch SV records
-            while ((int)pos > svRecord.endPosition())
+            while ((int)pos >= svRecord.endPosition())
             {
                 // Skip if near breakend.
                 skip = svRecord.nearBreakend(pos);
@@ -645,7 +681,7 @@ public:
             }
             else if (isIndel)
             {
-                if (!simulateSmallIndel(variants, haploCount, rId, pos))
+                if (!simulateSmallIndel(variants, seq, haploCount, rId, pos))
                     continue;
                 if (back(variants.smallIndels).size < 0)
                     pos += -back(variants.smallIndels).size + 1;
@@ -664,6 +700,9 @@ public:
     // Return true if SNP could be simulated.
     bool simulateSnp(Variants & variants, seqan::CharString & seq, int haploCount, int rId, unsigned pos)
     {
+        if (isNearN(seq, pos))
+            return false;  // No SNP next to an N.
+        
         // We simulate an alternative base for each haplotype.
 
         seqan::Dna5 from = seq[pos];
@@ -682,7 +721,7 @@ public:
     }
 
     // Return true if SNP could be simulated.
-    bool simulateSmallIndel(Variants & variants, int haploCount, int rId, unsigned pos)
+    bool simulateSmallIndel(Variants & variants, seqan::CharString & seq, int haploCount, int rId, unsigned pos)
     {
         // Indels are simulated for one haplotype only.
         int hId = pickRandomNumber(rng, seqan::Pdf<seqan::Uniform<int> >(0, haploCount - 1));
@@ -693,6 +732,10 @@ public:
         bool deletion = pickRandomNumber(rng, seqan::Pdf<seqan::Uniform<int> >(0, 1));
         if (deletion && (pos + indelSize) > sequenceLength(faiIndex, rId))
             return false;  // not enough space at the end
+        if (deletion && overlapsWithN(seq, pos, pos + indelSize))
+            return false;  // no deletion in gap
+        else if (!deletion && isNearN(seq, pos))
+            return false;  // no insertion next to N
         indelSize = deletion ? -indelSize : indelSize;
         seqan::Pdf<seqan::Uniform<int> > pdf(0, 3);
         for (int i = 0; i < indelSize; ++i)  // not executed in case of deleted sequence
@@ -717,10 +760,10 @@ public:
 
     MasonVariatorOptions options;
 
-    seqan::VcfStream vcfStream;
-    seqan::SequenceStream outSeqStream;
+    seqan::VcfFileOut vcfFileOut;
+    seqan::SeqFileOut outSeqStream;
 
-    seqan::SequenceStream outMethLevelStream;
+    seqan::SeqFileOut outMethLevelStream;
 
     // FAI Index for loading sequence contig-wise.
     seqan::FaiIndex const & faiIndex;
@@ -748,13 +791,13 @@ public:
         // Read/build methylation FASTA FAI file.
         if (!empty(options.methFastaInFile))
         {
-            if (read(methFaiIndex, toCString(options.methFastaInFile)) != 0)
+            if (!open(methFaiIndex, toCString(options.methFastaInFile)))
             {
-                if (build(methFaiIndex, toCString(options.methFastaInFile)) != 0)
+                if (!build(methFaiIndex, toCString(options.methFastaInFile)))
                     throw MasonIOException("Could not build FAI index for methylation FASTA.");
                 seqan::CharString faiPath = options.methFastaInFile;
                 append(faiPath, ".fai");
-                if (write(methFaiIndex, toCString(faiPath)) != 0)
+                if (!save(methFaiIndex, toCString(faiPath)))
                     throw MasonIOException("Could not save methylation FASTA FAI.");
             }
         }
@@ -775,32 +818,32 @@ public:
         }
 
         // Open VCF stream to write to.
-        open(vcfStream, toCString(options.vcfOutFile), seqan::VcfStream::WRITE);
-        if (!isGood(vcfStream))
+        if (!open(vcfFileOut, toCString(options.vcfOutFile)))
         {
             std::cerr << "Could not open " << options.vcfOutFile << " for writing.\n";
             return 1;
         }
         // Create header.
-        appendValue(vcfStream.header.headerRecords, seqan::VcfHeaderRecord("fileformat", "VCFv4.1"));
-        appendValue(vcfStream.header.headerRecords, seqan::VcfHeaderRecord("source", "mason_variator"));
-        appendValue(vcfStream.header.headerRecords, seqan::VcfHeaderRecord("reference", options.fastaInFile));
-        appendValue(vcfStream.header.headerRecords, seqan::VcfHeaderRecord(
+        seqan::VcfHeader vcfHeader;
+        appendValue(vcfHeader, seqan::VcfHeaderRecord("fileformat", "VCFv4.1"));
+        appendValue(vcfHeader, seqan::VcfHeaderRecord("source", "mason_variator"));
+        appendValue(vcfHeader, seqan::VcfHeaderRecord("reference", options.fastaInFile));
+        appendValue(vcfHeader, seqan::VcfHeaderRecord(
                 "INFO", "<ID=END,Number=1,Type=Integer,Description=\"End position of the variant described in this record\">"));
-        appendValue(vcfStream.header.headerRecords, seqan::VcfHeaderRecord(
+        appendValue(vcfHeader, seqan::VcfHeaderRecord(
                 "INFO", "<ID=SVLEN,Number=.,Type=Integer,Description=\"Difference in length between REF and ALT alleles\">"));
-        appendValue(vcfStream.header.headerRecords, seqan::VcfHeaderRecord(
+        appendValue(vcfHeader, seqan::VcfHeaderRecord(
                 "INFO", "<ID=SVTYPE,Number=1,Type=String,Description=\"Type of structural variant\">"));
-        appendValue(vcfStream.header.headerRecords, seqan::VcfHeaderRecord(
+        appendValue(vcfHeader, seqan::VcfHeaderRecord(
                 "INFO", "<ID=TARGETPOS,Number=1,Type=String,Description=\"Target position for duplications.\">"));
-        appendValue(vcfStream.header.headerRecords, seqan::VcfHeaderRecord(
+        appendValue(vcfHeader, seqan::VcfHeaderRecord(
                 "ALT", "<ID=INV,Description=\"Inversion\">"));
-        appendValue(vcfStream.header.headerRecords, seqan::VcfHeaderRecord(
+        appendValue(vcfHeader, seqan::VcfHeaderRecord(
                 "ALT", "<ID=DUP,Description=\"Duplication\">"));
         // We don't need DEL and INS here since we report exact one with the sequence.
-        // appendValue(vcfStream.header.headerRecords, seqan::VcfHeaderRecord(
+        // appendValue(vcfHeader, seqan::VcfHeaderRecord(
         //         "ALT", "<ID=DEL,Description=\"Deletion\">"));
-        // appendValue(vcfStream.header.headerRecords, seqan::VcfHeaderRecord(
+        // appendValue(vcfHeader, seqan::VcfHeaderRecord(
         //         "ALT", "<ID=INS,Description=\"Insertion of novel sequence\">"));
 
         // Copy over sequence names.
@@ -813,20 +856,20 @@ public:
             ss << sequenceLength(faiIndex, i);
             append(contigStr, ss.str());
             append(contigStr, ">");
-            appendValue(vcfStream.header.headerRecords, seqan::VcfHeaderRecord("contig", contigStr));
-            appendName(*vcfStream._context.sequenceNames,
-                       sequenceName(faiIndex, i),
-                       vcfStream._context.sequenceNamesCache);
+            appendValue(vcfHeader, seqan::VcfHeaderRecord("contig", contigStr));
+
+            appendName(contigNamesCache(context(vcfFileOut)), sequenceName(faiIndex, i));
         }
         // Copy over sample names.
-        appendName(*vcfStream._context.sampleNames, "simulated", vcfStream._context.sampleNamesCache);
+        appendName(sampleNamesCache(context(vcfFileOut)), "simulated");
+
+        // Write out VCF header.
+        writeRecord(vcfFileOut, vcfHeader);
 
         // Open output FASTA file if necessary.
         if (!empty(options.fastaOutFile))
         {
-            open(outSeqStream, toCString(options.fastaOutFile), seqan::SequenceStream::WRITE,
-                 seqan::SequenceStream::FASTA);
-            if (!isGood(outSeqStream))
+            if (!open(outSeqStream, toCString(options.fastaOutFile)))
             {
                 std::cerr << "ERROR: Could not open " << options.fastaOutFile << " for writing!\n";
                 return 1;
@@ -836,9 +879,7 @@ public:
         // Open methylation level output file if necessary.
         if (options.methSimOptions.simulateMethylationLevels && !empty(options.methFastaOutFile))
         {
-            open(outMethLevelStream, toCString(options.methFastaOutFile), seqan::SequenceStream::WRITE,
-                 seqan::SequenceStream::FASTA);
-            if (!isGood(outMethLevelStream))
+            if (!open(outMethLevelStream, toCString(options.methFastaOutFile)))
             {
                 std::cerr << "ERROR: Could not open " << options.methFastaOutFile << " for writing!\n";
                 return 1;
@@ -867,31 +908,21 @@ public:
                     std::stringstream ssTop, ssBottom;
                     ssTop << sequenceName(faiIndex, rId) << "/TOP";
                     unsigned idx = 0;
-                    if (!getIdByName(methFaiIndex, ssTop.str().c_str(), idx))
+                    if (!getIdByName(idx, methFaiIndex, ssTop.str().c_str()))
                     {
                         std::cerr << "\nERROR: Could not find " << ssTop.str()
                                   << " in methylation input file.\n";
                         return 1;
                     }
-                    if (readSequence(methLevels.forward, methFaiIndex, idx) != 0)
-                    {
-                        std::cerr << "\nERROR: Could not load " << ssTop.str()
-                                  << " from methylation FASTA.\n";
-                        return 1;
-                    }
+                    readSequence(methLevels.forward, methFaiIndex, idx);
                     ssBottom << sequenceName(faiIndex, rId) << "/BOT";
-                    if (!getIdByName(methFaiIndex, ssBottom.str().c_str(), idx))
+                    if (!getIdByName(idx, methFaiIndex, ssBottom.str().c_str()))
                     {
                         std::cerr << "\nERROR: Could not find " << ssBottom.str()
                                   << " in methylation input file.\n";
                         return 1;
                     }
-                    if (readSequence(methLevels.reverse, methFaiIndex, idx) != 0)
-                    {
-                        std::cerr << "\nERROR: Could not load " << ssBottom.str()
-                                  << " from methylation FASTA.\n";
-                        return 1;
-                    }
+                    readSequence(methLevels.reverse, methFaiIndex, idx);
                 }
                 else
                 {
@@ -912,8 +943,8 @@ public:
     {
         MethylationLevelSimulator methSim(methRng, options.methSimOptions);
         seqan::Dna5String contig;
-        if (!readSequence(contig, faiIndex, rId))
-            methSim.run(levels, contig);
+        readSequence(contig, faiIndex, rId);
+        methSim.run(levels, contig);
 
         return 0;
     }
@@ -930,22 +961,14 @@ public:
         if (hId != -1)
             idTop << options.haplotypeSep << (hId + 1);
         idTop << options.haplotypeSep << "TOP";
-        if (writeRecord(outMethLevelStream, idTop.str(), levels.forward) != 0)
-        {
-            std::cerr << "ERROR: Problem writing to " << options.methFastaOutFile << "\n";
-            return 1;
-        }
+        writeRecord(outMethLevelStream, idTop.str(), levels.forward);
 
         std::stringstream idBottom;
         idBottom << sequenceName(faiIndex, rId);
         if (hId != -1)
             idBottom << options.haplotypeSep << (hId + 1);
         idBottom << options.haplotypeSep << "BOT";
-        if (writeRecord(outMethLevelStream, idBottom.str(), levels.reverse) != 0)
-        {
-            std::cerr << "ERROR: Problem writing to " << options.methFastaOutFile << "\n";
-            return 1;
-        }
+        writeRecord(outMethLevelStream, idBottom.str(), levels.reverse);
 
         return 0;
     }
@@ -966,17 +989,18 @@ public:
             return 1;
         }
 
-        seqan::RecordReader<std::fstream, seqan::SinglePass<> > reader(inF);
+        seqan::DirectionIterator<std::fstream, seqan::Input>::Type inputIter =
+                directionIterator(inF, seqan::Input());
         VariationSizeRecord record;
-        while (!atEnd(reader))
+        while (!atEnd(inputIter))
         {
-            if (value(reader) == '#')
+            if (*inputIter == '#')
             {
-                skipLine(reader);
+                skipLine(inputIter);
                 continue;  // Skip comment.
             }
 
-            if (readRecord(record, reader, VariationSizeTsv()) != 0)
+            if (readRecord(record, inputIter, VariationSizeTsv()) != 0)
             {
                 std::cerr << "ERROR: Problem reading from " << options.inputSVSizeFile << "\n";
                 return 1;
@@ -1023,11 +1047,7 @@ public:
         // Load contig seq.
         // TODO(holtgrew): Pass from outside, could reuse sequence from methylation levels.
         seqan::Dna5String contig;
-        if (readSequence(contig, faiIndex, rId) != 0)
-        {
-            std::cerr << "Could not read contig seq " << rId << "\n";
-            return 1;
-        }
+        readSequence(contig, faiIndex, rId);
 
         // Write out variants for contig to VCF file.
         if (_writeVcf(contig, variants, rId) != 0)
@@ -1062,7 +1082,8 @@ public:
         {
             MethylationLevels levelsVariants;
             PositionMap posMap;  // unused, though
-            varMat.run(seqVariants, posMap, levelsVariants, breakpoints, contig, levels, hId);
+            std::vector<SmallVarInfo> varInfos;  // small variants for counting in read alignments
+            varMat.run(seqVariants, posMap, levelsVariants, varInfos, breakpoints, contig, levels, hId);
             // Write out methylation levels if necessary.
             if (!empty(options.methFastaOutFile))
                 if (_writeMethylationLevels(levelsVariants, hId, rId) != 0)
@@ -1071,7 +1092,8 @@ public:
         else
         {
             PositionMap posMap;  // unused, though
-            varMat.run(seqVariants, posMap, breakpoints, contig, hId);
+            std::vector<SmallVarInfo> varInfos;  // small variants for counting in read alignments
+            varMat.run(seqVariants, posMap, varInfos, breakpoints, contig, hId);
         }
 
         // Build sequence id.
@@ -1087,7 +1109,8 @@ public:
                 breakpointsOut << id << "\t" << variants.getVariantName(it->second) << "\t" << (it->first + 1) << "\n";
 
         // Write out sequence with variants.
-        return writeRecord(outSeqStream, id, seqVariants);
+        writeRecord(outSeqStream, id, seqVariants);
+        return 0;
     }
 
     // Write out variants for the given contig to the VCF file.
@@ -1254,12 +1277,7 @@ public:
         }
 
         // Write out VCF record.
-        if (writeRecord(vcfStream, vcfRecord) != 0)
-        {
-            std::cerr << "ERROR: Problem writing to " << options.vcfOutFile << "\n";
-            return 1;
-        }
-
+        writeRecord(vcfFileOut, vcfRecord);
         return 0;
     }
 
@@ -1347,11 +1365,7 @@ public:
         }
 
         // Write out VCF record.
-        if (writeRecord(vcfStream, vcfRecord) != 0)
-        {
-            std::cerr << "ERROR: Problem writing to " << options.vcfOutFile << "\n";
-            return 1;
-        }
+        writeRecord(vcfFileOut, vcfRecord);
         return 0;
     }
 
@@ -1412,11 +1426,7 @@ public:
         }
 
         // Write out VCF record.
-        if (writeRecord(vcfStream, vcfRecord) != 0)
-        {
-            std::cerr << "ERROR: Problem writing to " << options.vcfOutFile << "\n";
-            return 1;
-        }
+        writeRecord(vcfFileOut, vcfRecord);
         return 0;
     }
 
@@ -1460,7 +1470,7 @@ public:
         // ALT
         std::stringstream ssLeftOfCutL, ssRightOfCutL, ssLeftOfCutR, ssRightOfCutR,
                 ssLeftOfPaste, ssRightOfPaste;
-        seqan::CharString refName = vcfStream.header.sequenceNames[svRecord.rId];
+        seqan::CharString refName = contigNames(context(vcfFileOut))[svRecord.rId];
         ssLeftOfCutL << leftOfCutL.ref << "[" << refName << ":" << (rightOfCutR.beginPos + 1) << "[";
         leftOfCutL.alt = ssLeftOfCutL.str();
 
@@ -1532,13 +1542,12 @@ public:
         }
 
         // Write out VCF records.
-        if (writeRecord(vcfStream, leftOfCutL) != 0 || writeRecord(vcfStream, rightOfCutL) != 0 ||
-            writeRecord(vcfStream, leftOfCutR) != 0 || writeRecord(vcfStream, rightOfCutR) != 0 ||
-            writeRecord(vcfStream, leftOfPaste) != 0 || writeRecord(vcfStream, rightOfPaste) != 0)
-        {
-            std::cerr << "ERROR: Problem writing to " << options.vcfOutFile << "\n";
-            return 1;
-        }
+        writeRecord(vcfFileOut, leftOfCutL);
+        writeRecord(vcfFileOut, rightOfCutL);
+        writeRecord(vcfFileOut, leftOfCutR);
+        writeRecord(vcfFileOut, rightOfCutR);
+        writeRecord(vcfFileOut, leftOfPaste);
+        writeRecord(vcfFileOut, rightOfPaste);
 
         return 0;
     }
@@ -1575,11 +1584,7 @@ public:
         }
 
         // Write out VCF record.
-        if (writeRecord(vcfStream, vcfRecord) != 0)
-        {
-            std::cerr << "ERROR: Problem writing to " << options.vcfOutFile << "\n";
-            return 1;
-        }
+        writeRecord(vcfFileOut, vcfRecord);
         return 0;
     }
 
@@ -1600,7 +1605,7 @@ public:
         vcfRecord.filter = "PASS";
         std::stringstream ss;
         ss << "SVTYPE=DUP;SVLEN=" << svRecord.size << ";END=" << svRecord.pos + svRecord.size
-           << ";TARGETPOS=" << vcfStream.header.sequenceNames[svRecord.targetRId] << ":" << svRecord.targetPos + 1;
+           << ";TARGETPOS=" << contigNames(context(vcfFileOut))[svRecord.targetRId] << ":" << svRecord.targetPos + 1;
         vcfRecord.info = ss.str();
         appendValue(vcfRecord.ref, contig[vcfRecord.beginPos]);
         vcfRecord.alt = "<DUP>";
@@ -1618,11 +1623,7 @@ public:
         }
 
         // Write out VCF record.
-        if (writeRecord(vcfStream, vcfRecord) != 0)
-        {
-            std::cerr << "ERROR: Problem writing to " << options.vcfOutFile << "\n";
-            return 1;
-        }
+        writeRecord(vcfFileOut, vcfRecord);
         return 0;
     }
 
@@ -1681,30 +1682,30 @@ parseCommandLine(MasonVariatorOptions & options, int argc, char const ** argv)
     addSection(parser, "Input / Output");
 
     // addOption(parser, seqan::ArgParseOption("iv", "in-vcf", "VCF file to load variations from.",
-    //                                         seqan::ArgParseOption::INPUTFILE, "VCF"));
+    //                                         seqan::ArgParseOption::INPUT_FILE, "VCF"));
     // setValidValues(parser, "in-vcf", "vcf");
 
     addOption(parser, seqan::ArgParseOption("ir", "in-reference", "FASTA file with reference.",
-                                            seqan::ArgParseOption::INPUTFILE, "FASTA"));
+                                            seqan::ArgParseOption::INPUT_FILE, "FASTA"));
     setValidValues(parser, "in-reference", "fasta fa");
     setRequired(parser, "in-reference");
 
     addOption(parser, seqan::ArgParseOption("it", "in-variant-tsv",
                                             "TSV file with variants to simulate.  See Section on the Variant TSV File below.",
-                                            seqan::ArgParseOption::INPUTFILE, "VCF"));
+                                            seqan::ArgParseOption::INPUT_FILE, "VCF"));
     setValidValues(parser, "in-variant-tsv", "tsv txt");
 
     addOption(parser, seqan::ArgParseOption("ov", "out-vcf", "VCF file to write simulated variations to.",
-                                            seqan::ArgParseOption::INPUTFILE, "VCF"));
+                                            seqan::ArgParseOption::INPUT_FILE, "VCF"));
     setRequired(parser, "out-vcf");
     setValidValues(parser, "out-vcf", "vcf");
 
     addOption(parser, seqan::ArgParseOption("of", "out-fasta", "FASTA file to write simulated haplotypes to.",
-                                            seqan::ArgParseOption::INPUTFILE, "FASTA"));
+                                            seqan::ArgParseOption::INPUT_FILE, "FASTA"));
     setValidValues(parser, "out-fasta", "fasta fa");
 
     addOption(parser, seqan::ArgParseOption("", "out-breakpoints", "TSV file to write breakpoints in variants to.",
-                                            seqan::ArgParseOption::OUTPUTFILE, "TSV"));
+                                            seqan::ArgParseOption::OUTPUT_FILE, "TSV"));
     setValidValues(parser, "out-breakpoints", "tsv txt");
 
     addOption(parser, seqan::ArgParseOption("", "haplotype-name-sep", "Haplotype name separator in output FASTA.",
@@ -1800,12 +1801,12 @@ parseCommandLine(MasonVariatorOptions & options, int argc, char const ** argv)
 
     addOption(parser, seqan::ArgParseOption("", "meth-fasta-in", "Path to load original methylation levels from.  "
                                             "Methylation levels are simulated if omitted.",
-                                            seqan::ArgParseOption::INPUTFILE, "FILE"));
+                                            seqan::ArgParseOption::INPUT_FILE, "FILE"));
     setValidValues(parser, "meth-fasta-in", "fa fasta");
 
     addOption(parser, seqan::ArgParseOption("", "meth-fasta-out", "Path to write methylation levels to as FASTA.  "
                                             "Only written if \\fB-of\\fP/\\fB--out-fasta\\fP is given.",
-                                            seqan::ArgParseOption::OUTPUTFILE, "FILE"));
+                                            seqan::ArgParseOption::OUTPUT_FILE, "FILE"));
     setValidValues(parser, "meth-fasta-out", "fa fasta");
 
 
@@ -1959,11 +1960,11 @@ int main(int argc, char const ** argv)
 
     std::cerr << "Loading Reference Index " << options.fastaInFile << " ...";
     seqan::FaiIndex faiIndex;
-    if (read(faiIndex, toCString(options.fastaInFile)) != 0)
+    if (!open(faiIndex, toCString(options.fastaInFile)))
     {
         std::cerr << " FAILED (not fatal, we can just build it)\n";
         std::cerr << "Building Index        " << options.fastaInFile << ".fai ...";
-        if (build(faiIndex, toCString(options.fastaInFile)) != 0)
+        if (!build(faiIndex, toCString(options.fastaInFile)))
         {
             std::cerr << "Could not build FAI index.\n";
             return 1;
@@ -1972,7 +1973,7 @@ int main(int argc, char const ** argv)
         seqan::CharString faiPath = options.fastaInFile;
         append(faiPath, ".fai");
         std::cerr << "Reference Index       " << faiPath << " ...";
-        if (write(faiIndex, toCString(faiPath)) != 0)
+        if (!save(faiIndex, toCString(faiPath)))
         {
             std::cerr << "Could not write FAI index we just built.\n";
             return 1;

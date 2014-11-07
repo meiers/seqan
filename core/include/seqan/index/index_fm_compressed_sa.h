@@ -99,8 +99,11 @@ template <typename TText, typename TSpec, typename TConfig>
 struct Fibre<CompressedSA<TText, TSpec, TConfig>, FibreSparseString>
 {
     // TODO(esiragusa): Change SparseString spec to be SparseString<TValue, TSpec, TConfig>.
+    typedef CompressedSA<TText, TSpec, TConfig>         TCSA;
     typedef typename SAValue<TText>::Type               TSAValue_;
-    typedef SparseString<String<TSAValue_>, TSpec>      Type;
+    typedef typename DefaultIndexStringSpec<TCSA>::Type TSASpec_;
+    typedef String<TSAValue_, TSASpec_>                 TSA_;
+    typedef SparseString<TSA_, TSpec>                   Type;
 };
 
 template <typename TText, typename TSpec, typename TConfig>
@@ -147,6 +150,12 @@ struct Value<CompressedSA<TText, TSpec, TConfig> >
     typedef typename Value<typename Fibre<CompressedSA<TText, TSpec, TConfig>, FibreSparseString>::Type>::Type   Type;
 };
 
+template <typename TText, typename TSpec, typename TConfig>
+struct Value<CompressedSA<TText, TSpec, TConfig> const>
+{
+    typedef typename Value<typename Fibre<CompressedSA<TText, TSpec, TConfig> const, FibreSparseString>::Type>::Type    Type;
+};
+
 // ============================================================================
 // Classes
 // ============================================================================
@@ -172,7 +181,7 @@ struct Value<CompressedSA<TText, TSpec, TConfig> >
 /*!
  * @class CompressedSA
  * @implements ContainerConcept
- * @headerfile seqan/index.h
+ * @headerfile <seqan/index.h>
  * 
  * @brief A suffix array storing only a few suffix array entries and computing the remaining on demand.
  * 
@@ -233,7 +242,7 @@ struct CompressedSA
 */
 /*!
  * @fn CompressedSA#clear
- * @headerfile seqan/index.h
+ * @headerfile <seqan/index.h>
  * @brief Resets the compressed suffix array.
  * 
  * @signature void clear(compressedSA);
@@ -257,7 +266,7 @@ inline void clear(CompressedSA<TText, TSpec, TConfig> & compressedSA)
 */
 /*!
  * @fn CompressedSA#empty
- * @headerfile seqan/index.h
+ * @headerfile <seqan/index.h>
  * @brief Checks whether or not a compressed suffix array contains any elements.
  * 
  * @signature bool empty(compressedSA);
@@ -294,7 +303,7 @@ SEQAN_HOST_DEVICE inline bool empty(CompressedSA<TText, TSpec, TConfig> & compre
 // TODO(holtgrew): Rename to createCompressedSA
 /*!
  * @fn CompressedSA#createCompressedSa
- * @headerfile seqan/index.h
+ * @headerfile <seqan/index.h>
  * @brief This function creates a compressed suffix array with a specified compression factor.
  * 
  * @signature void createCompressedSa(compressedSA, completeSA, compressionFactor[, offset]);
@@ -383,7 +392,7 @@ String<char> & text = getFibre(indexEsa, EsaText());
 /*!
  * @fn CompressedSA#getFibre
  * 
- * @headerfile seqan/index.h
+ * @headerfile <seqan/index.h>
  * 
  * @brief Returns a specific fibre of a compressed suffix array.
  * 
@@ -440,7 +449,7 @@ getFibre(CompressedSA<TText, TSpec, TConfig> & compressedSA, FibreLF)
 /*!
  * @fn CompressedSA#setFibre
  * 
- * @headerfile seqan/index.h
+ * @headerfile <seqan/index.h>
  * 
  * @brief Set the LF of the compressed suffix array. * 
  * @signature void setFibre(compressedSa, lf, fibreLF);
@@ -466,7 +475,7 @@ void setFibre(CompressedSA<TText, TSpec, TConfig> & compressedSA, TLF & lf, Fibr
 /*!
  * @fn CompressedSA#length
  * 
- * @headerfile seqan/index.h
+ * @headerfile <seqan/index.h>
  * 
  * @brief Returns the number of elements in the compressed suffix array.
  * 
@@ -495,7 +504,7 @@ length(CompressedSA<TText, TSpec, TConfig> const & compressedSA)
 /*!
  * @fn CompressedSA#resize
  * 
- * @headerfile seqan/index.h
+ * @headerfile <seqan/index.h>
  * 
  * @brief Resets the number of elements in the compressed suffix array.
  * 
@@ -597,7 +606,7 @@ value(CompressedSA<TText, TSpec, TConfig> const & compressedSA, TPos pos)
 */
 /*!
  * @fn CompressedSA#open
- * @headerfile seqan/index.h
+ * @headerfile <seqan/index.h>
  * @brief This functions opens a compressed suffix array from disk.
  * 
  * @signature bool open(compressedSA, fileName[, mode]);
@@ -650,7 +659,7 @@ inline bool open(CompressedSA<TText, TSpec, TConfig> & compressedSA, const char 
 /*!
  * @fn CompressedSA#save
  * 
- * @headerfile seqan/index.h
+ * @headerfile <seqan/index.h>
  * 
  * @brief This functions saves a compressed suffix array to disk.
  * 

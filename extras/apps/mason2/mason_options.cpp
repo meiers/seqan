@@ -334,12 +334,12 @@ void MaterializerOptions::addOptions(seqan::ArgumentParser & parser) const
     addSection(parser, "Apply VCF Variants to Reference");
 
     addOption(parser, seqan::ArgParseOption("ir", "input-reference", "Path to FASTA file to read the reference from.",
-                                            seqan::ArgParseOption::INPUTFILE, "IN.fa"));
+                                            seqan::ArgParseOption::INPUT_FILE, "IN.fa"));
     setValidValues(parser, "input-reference", "fa fasta");
     setRequired(parser, "input-reference");
 
     addOption(parser, seqan::ArgParseOption("iv", "input-vcf", "Path to the VCF file with variants to apply.",
-                                            seqan::ArgParseOption::INPUTFILE, "IN.vcf"));
+                                            seqan::ArgParseOption::INPUT_FILE, "IN.vcf"));
     setValidValues(parser, "input-vcf", "vcf");
 }
 
@@ -380,9 +380,9 @@ void MaterializerOptions::getOptionValues(seqan::ArgumentParser const & parser)
 void MaterializerOptions::print(std::ostream & out) const
 {
     out << "MATERIALIZER OPTIONS\n"
-        << "  VERBOSITY      \t" << getVerbosityStr(verbosity) << "\n"
-        << "  REFERENCE FASTA\t" << fastaFileName << "\n"
-        << "  VARIANTS VCF   \t" << vcfFileName << "\n";
+        << "  VERBOSITY         \t" << getVerbosityStr(verbosity) << "\n"
+        << "  REFERENCE FASTA   \t" << fastaFileName << "\n"
+        << "  VARIANTS VCF      \t" << vcfFileName << "\n";
 }
 
 // ----------------------------------------------------------------------------
@@ -606,7 +606,7 @@ void IlluminaSequencingOptions::addOptions(seqan::ArgumentParser & parser) const
                                             "Path to file with Illumina error profile.  The file must be a text file "
                                             "with floating point numbers separated by space, each giving a positional "
                                             "error rate.",
-                                            seqan::ArgParseOption::INPUTFILE, "FILE"));
+                                            seqan::ArgParseOption::INPUT_FILE, "FILE"));
     setValidValues(parser, "illumina-error-profile-file", "txt");
 
     addOption(parser, seqan::ArgParseOption("", "illumina-prob-insert",
@@ -614,14 +614,14 @@ void IlluminaSequencingOptions::addOptions(seqan::ArgumentParser & parser) const
                                             seqan::ArgParseOption::DOUBLE, "PROB"));
     setMinValue(parser, "illumina-prob-insert", "0");
     setMaxValue(parser, "illumina-prob-insert", "1");
-    setDefaultValue(parser, "illumina-prob-insert", "0.001");
+    setDefaultValue(parser, "illumina-prob-insert", "0.00005");
 
     addOption(parser, seqan::ArgParseOption("", "illumina-prob-deletion",
                                             "Insert per-base probability for deletion in Illumina sequencing.",
                                             seqan::ArgParseOption::DOUBLE, "PROB"));
     setMinValue(parser, "illumina-prob-deletion", "0");
     setMaxValue(parser, "illumina-prob-deletion", "1");
-    setDefaultValue(parser, "illumina-prob-deletion", "0.001");
+    setDefaultValue(parser, "illumina-prob-deletion", "0.00005");
 
     addOption(parser, seqan::ArgParseOption("", "illumina-prob-mismatch-scale",
                                             "Scaling factor for Illumina mismatch probability.",
@@ -685,27 +685,27 @@ void IlluminaSequencingOptions::addOptions(seqan::ArgumentParser & parser) const
     addOption(parser, seqan::ArgParseOption("", "illumina-mismatch-quality-mean-end",
                                             "Mean PHRED quality for mismatch bases of last base in Illumina sequencing.",
                                             seqan::ArgParseOption::DOUBLE, "QUAL"));
-    setDefaultValue(parser, "illumina-mismatch-quality-mean-end", "39.5");
+    setDefaultValue(parser, "illumina-mismatch-quality-mean-end", "30.0");
 
     addOption(parser, seqan::ArgParseOption("", "illumina-mismatch-quality-stddev-begin",
                                             "Standard deviation of PHRED quality for mismatch bases of first base "
                                             "in Illumina sequencing.", seqan::ArgParseOption::DOUBLE, "QUAL"));
-    setDefaultValue(parser, "illumina-mismatch-quality-stddev-begin", "0.05");
+    setDefaultValue(parser, "illumina-mismatch-quality-stddev-begin", "3.0");
 
     addOption(parser, seqan::ArgParseOption("", "illumina-mismatch-quality-stddev-end",
                                             "Standard deviation of PHRED quality for mismatch bases of last base "
                                             "in Illumina sequencing.", seqan::ArgParseOption::DOUBLE, "QUAL"));
-    setDefaultValue(parser, "illumina-mismatch-quality-stddev-end", "10.0");
+    setDefaultValue(parser, "illumina-mismatch-quality-stddev-end", "15.0");
 
     addOption(parser, seqan::ArgParseOption("", "illumina-left-template-fastq",
                                             "FASTQ file to use for a template for left-end reads.",
-                                            seqan::ArgParseOption::INPUTFILE, "IN.fq"));
-    setValidValues(parser, "illumina-left-template-fastq", "fq fastq");
+                                            seqan::ArgParseOption::INPUT_FILE, "IN.fq"));
+    setValidValues(parser, "illumina-left-template-fastq", "fq fastq fq.gz fastq.gz");
 
     addOption(parser, seqan::ArgParseOption("", "illumina-right-template-fastq",
                                             "FASTQ file to use for a template for right-end reads.",
-                                            seqan::ArgParseOption::INPUTFILE, "IN.fq"));
-    setValidValues(parser, "illumina-right-template-fastq", "fq fastq");
+                                            seqan::ArgParseOption::INPUT_FILE, "IN.fq"));
+    setValidValues(parser, "illumina-right-template-fastq", "fq fastq fq.gz fastq.gz");
 }
 
 // ----------------------------------------------------------------------------
@@ -1112,20 +1112,20 @@ void MasonSimulatorOptions::addOptions(seqan::ArgumentParser & parser) const
     setMinValue(parser, "num-fragments", "1");
 
     addOption(parser, seqan::ArgParseOption("", "meth-fasta-in", "FASTA file with methylation levels of the input file.",
-                                            seqan::ArgParseOption::INPUTFILE, "IN"));
+                                            seqan::ArgParseOption::INPUT_FILE, "IN"));
     setValidValues(parser, "meth-fasta-in", "fa fasta");
 
     addOption(parser, seqan::ArgParseOption("o", "out", "Output of single-end/left end reads.",
-                                            seqan::ArgParseOption::OUTPUTFILE, "OUT"));
+                                            seqan::ArgParseOption::OUTPUT_FILE, "OUT"));
     setRequired(parser, "out");
-    setValidValues(parser, "out", "fa fasta fq fastq");
+    setValidValues(parser, "out", "fa fasta fq fastq fq.gz fastq.gz");
 
     addOption(parser, seqan::ArgParseOption("or", "out-right", "Output of right reads.  Giving this options enables "
-                                            "paired-end simulation.", seqan::ArgParseOption::OUTPUTFILE, "OUT2"));
-    setValidValues(parser, "out-right", "fa fasta fq fastq");
+                                            "paired-end simulation.", seqan::ArgParseOption::OUTPUT_FILE, "OUT2"));
+    setValidValues(parser, "out-right", "fa fasta fq fastq fq.gz fastq.gz");
 
     addOption(parser, seqan::ArgParseOption("oa", "out-alignment", "SAM/BAM file with alignments.",
-                                            seqan::ArgParseOption::OUTPUTFILE, "OUT"));
+                                            seqan::ArgParseOption::OUTPUT_FILE, "OUT"));
     setValidValues(parser, "out-alignment", "sam bam");
 
     // Add options of the component options.
@@ -1168,6 +1168,25 @@ void MasonSimulatorOptions::addTextSections(seqan::ArgumentParser & parser) cons
     addText(parser,
             "When using multi-threading, each thread gets its own random number generator (RNG).  The RNG of thread "
             "i is initialized with the value of \\fB--seed\\fP plus i.");
+
+    addTextSection(parser, "BAM/SAM Tags");
+    addText(parser,
+            "Mason can write out a BAM or SAM file with alignments of the reads against the reference.  The records "
+            "have tags that give information about the simulated reads.  Below is a list of the tags and their meaning.");
+
+    addListItem(parser, "NM", "Edit distance when aligned to the reference (i).");
+    addListItem(parser, "MD", "String for mismatching positions (Z).");
+
+    addListItem(parser, "oR", "Name of \\fBo\\fPriginal \\fBr\\fPeference, (Z).");
+    addListItem(parser, "oH", "Number of the \\fBo\\fPriginal \\fBh\\fPhaplotype (1-based), (i).");
+    addListItem(parser, "oP", "\\fBo\\fPriginal \\fBp\\fPosition on the original reference (i).");
+    addListItem(parser, "oS", "\\fBo\\fPriginal \\fBs\\fPtrand, \\fIF/R\\fP for forward and reverse strand (A).");
+    addListItem(parser, "uR",
+                "Reason for being unaligned, \\fII/B\\fP for being in insertion or spanning over breakpoint.");
+
+    addListItem(parser, "XE", "Number of sequencing \\fIe\\fPrrors in the read (i).");
+    addListItem(parser, "XS", "Number of \\fIS\\fPNPs in the read alignment (i).");
+    addListItem(parser, "XI", "Number of small \\fIi\\fPndels in the read alignment (i).");
 
     // Add text sections of the component options.
     matOptions.addTextSections(parser);
@@ -1294,9 +1313,13 @@ void MasonMaterializerOptions::addOptions(seqan::ArgumentParser & parser) const
     setDefaultValue(parser, "meth-seed", "0");
 
     addOption(parser, seqan::ArgParseOption("o", "out", "Output of materialized contigs.",
-                                            seqan::ArgParseOption::OUTPUTFILE, "OUT"));
+                                            seqan::ArgParseOption::OUTPUT_FILE, "OUT"));
     setRequired(parser, "out");
     setValidValues(parser, "out", "fa fasta");
+
+    addOption(parser, seqan::ArgParseOption("", "out-breakpoints", "TSV file to write breakpoints in variants to.",
+                                            seqan::ArgParseOption::OUTPUT_FILE, "TSV"));
+    setValidValues(parser, "out-breakpoints", "tsv txt");
 
     addOption(parser, seqan::ArgParseOption("", "haplotype-name-sep",
                                             "String separating contig name from haplotype number.",
@@ -1304,11 +1327,11 @@ void MasonMaterializerOptions::addOptions(seqan::ArgumentParser & parser) const
     setDefaultValue(parser, "haplotype-name-sep", "/");
 
     addOption(parser, seqan::ArgParseOption("", "meth-fasta-in", "FASTA file with methylation levels of the input file.",
-                                            seqan::ArgParseOption::INPUTFILE, "IN"));
+                                            seqan::ArgParseOption::INPUT_FILE, "IN"));
     setValidValues(parser, "meth-fasta-in", "fa fasta");
 
     addOption(parser, seqan::ArgParseOption("", "meth-fasta-out", "FASTA file with methylation levels of the output file.",
-                                            seqan::ArgParseOption::OUTPUTFILE, "OUT"));
+                                            seqan::ArgParseOption::OUTPUT_FILE, "OUT"));
     setValidValues(parser, "meth-fasta-out", "fa fasta");
 
     // Add options of the component options.
@@ -1343,6 +1366,7 @@ void MasonMaterializerOptions::getOptionValues(seqan::ArgumentParser const & par
     getOptionValue(seed, parser, "seed");
     getOptionValue(methSeed, parser, "meth-seed");
     getOptionValue(outputFileName, parser, "out");
+    getOptionValue(outputBreakpointFile, parser, "out-breakpoints");
     getOptionValue(haplotypeNameSep, parser, "haplotype-name-sep");
     getOptionValue(methFastaInFile, parser, "meth-fasta-in");
     getOptionValue(methFastaOutFile, parser, "meth-fasta-out");
@@ -1374,6 +1398,7 @@ void MasonMaterializerOptions::print(std::ostream & out) const
         << "METHYLATION SEED        \t" << methSeed << "\n"
         << "\n"
         << "OUTPUT FILE             \t" << outputFileName << "\n"
+        << "BREAKPOINT TSV OUT      \t" << outputBreakpointFile << "\n"
         << "METHYLATION LEVEL INPUT \t" << methFastaInFile << "\n"
         << "METHYLATION LEVEL OUTPUT\t" << methFastaOutFile << "\n"
         << "\n"
@@ -1402,7 +1427,7 @@ void MasonSplicingOptions::addOptions(seqan::ArgumentParser & parser) const
     setDefaultValue(parser, "seed", "0");
 
     addOption(parser, seqan::ArgParseOption("o", "out", "Output of materialized contigs.",
-                                            seqan::ArgParseOption::OUTPUTFILE, "OUT"));
+                                            seqan::ArgParseOption::OUTPUT_FILE, "OUT"));
     setRequired(parser, "out");
     setValidValues(parser, "out", "fa fasta");
 
@@ -1413,16 +1438,16 @@ void MasonSplicingOptions::addOptions(seqan::ArgumentParser & parser) const
 
     addOption(parser, seqan::ArgParseOption("ig", "in-gff", "Path to input GFF or GTF file, must be "
                                             "sorted by reference name.",
-                                            seqan::ArgParseOption::INPUTFILE, "IN.gff"));
+                                            seqan::ArgParseOption::INPUT_FILE, "IN.gff"));
     setValidValues(parser, "in-gff", "gff gtf");
     setRequired(parser, "in-gff");
 
     addOption(parser, seqan::ArgParseOption("", "gff-type", "Splicing will filter to the records that have this type.",
-                                            seqan::ArgParseOption::INPUTFILE, "TYPE"));
+                                            seqan::ArgParseOption::INPUT_FILE, "TYPE"));
     setDefaultValue(parser, "gff-type", "exon");
 
     addOption(parser, seqan::ArgParseOption("", "gff-group-by", "Assign features to their parent using the tag "
-                                            "with this name.", seqan::ArgParseOption::INPUTFILE, "KEY"));
+                                            "with this name.", seqan::ArgParseOption::INPUT_FILE, "KEY"));
     setDefaultValue(parser, "gff-group-by", "Parent");
 
     // Add options of the component options.
@@ -1508,18 +1533,18 @@ void MasonFragmentSequencingOptions::addOptions(seqan::ArgumentParser & parser) 
     setDefaultValue(parser, "seed", "0");
 
     addOption(parser, seqan::ArgParseOption("i", "in", "Path to input file.",
-                                            seqan::ArgParseOption::INPUTFILE, "OUT"));
+                                            seqan::ArgParseOption::INPUT_FILE, "OUT"));
     setRequired(parser, "in");
     setValidValues(parser, "in", "fa fasta");
 
     addOption(parser, seqan::ArgParseOption("o", "out", "Output of single-end/left end reads.",
-                                            seqan::ArgParseOption::OUTPUTFILE, "OUT"));
+                                            seqan::ArgParseOption::OUTPUT_FILE, "OUT"));
     setRequired(parser, "out");
-    setValidValues(parser, "out", "fa fasta fq fastq");
+    setValidValues(parser, "out", "fa fasta fq fastq fq.gz fastq.gz");
 
     addOption(parser, seqan::ArgParseOption("or", "out-right", "Output of right reads.  Giving this options enables "
-                                            "paired-end simulation.", seqan::ArgParseOption::OUTPUTFILE, "OUT2"));
-    setValidValues(parser, "out-right", "fa fasta fq fastq");
+                                            "paired-end simulation.", seqan::ArgParseOption::OUTPUT_FILE, "OUT2"));
+    setValidValues(parser, "out-right", "fa fasta fq fastq fq.gz fastq.gz");
 
     addOption(parser, seqan::ArgParseOption("", "force-single-end", "Force single-end simulation although --out-right "
                                             "is given."));
@@ -1624,12 +1649,12 @@ void MasonMethylationOptions::addOptions(seqan::ArgumentParser & parser) const
     setDefaultValue(parser, "seed", "0");
 
     addOption(parser, seqan::ArgParseOption("i", "in", "Input FASTA file with genome.",
-                                            seqan::ArgParseOption::INPUTFILE, "IN.fa"));
+                                            seqan::ArgParseOption::INPUT_FILE, "IN.fa"));
     setRequired(parser, "in");
     setValidValues(parser, "in", "fa fasta");
 
     addOption(parser, seqan::ArgParseOption("o", "out", "Input FASTA file with genome.",
-                                            seqan::ArgParseOption::INPUTFILE, "OUT.fa"));
+                                            seqan::ArgParseOption::INPUT_FILE, "OUT.fa"));
     setRequired(parser, "out");
     setValidValues(parser, "out", "fa fasta");
 

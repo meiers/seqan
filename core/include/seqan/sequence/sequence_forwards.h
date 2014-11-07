@@ -38,6 +38,8 @@
 #ifndef SEQAN_HEADER_SEQUENCE_FORWARDS_H
 #define SEQAN_HEADER_SEQUENCE_FORWARDS_H
 
+#if !defined(_MSC_VER) || _MSC_VER <= 1600
+
 //SEQAN_NO_GENERATED_FORWARDS: no forwards are generated for this file
 
 //////////////////////////////////////////////////////////////////////////////
@@ -60,19 +62,6 @@ template <typename TValue, unsigned int SPACE, typename TSpec> inline typename I
 template <typename TString, typename TSpec, typename TTag> inline typename Iterator< StringSet< TString, TSpec >, Tag<TTag> const>::Type end(StringSet< TString, TSpec > & me, Tag<TTag> const tag);        // "core/include/seqan/sequence\sequence_multiple.h"(1398)
 template <typename TString, typename TSpec, typename TTag> inline typename Iterator< StringSet< TString, TSpec > const, Tag<TTag> const>::Type end(StringSet< TString, TSpec > const & me, Tag<TTag> const tag);        // "core/include/seqan/sequence\sequence_multiple.h"(1405)
 #endif  // defined(_MSC_VER) && (_MSC_VER < 1400)
-
-//////////////////////////////////////////////////////////////////////////////
-
-template <typename TFile, typename TData>
-void read(TFile & file, TData & data);          // "core/include/seqan/file/file_format_raw.h"(307)
-
-//////////////////////////////////////////////////////////////////////////////
-
-template <typename TFile, typename TData>
-void write(TFile & file, TData & data);         // "core/include/seqan/file/file_format_raw.h"(327)
-
-template <typename TFile, typename TData>
-void write(TFile & file, TData const & data);   // "core/include/seqan/file/file_format_raw.h"(335)
 
 // ==========================================================================
 // Adaption Forwards
@@ -132,8 +121,10 @@ template <typename TTarget, typename TSource> inline void append(TTarget & targe
 template <typename TTarget, typename TSource> inline void append(TTarget const & target, TSource & source, typename Size<TTarget>::Type limit);
 template <typename TTarget, typename TSource> inline void append(TTarget & target, TSource const & source, typename Size<TTarget>::Type limit);
 template <typename TTarget, typename TSource> inline void append(TTarget const & target, TSource const & source, typename Size<TTarget>::Type limit);
-template <typename T, typename TValue> inline void appendValue(T & me, TValue const & _value);
+template <typename T, typename TValue> inline void appendValue(T SEQAN_FORWARD_ARG me, TValue SEQAN_FORWARD_CARG _value);
+#ifndef SEQAN_CXX11_STANDARD
 template <typename T, typename TValue> inline void appendValue(T const & me, TValue const & _value);
+#endif
 template <typename TTarget, typename TSource> inline void assign(TTarget & target, TSource & source, typename Size<TTarget>::Type limit);
 template <typename TTarget, typename TSource> inline void assign(TTarget const & target, TSource & source, typename Size<TTarget>::Type limit);
 template <typename TTarget, typename TSource> inline void assign(TTarget & target, TSource const & source, typename Size<TTarget>::Type limit);
@@ -274,7 +265,7 @@ template <typename TChar, typename TCharTraits, typename TAlloc> inline bool emp
 template <typename TChar, typename TCharTraits, typename TAlloc> inline typename Iterator< std::basic_string<TChar, TCharTraits, TAlloc>, Standard>::Type end(std::basic_string<TChar, TCharTraits, TAlloc> & me, Standard);
 template <typename TChar, typename TCharTraits, typename TAlloc> inline typename Iterator< std::basic_string<TChar, TCharTraits, TAlloc> const, Standard>::Type end(std::basic_string<TChar, TCharTraits, TAlloc> const & me, Standard);
 template <typename TChar, typename TCharTraits, typename TAlloc> inline void const * getObjectId(std::basic_string<TChar, TCharTraits, TAlloc> const & me);
-template <typename TChar, typename TCharTraits, typename TAlloc> inline typename Size< std::basic_string<TChar, TCharTraits, TAlloc> >::Type length(std::basic_string<TChar, TCharTraits, TAlloc> const & me);
+template <typename TChar, typename TCharTraits, typename TAlloc> inline typename std::basic_string<TChar, TCharTraits, TAlloc>::size_type length(std::basic_string<TChar, TCharTraits, TAlloc> const & me);
 template <typename TChar, typename TCharTraits, typename TAlloc, typename TSource> inline void replace(std::basic_string<TChar, TCharTraits, TAlloc> & target, typename Position< std::basic_string<TChar, TCharTraits, TAlloc> >::Type pos_begin, typename Position< std::basic_string<TChar, TCharTraits, TAlloc> >::Type pos_end, TSource const & source, Generous);
 template <typename TChar, typename TCharTraits, typename TAlloc, typename TSource> inline void replace(std::basic_string<TChar, TCharTraits, TAlloc> & target, typename Position< std::basic_string<TChar, TCharTraits, TAlloc> >::Type pos_begin, typename Position< std::basic_string<TChar, TCharTraits, TAlloc> >::Type pos_end, TSource const & source, typename Size< std::basic_string<TChar, TCharTraits, TAlloc> >::Type limit, Generous);
 template <typename TChar, typename TCharTraits, typename TAlloc, typename TSource> inline void replace(std::basic_string<TChar, TCharTraits, TAlloc> & target, typename Position< std::basic_string<TChar, TCharTraits, TAlloc> >::Type pos_begin, typename Position< std::basic_string<TChar, TCharTraits, TAlloc> >::Type pos_end, TSource const & source, Limit);
@@ -396,6 +387,8 @@ template <typename TChar, typename TAlloc, typename TSize, typename TExpand> inl
 #endif
 
 }  // namespace SEQAN_NAMESPACE_MAIN
+
+#endif  // #if !defined(_MSC_VER) || _MSC_VER <= 1600
 
 #endif
 

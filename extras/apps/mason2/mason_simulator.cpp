@@ -193,7 +193,7 @@ public:
         _flipState(info.isForward == isRC);  // restore state if previously flipped
 
         // Fill BAM tags.
-        _fillTags(record, editDistance, buffer);
+        _fillTags(record, info, editDistance, buffer);
     }
 
     // Flip the sequence and quality in case that the record is reverse complemented.
@@ -212,22 +212,37 @@ public:
                            int & editDistance,
                            seqan::CharString & mdString,
                            seqan::Dna5String & seq,
-                           int beginPos,
+                           int & beginPos,
                            int endPos)
     {
-        // Realign the read sequence against the original interval.
+        int const PADDING = 5;
+        int const PADDING_BEGIN = std::min(PADDING, beginPos);
+        int const PADDING_END = std::min(PADDING, (int)length(refSeq) - endPos);
+
+        // Realign the read sequence against the original interval.  We add some padding so insertions into the read at
+        // the ends can be converted to matches/mismatches as they appear after the mapping.
         typedef seqan::Infix<seqan::Dna5String>::Type TContigInfix;
-        TContigInfix contigInfix(refSeq, beginPos, endPos);
+        TContigInfix contigInfix(refSeq, beginPos - PADDING_BEGIN, endPos + PADDING_END);
         seqan::Gaps<TContigInfix> gapsContig(contigInfix);
         seqan::Gaps<seqan::Dna5String> gapsRead(seq);
         seqan::Score<int, seqan::Simple> sScheme(0, -1000, -1001, -1002);
+        seqan::AlignConfig<true, false, false, true> alignConfig;
 
         int buffer = 3;  // should be unnecessary
         int uDiag = std::max((int)(length(contigInfix) - length(seq)), 0) + buffer;
         int lDiag = -std::max((int)(length(seq) - length(contigInfix)), 0) - buffer;
 
-        editDistance = globalAlignment(gapsContig, gapsRead, sScheme, lDiag, uDiag);
+        editDistance = globalAlignment(gapsContig, gapsRead, sScheme, alignConfig, lDiag, uDiag);
         editDistance /= -1000;  // score to edit distance
+
+        beginPos += countGaps(begin(gapsRead, seqan::Standard())) - PADDING_BEGIN;
+        while (isGap(gapsRead, length(gapsRead) - 1))
+        {
+            setClippedEndPosition(gapsRead, length(gapsRead) - 1);
+            setClippedEndPosition(gapsContig, length(gapsContig) - 1);
+        }
+        setClippedBeginPosition(gapsContig, countGaps(begin(gapsRead, seqan::Standard())));
+        setClippedBeginPosition(gapsRead, countGaps(begin(gapsRead, seqan::Standard())));
 
         getCigarString(record.cigar, gapsContig, gapsRead, seqan::maxValue<int>());
         getMDString2(mdString, gapsContig, gapsRead);
@@ -235,16 +250,29 @@ public:
 
     // Fill the tags dict.
     void _fillTags(seqan::BamAlignmentRecord & record,
+                   SequencingSimulationInfo & infoRecord,
                    int editDistance,
                    seqan::CharString const & mdString)
     {
         seqan::BamTagsDict tagsDict(record.tags);
         setTagValue(tagsDict, "NM", editDistance);        // edit distance to reference
         setTagValue(tagsDict, "MD", toCString(mdString));
+
+        // Set position on original haplotype.
         setTagValue(tagsDict, "oR", toCString(refName));  // original reference name
         setTagValue(tagsDict, "oH", hID + 1);             // original haplotype
         setTagValue(tagsDict, "oP", info.beginPos);       // original position
         setTagValue(tagsDict, "oS", info.isForward ? 'F' : 'R', 'A');  // original strand
+
+        // Compute number of errors.
+        int numErrors = 0;
+        for (unsigned i = 0; i < length(infoRecord.cigar); ++i)
+            if (infoRecord.cigar[i].operation != 'M')
+                numErrors += infoRecord.cigar[i].count;
+        setTagValue(tagsDict, "XE", numErrors);
+        // Write out number of bases overlapping with snp/indel variants.
+        setTagValue(tagsDict, "XS", infoRecord.snpCount);
+        setTagValue(tagsDict, "XI", infoRecord.indelCount);
     }
 };
 
@@ -436,9 +464,11 @@ public:
 
         // Write out some tags with the information.
         seqan::BamTagsDict tagsDict(record.tags);
+
         // Set tag with the eason for begin unmapped: Inserted or over breakpoint.  We only reach here if the alignment
         // does not overlap with a breakpoint in the case that the alignment is in an inserted region.
         setTagValue(tagsDict, "uR", overlapsWithBreakpoint ? 'B' : 'I', 'A');
+
         // Set position on original haplotype.
         setTagValue(tagsDict, "oR", toCString(refName));  // original reference name
         setTagValue(tagsDict, "oP", infoRecord.beginPos);       // original position
@@ -503,22 +533,37 @@ public:
                            int & editDistance,
                            seqan::CharString & mdString,
                            seqan::Dna5String & seq,
-                           int beginPos,
+                           int & beginPos,
                            int endPos)
     {
-        // Realign the read sequence against the original interval.
+        int const PADDING = 5;
+        int const PADDING_BEGIN = std::min(PADDING, beginPos);
+        int const PADDING_END = std::min(PADDING, (int)length(refSeq) - endPos);
+
+        // Realign the read sequence against the original interval.  We add some padding so insertions into the read at
+        // the ends can be converted to matches/mismatches as they appear after the mapping.
         typedef seqan::Infix<seqan::Dna5String>::Type TContigInfix;
-        TContigInfix contigInfix(refSeq, beginPos, endPos);
+        TContigInfix contigInfix(refSeq, beginPos - PADDING_BEGIN, endPos + PADDING_END);
         seqan::Gaps<TContigInfix> gapsContig(contigInfix);
         seqan::Gaps<seqan::Dna5String> gapsRead(seq);
         seqan::Score<int, seqan::Simple> sScheme(0, -1000, -1001, -1002);
+        seqan::AlignConfig<true, false, false, true> alignConfig;
 
         int buffer = 3;  // should be unnecessary
         int uDiag = std::max((int)(length(contigInfix) - length(seq)), 0) + buffer;
         int lDiag = -std::max((int)(length(seq) - length(contigInfix)), 0) - buffer;
 
-        editDistance = globalAlignment(gapsContig, gapsRead, sScheme, lDiag, uDiag);
+        editDistance = globalAlignment(gapsContig, gapsRead, sScheme, alignConfig, lDiag, uDiag);
         editDistance /= -1000;  // score to edit distance
+
+        beginPos += countGaps(begin(gapsRead, seqan::Standard())) - PADDING_BEGIN;
+        while (isGap(gapsRead, length(gapsRead) - 1))
+        {
+            setClippedEndPosition(gapsRead, length(gapsRead) - 1);
+            setClippedEndPosition(gapsContig, length(gapsContig) - 1);
+        }
+        setClippedBeginPosition(gapsContig, countGaps(begin(gapsRead, seqan::Standard())));
+        setClippedBeginPosition(gapsRead, countGaps(begin(gapsRead, seqan::Standard())));
 
         getCigarString(record.cigar, gapsContig, gapsRead, seqan::maxValue<int>());
         getMDString2(mdString, gapsContig, gapsRead);
@@ -533,10 +578,22 @@ public:
         seqan::BamTagsDict tagsDict(record.tags);
         setTagValue(tagsDict, "NM", editDistance);        // edit distance to reference
         setTagValue(tagsDict, "MD", toCString(mdString));
+
+        // Write out original sampling pos info.
         setTagValue(tagsDict, "oR", toCString(refName));  // original reference name
         setTagValue(tagsDict, "oH", hID + 1);             // original haplotype
         setTagValue(tagsDict, "oP", infoRecord.beginPos);       // original position
         setTagValue(tagsDict, "oS", infoRecord.isForward ? 'F' : 'R', 'A');  // original strand
+
+        // Compute number of errors.
+        int numErrors = 0;
+        for (unsigned i = 0; i < length(infoRecord.cigar); ++i)
+            if (infoRecord.cigar[i].operation != 'M')
+                numErrors += infoRecord.cigar[i].count;
+        setTagValue(tagsDict, "XE", numErrors);
+        // Write out number of bases overlapping with snp/indel variants.
+        setTagValue(tagsDict, "XS", infoRecord.snpCount);
+        setTagValue(tagsDict, "XI", infoRecord.indelCount);
     }
 };
 
@@ -623,7 +680,9 @@ public:
         str = ss.str();
     }
 
-    void _simulatePairedEnd(seqan::Dna5String const & seq, PositionMap const & posMap,
+    void _simulatePairedEnd(seqan::Dna5String const & seq,
+                            std::vector<SmallVarInfo> const & varInfos,
+                            PositionMap const & posMap,
                             seqan::CharString const & refName,
                             seqan::Dna5String /*const*/ & refSeq,
                             int rID, int hID)
@@ -642,6 +701,18 @@ public:
             // Set the sequence ids.
             _setId(ids[i], ss, fragmentIds[i / 2], 1, infos[i]);
             _setId(ids[i + 1], ss, fragmentIds[i / 2], 2, infos[i + 1]);
+            // Compute number of bases overlapping with SNPs/indels.
+            int beginPos = infos[i].beginPos, endPos = infos[i].beginPos + infos[i].lengthInRef();
+            infos[i].snpCount = countSmallVars(varInfos, beginPos, endPos, SmallVarInfo::SNP);
+            infos[i].indelCount =
+                    countSmallVars(varInfos, beginPos, endPos, SmallVarInfo::INS) +
+                    countSmallVars(varInfos, beginPos, endPos, SmallVarInfo::DEL);
+            beginPos = infos[i + 1].beginPos;
+            endPos = infos[i + 1].beginPos + infos[i + 1].lengthInRef();
+            infos[i + 1].snpCount = countSmallVars(varInfos, beginPos, endPos, SmallVarInfo::SNP);
+            infos[i + 1].indelCount =
+                    countSmallVars(varInfos, beginPos, endPos, SmallVarInfo::INS) +
+                    countSmallVars(varInfos, beginPos, endPos, SmallVarInfo::DEL);
 
             if (buildAlignments)
             {
@@ -657,7 +728,27 @@ public:
         }
     }
 
+    int countSmallVars(std::vector<SmallVarInfo> const & varInfos,
+                       int beginPos, int endPos,
+                       SmallVarInfo::Kind kind)
+    {
+        SmallVarInfo query;
+
+        std::vector<SmallVarInfo>::const_iterator it, itBegin, itEnd;
+        query.pos = beginPos;
+        itBegin = std::lower_bound(varInfos.begin(), varInfos.end(), query);
+        query.pos = endPos;
+        itEnd = std::lower_bound(varInfos.begin(), varInfos.end(), query);
+
+        int result = 0;
+        for (it = itBegin; it != itEnd; ++it)
+            if (it->kind == kind)
+                result += it->count;
+        return result;
+    }
+
     void _simulateSingleEnd(seqan::Dna5String /*const*/ & seq,
+                            std::vector<SmallVarInfo> const & varInfos,
                             PositionMap const & posMap,
                             seqan::CharString const & refName,
                             seqan::Dna5String /*const*/ & refSeq,
@@ -671,6 +762,11 @@ public:
             TFragment frag(seq, fragments[i].beginPos, fragments[i].endPos);
             seqSimulator->simulateSingleEnd(seqs[i], quals[i], infos[i], frag, methLevels);
             _setId(ids[i], ss, fragmentIds[i], 0, infos[i]);
+            int beginPos = infos[i].beginPos, endPos = infos[i].beginPos + infos[i].lengthInRef();
+            infos[i].snpCount = countSmallVars(varInfos, beginPos, endPos, SmallVarInfo::SNP);
+            infos[i].indelCount =
+                    countSmallVars(varInfos, beginPos, endPos, SmallVarInfo::INS) +
+                    countSmallVars(varInfos, beginPos, endPos, SmallVarInfo::DEL);
             if (buildAlignments)
             {
                 // Build the alignment record itself.
@@ -685,13 +781,15 @@ public:
 
     // Simulate next chunk.
     void run(seqan::Dna5String /*const*/ & seq,
+             std::vector<std::pair<int, int> > const & gapIntervals,
+             std::vector<SmallVarInfo> const & varInfos,
              PositionMap const & posMap,
              seqan::CharString const & refName,
              seqan::Dna5String /*const*/ & refSeq,
              int rID, int hID)
     {
         // Sample fragments.
-        fragSampler->generateMany(fragments, rID, length(seq), fragmentIds.size());
+        fragSampler->generateMany(fragments, rID, length(seq), gapIntervals, fragmentIds.size());
 
         // Simulate reads.
         int seqCount = (options->seqOptions.simulateMatePairs ? 2 : 1) * fragmentIds.size();
@@ -705,9 +803,9 @@ public:
             alignmentRecords.resize(seqCount);
         }
         if (options->seqOptions.simulateMatePairs)
-            _simulatePairedEnd(seq, posMap, refName, refSeq, rID, hID);
+            _simulatePairedEnd(seq, varInfos, posMap, refName, refSeq, rID, hID);
         else
-            _simulateSingleEnd(seq, posMap, refName, refSeq, rID, hID);
+            _simulateSingleEnd(seq, varInfos, posMap, refName, refSeq, rID, hID);
     }
 };
 
@@ -755,26 +853,20 @@ public:
     // Helper for joining the SAM files.
     std::SEQAN_AUTO_PTR_NAME<SamJoiner> alignmentJoiner;
 
-    // ----------------------------------------------------------------------
-    // Header used for writing temporary SAM.
-    // ----------------------------------------------------------------------
-
-    typedef seqan::StringSet<seqan::CharString> TNameStore;
-    typedef seqan::NameStoreCache<TNameStore>   TNameStoreCache;
-    typedef seqan::BamIOContext<TNameStore>     TBamIOContext;
-    TNameStore nameStore;
-    seqan::BamHeader header;
-    TNameStoreCache nameStoreCache;
-    TBamIOContext   bamIOContext;
+    // The BamHeader to use.
+    seqan::BamHeader bamHeader;
+    // BamFileOut and SeqFileOut objects for writing to alignmentSplitter and fragmentSplitter files.
+    std::vector<seqan::BamFileOut *> bamFileOuts;
+    std::vector<seqan::SeqFileOut *> seqFileOuts;
 
     // ----------------------------------------------------------------------
     // File Output
     // ----------------------------------------------------------------------
 
     // For writing left/right reads.
-    seqan::SequenceStream outSeqsLeft, outSeqsRight;
+    seqan::SeqFileOut outSeqsLeft, outSeqsRight;
     // For writing the final SAM/BAM file.
-    seqan::BamStream outBamStream;
+    std::SEQAN_AUTO_PTR_NAME<seqan::BamFileOut> outBamStream;
 
     MasonSimulatorApp(MasonSimulatorOptions const & options) :
             options(options), rng(options.seed), methRng(options.methSeed),
@@ -783,8 +875,30 @@ public:
                    toCString(options.matOptions.vcfFileName),
                    toCString(options.methFastaInFile),
                    &options.methOptions),
-            contigPicker(rng), nameStoreCache(nameStore), bamIOContext(nameStore, nameStoreCache)
+            contigPicker(rng)
     {}
+
+    ~MasonSimulatorApp()
+    {
+        clearOutFiles();
+    }
+
+    void clearOutFiles()
+    {
+        for (unsigned i = 0; i < bamFileOuts.size(); ++i)
+            delete bamFileOuts[i];
+        bamFileOuts.clear();
+
+        for (unsigned i = 0; i < alignmentSplitter.files.size(); ++i)
+            alignmentSplitter.files[i]->flush();
+
+        for (unsigned i = 0; i < seqFileOuts.size(); ++i)
+            delete seqFileOuts[i];
+        seqFileOuts.clear();
+
+        for (unsigned i = 0; i < fragmentIdSplitter.files.size(); ++i)
+            fragmentIdSplitter.files[i]->flush();
+    }
 
     int run()
     {
@@ -798,6 +912,37 @@ public:
         return 0;
     }
 
+    // Build sorted vector of intervals with more than minNs N characters.
+    //
+    // Used for fragment exclusion downstream.
+    void buildGapIntervals(std::vector<std::pair<int, int> > & intervals,
+                           seqan::Dna5String const & contigSeq,
+                           unsigned minNs = 3)
+    {
+        intervals.clear();
+
+        bool inN = false;
+        unsigned beginPos = 0;
+        for (unsigned pos = 0; pos < length(contigSeq); ++pos)
+        {
+            if (contigSeq[pos] == 'N' && !inN)
+            {
+                beginPos = pos;
+                inN = true;
+            }
+            else if (contigSeq[pos] != 'N' && inN)
+            {
+                if (pos - beginPos >= minNs)
+                    intervals.push_back(std::make_pair(beginPos, pos));
+                inN = false;
+            }
+        }
+        if (inN)
+            intervals.push_back(std::make_pair(beginPos, (int)length(contigSeq)));
+
+        std::sort(intervals.begin(), intervals.end());
+    }
+
     void _simulateReadsDoSimulation()
     {
         std::cerr << "\nSimulating Reads:\n";
@@ -809,13 +954,16 @@ public:
         // Note that all shared variables are correctly synchronized by implicit flushes at the critical sections below.
         MethylationLevels levels;
         seqan::Dna5String refSeq;  // reference sequence
-        while ((options.seqOptions.bsSeqOptions.bsSimEnabled && vcfMat.materializeNext(contigSeq, levels, rID, hID)) ||
-               (!options.seqOptions.bsSeqOptions.bsSimEnabled && vcfMat.materializeNext(contigSeq, rID, hID)))
+        std::vector<SmallVarInfo> varInfos;  // small variants for counting in read alignments
+        std::vector<std::pair<int, int> > breakpoints;  // unused/ignored
+        while ((options.seqOptions.bsSeqOptions.bsSimEnabled &&
+                vcfMat.materializeNext(contigSeq, levels, varInfos, breakpoints, rID, hID)) ||
+               (!options.seqOptions.bsSeqOptions.bsSimEnabled &&
+                vcfMat.materializeNext(contigSeq, varInfos, breakpoints, rID, hID)))
         {
             std::cerr << "  " << sequenceName(vcfMat.faiIndex, rID) << " (allele " << (hID + 1) << ") ";
             contigFragmentCount = 0;
-            if (readSequence(refSeq, vcfMat.faiIndex, rID) != 0)
-                throw MasonIOException("Could not load reference sequence.");
+            readSequence(refSeq, vcfMat.faiIndex, rID);
 
             while (true)  // Execute as long as there are fragments left.
             {
@@ -827,18 +975,24 @@ public:
                     threads[tID].methLevels = &levels;
 
                     // Load the fragment ids to simulate for.
-                    int numRead = fread(&threads[tID].fragmentIds[0], sizeof(int), options.chunkSize,
-                                        fragmentIdSplitter.files[rID * haplotypeCount + hID]);
+                    fragmentIdSplitter.files[rID * haplotypeCount + hID]->read(
+                        reinterpret_cast<char *>(&threads[tID].fragmentIds[0]),
+                        sizeof(int) * options.chunkSize);
+                    int numRead = fragmentIdSplitter.files[rID * haplotypeCount + hID]->gcount() / 4;
                     contigFragmentCount += numRead;
                     if (numRead == 0)
                         doBreak = true;
                     threads[tID].fragmentIds.resize(numRead);
                 }
 
+                // Build gap intervals.
+                std::vector<std::pair<int, int> > gapIntervals;
+                buildGapIntervals(gapIntervals, contigSeq);
+
                 // Perform the simulation.
                 SEQAN_OMP_PRAGMA(parallel num_threads(options.numThreads))
                 {
-                    threads[omp_get_thread_num()].run(contigSeq, vcfMat.posMap,
+                    threads[omp_get_thread_num()].run(contigSeq, gapIntervals, varInfos, vcfMat.posMap,
                                                       sequenceName(vcfMat.faiIndex, rID),
                                                       refSeq, rID, hID);
                 }
@@ -846,16 +1000,11 @@ public:
                 // Write out the temporary sequence.
                 for (int tID = 0; tID < options.numThreads; ++tID)
                 {
-                    if (write2(fragmentSplitter.files[rID * haplotypeCount + hID],
-                               threads[tID].ids, threads[tID].seqs, threads[tID].quals, seqan::Fastq()))
-                        throw MasonIOException("Could not write out temporary sequence.");
+                    unsigned idx = rID * haplotypeCount + hID;
+                    writeRecords(*seqFileOuts[idx], threads[tID].ids, threads[tID].seqs, threads[tID].quals);
                     if (!empty(options.outFileNameSam))
                         for (unsigned i = 0; i < length(threads[tID].alignmentRecords); ++i)
-                        {
-                            if (write2(alignmentSplitter.files[rID * haplotypeCount + hID],
-                                       threads[tID].alignmentRecords[i], bamIOContext, seqan::Sam()) != 0)
-                                throw MasonIOException("Could not write out temporary alignment record.");
-                        }
+                            writeRecord(*bamFileOuts[idx], threads[tID].alignmentRecords[i]);
                     std::cerr << '.' << std::flush;
                 }
 
@@ -871,6 +1020,7 @@ public:
     void _simulateReadsJoin()
     {
         std::cerr << "\nJoining temporary files ...";
+        clearOutFiles();  // clear output files such that they are flushed
         fragmentSplitter.reset();
         fastxJoiner.reset(new FastxJoiner<seqan::Fastq>(fragmentSplitter));
         FastxJoiner<seqan::Fastq> & joiner = *fastxJoiner.get();  // Shortcut
@@ -879,33 +1029,31 @@ public:
             while (!joiner.atEnd())
             {
                 joiner.get(id, seq, qual);
-                if (writeRecord(outSeqsLeft, id, seq, qual) != 0)
-                    throw MasonIOException("Problem joining sequences.");
+                writeRecord(outSeqsLeft, id, seq, qual);
                 joiner.get(id, seq, qual);
-                if (writeRecord(outSeqsRight, id, seq, qual) != 0)
-                    throw MasonIOException("Problem joining sequences.");
+                writeRecord(outSeqsRight, id, seq, qual);
             }
         else
             while (!joiner.atEnd())
             {
                 joiner.get(id, seq, qual);
-                if (writeRecord(outSeqsLeft, id, seq, qual) != 0)
-                    throw MasonIOException("Problem joining sequences.");
+                writeRecord(outSeqsLeft, id, seq, qual);
             }
         if (!empty(options.outFileNameSam))
         {
             alignmentSplitter.reset();
-            alignmentJoiner.reset(new SamJoiner(alignmentSplitter));
+            alignmentJoiner.reset(new SamJoiner(alignmentSplitter, outBamStream.get()));
 
-            outBamStream.header = alignmentJoiner->header;
+            // Write out header.
+            seqan::BamFileOut & bamFileOut = *outBamStream;
+            writeRecord(bamFileOut, alignmentJoiner->header);
 
             SamJoiner & joiner = *alignmentJoiner.get();  // Shortcut
             seqan::BamAlignmentRecord record;
             while (!joiner.atEnd())
             {
                 joiner.get(record);
-                if (writeRecord(outBamStream, record) != 0)
-                    throw MasonIOException("Problem writing to alignment out file.");
+                writeRecord(bamFileOut, record);
             }
         }
         std::cerr << " OK\n";
@@ -925,7 +1073,8 @@ public:
         std::cerr << "Distributing fragments to " << seqCount << " contigs (" << haplotypeCount
                   << " haplotypes each) ...";
         for (int i = 0; i < options.numFragments; ++i)
-            fwrite(&i, sizeof(int), 1, fragmentIdSplitter.files[contigPicker.toId(contigPicker.pick())]);
+            fragmentIdSplitter.files[contigPicker.toId(contigPicker.pick())]->write(
+                reinterpret_cast<char *>(&i), sizeof(int));
         fragmentIdSplitter.reset();
         std::cerr << " OK\n";
 
@@ -942,39 +1091,41 @@ public:
         // Open alignment splitters.
         alignmentSplitter.numContigs = fragmentIdSplitter.numContigs;
         alignmentSplitter.open();
+        // Construct output BAM files.
+        for (unsigned i = 0; i < alignmentSplitter.files.size(); ++i)
+            bamFileOuts.push_back(new seqan::BamFileOut(*alignmentSplitter.files[i], seqan::Sam()));
         // Build and write out header, fill ref name store.
         seqan::BamHeaderRecord vnHeaderRecord;
         vnHeaderRecord.type = seqan::BAM_HEADER_FIRST;
         appendValue(vnHeaderRecord.tags, seqan::Pair<seqan::CharString>("VN", "1.4"));
-        appendValue(header.records, vnHeaderRecord);
-        resize(header.sequenceInfos, numSeqs(vcfMat.faiIndex));
+        appendValue(bamHeader, vnHeaderRecord);
         for (unsigned i = 0; i < numSeqs(vcfMat.faiIndex); ++i)
         {
-            if (!empty(options.matOptions.vcfFileName))
-                header.sequenceInfos[i].i1 = vcfMat.vcfStream.header.sequenceNames[i];
-            else
-                header.sequenceInfos[i].i1 = sequenceName(vcfMat.faiIndex, i);
+            for (unsigned j = 0; j < bamFileOuts.size(); ++j)
+                if (!empty(options.matOptions.vcfFileName))
+                    appendName(nameStoreCache(context(*bamFileOuts[j])), contigNames(context(vcfMat.vcfFileIn))[i]);
+                else
+                    appendName(nameStoreCache(context(*bamFileOuts[j])), sequenceName(vcfMat.faiIndex, i));
             unsigned idx = 0;
-            if (!getIdByName(vcfMat.faiIndex, header.sequenceInfos[i].i1, idx))
+            if (!getIdByName(idx, vcfMat.faiIndex, nameStore(context(*bamFileOuts[0]))[i]))
             {
                 std::stringstream ss;
-                ss << "Could not find " << header.sequenceInfos[i].i1 << " from VCF file in FAI index.";
+                ss << "Could not find " << nameStore(context(*bamFileOuts[0]))[i] << " from VCF file in FAI index.";
                 throw MasonIOException(ss.str());
             }
-            header.sequenceInfos[i].i2 = sequenceLength(vcfMat.faiIndex, idx);
-            appendValue(nameStore, sequenceName(vcfMat.faiIndex, idx));
+            for (unsigned j = 0; j < bamFileOuts.size(); ++j)
+                appendValue(sequenceLengths(context(*bamFileOuts[j])), sequenceLength(vcfMat.faiIndex, idx));
             seqan::BamHeaderRecord seqHeaderRecord;
             seqHeaderRecord.type = seqan::BAM_HEADER_REFERENCE;
-            appendValue(seqHeaderRecord.tags, seqan::Pair<seqan::CharString>("SN", header.sequenceInfos[i].i1));
+            appendValue(seqHeaderRecord.tags, seqan::Pair<seqan::CharString>("SN", nameStore(context(*bamFileOuts[0]))[i]));
             std::stringstream ss;
-            ss << header.sequenceInfos[i].i2;
+            ss << sequenceLengths(context(*bamFileOuts[0]))[i];
             appendValue(seqHeaderRecord.tags, seqan::Pair<seqan::CharString>("LN", ss.str().c_str()));
-            appendValue(header.records, seqHeaderRecord);
+            appendValue(bamHeader, seqHeaderRecord);
         }
-        refresh(nameStoreCache);
+        // Write out header to each output BAM file.
         for (unsigned i = 0; i < alignmentSplitter.files.size(); ++i)
-            if (write2(alignmentSplitter.files[i], header, bamIOContext, seqan::Sam()) != 0)
-                throw MasonIOException("Could not write out SAM header to temporary file.");
+            writeRecord(*bamFileOuts[i], bamHeader);
     }
 
     // Configure contigPicker.
@@ -996,6 +1147,8 @@ public:
         // Splitter for sequence.
         fragmentSplitter.numContigs = fragmentIdSplitter.numContigs;
         fragmentSplitter.open();
+        for (unsigned i = 0; i < fragmentSplitter.files.size(); ++i)
+            seqFileOuts.push_back(new seqan::SeqFileOut(*fragmentSplitter.files[i], seqan::Fastq()));
         // Splitter for alignments, only required when writing out SAM/BAM.
         if (!empty(options.outFileNameSam))
             _initAlignmentSplitter();
@@ -1006,27 +1159,25 @@ public:
     void _initOpenOutputFiles()
     {
         std::cerr << "Opening output file " << options.outFileNameLeft << " ...";
-        open(outSeqsLeft, toCString(options.outFileNameLeft), seqan::SequenceStream::WRITE);
-        outSeqsLeft.outputOptions = seqan::SequenceOutputOptions(0);  // also FASTA in one line
-        if (!isGood(outSeqsLeft))
+        if (!open(outSeqsLeft, toCString(options.outFileNameLeft)))
             throw MasonIOException("Could not open left/single-end output file.");
+        context(outSeqsLeft).options.lineLength = 0;
         std::cerr << " OK\n";
 
         if (!options.forceSingleEnd && !empty(options.outFileNameRight))
         {
             std::cerr << "Opening output file " << options.outFileNameRight << " ...";
-            open(outSeqsRight, toCString(options.outFileNameRight), seqan::SequenceStream::WRITE);
-            outSeqsRight.outputOptions = seqan::SequenceOutputOptions(0);  // also FASTA in one line
-            if (!isGood(outSeqsRight))
+            if (!open(outSeqsRight, toCString(options.outFileNameRight)))
                 throw MasonIOException("Could not open right/single-end output file.");
+            context(outSeqsRight).options.lineLength = 0;
             std::cerr << " OK\n";
         }
 
         if (!empty(options.outFileNameSam))
         {
             std::cerr << "Opening output file " << options.outFileNameSam << "...";
-            open(outBamStream, toCString(options.outFileNameSam), seqan::BamStream::WRITE);
-            if (!isGood(outBamStream))
+            outBamStream.reset(new seqan::BamFileOut);
+            if (!open(*outBamStream, toCString(options.outFileNameSam)))
                 throw MasonIOException("Could not open SAM/BAM output file.");
             std::cerr << " OK\n";
         }
@@ -1036,6 +1187,10 @@ public:
     {
         std::cerr << "\n____INITIALIZING______________________________________________________________\n"
                   << "\n";
+
+        // Set lower bound on fragment size in case of Illumina reads.
+        if (options.seqOptions.sequencingTechnology == SequencingOptions::ILLUMINA)
+            options.fragSamplerOptions.fragSizeLowerBound = (int)(1.5 * options.illuminaOptions.readLength);
 
         // Initialize VCF materialization (reference FASTA and input VCF).
         std::cerr << "Opening reference and variants file ...";

@@ -336,7 +336,7 @@ public:
 
 /*!
  * @mfn ModCyclicShapeModifiedIterator#Cargo
- * @headerfile seqan/modifier.h
+ * @headerfile <seqan/modifier.h>
  * @brief Cargo of ModCyclicShape ModCyclicShape Modified Iterator and ModCyclicShape Modified String.
  * @signature Cargo<ModifiedIterator<THost, ModCyclicShape<CyclicShape<TSpec> > > >::Type;
  * @tparam THost Host iterator of ModifiedIterator.
@@ -356,7 +356,7 @@ struct Cargo<ModifiedIterator<THost, ModCyclicShape<CyclicShape<TSpec> > > >
 
 /*!
  * @mfn ModCyclicShapeModifiedString#Cargo
- * @headerfile seqan/modifier.h
+ * @headerfile <seqan/modifier.h>
  * @brief Cargo of ModCyclicShape ModCyclicShape Modified Iterator and ModCyclicShape Modified String.
  * @signature Cargo<ModifiedString<THost, ModCyclicShape<CyclicShape<TSpec> > > >::Type;
  * @tparam THost Host container of ModifiedString.
@@ -415,9 +415,11 @@ begin(ModifiedString<THost, ModCyclicShape<CyclicShape<TSpec> > > const & me, Ta
 {
     typedef typename Iterator<ModifiedString<THost, ModCyclicShape<CyclicShape<TSpec> > > const,
         Tag<TTagSpec> const>::Type TResult;
+    typedef typename Size<CyclicShape<TSpec> >::Type TSize;
+
     TResult tmp(begin(host(me), tag_));
     _copyCargo(tmp, me);
-    host(tmp) += cargo(me).loffset;
+    host(tmp) += (TSize)cargo(me).loffset;
     return tmp;
 }
 
@@ -428,9 +430,11 @@ begin(ModifiedString<THost, ModCyclicShape<CyclicShape<TSpec> > > & me, Tag<TTag
 {
     typedef typename Iterator<ModifiedString<THost, ModCyclicShape<CyclicShape<TSpec> > >,
         Tag<TTagSpec> const>::Type TResult;
+    typedef typename Size<CyclicShape<TSpec> >::Type TSize;
+
     TResult tmp(begin(host(me), tag_));
     _copyCargo(tmp, me);
-    host(tmp) += cargo(me).loffset;
+    host(tmp) += (TSize)cargo(me).loffset;
     return tmp;
 }
 
@@ -440,7 +444,7 @@ begin(ModifiedString<THost, ModCyclicShape<CyclicShape<TSpec> > > & me, Tag<TTag
 
 /*!
  * @fn ModCyclicShapeModifiedString#end
- * @headerfile seqan/modifier.h
+ * @headerfile <seqan/modifier.h>
  * @brief Returns an iterator to the end of the container.
  * @signature TIterator end(modStr[, tag]);
  * @tparam TIterator ModCyclicShape Modified Iterator to be returned.
@@ -497,10 +501,8 @@ inline void
 goNext(ModifiedIterator<THost, ModCyclicShape<CyclicShape<TSpec> > > & me)
 {
     host(me) += cargo(me).diffs[me._idx];
-    ++me._idx;
-    if (me._idx == weight(cargo(me)))
+    if (++me._idx == weight(cargo(me)))
         me._idx = 0;
-    // TDOD: replace modulo by small if
 }
 
 // --------------------------------------------------------------------------
@@ -609,22 +611,13 @@ goEnd(ModifiedIterator<THost, ModCyclicShape<CyclicShape<TSpec> > > & me, TConta
 
 template<typename THost, typename TSpec, typename TDelta>
 inline ModifiedIterator<THost, ModCyclicShape<CyclicShape<TSpec> > > &
-operator+=(ModifiedIterator<THost, ModCyclicShape<CyclicShape<TSpec> > >&me, TDelta delta_)
+operator+=(ModifiedIterator<THost, ModCyclicShape<CyclicShape<TSpec> > >&me, TDelta delta)
 {
-    typedef ModifiedIterator<THost, ModCyclicShape<CyclicShape<TSpec> > > TIterator;
-    typedef typename Position<TIterator>::Type TPosition;
-    TPosition delta = delta_;
-
-    if (delta == 0)
+    if (isNegative(delta))
     {
-        return me;
+        me -= -(typename MakeSigned<TDelta>::Type)delta;
     }
-    else if (delta == 1)
-    {
-        goNext(me);
-        return me;
-    }
-    else if (delta > 1)                         // runtime O(Q)
+    else
     {
         // jump full patterns
         host(me) += (delta / weight(cargo(me))) * cargo(me).span;
@@ -634,10 +627,6 @@ operator+=(ModifiedIterator<THost, ModCyclicShape<CyclicShape<TSpec> > >&me, TDe
         // number of jumps in dist that remain
         for (delta = delta % weight(cargo(me)); delta != 0; --delta)
             goNext(me);
-    }
-    else
-    {
-        me -= -delta;
     }
     return me;
 }
@@ -687,22 +676,13 @@ operator+=(ModifiedIterator<THost, ModCyclicShape<CyclicShape<FixedShape<L,TInne
 
 template<typename THost, typename TSpec, typename TDelta>
 inline ModifiedIterator<THost, ModCyclicShape<CyclicShape<TSpec> > > &
-operator-=(ModifiedIterator<THost, ModCyclicShape<CyclicShape<TSpec> > >&me, TDelta delta_)
+operator-=(ModifiedIterator<THost, ModCyclicShape<CyclicShape<TSpec> > >&me, TDelta delta)
 {
-    typedef ModifiedIterator<THost, ModCyclicShape<CyclicShape<TSpec> > > TIterator;
-    typedef typename Position<TIterator>::Type TPosition;
-    TPosition delta = delta_;
-
-    if (delta == 0)
+    if (isNegative(delta))
     {
-        return me;
+        me += -(typename MakeSigned<TDelta>::Type)delta;
     }
-    else if (delta == 1)
-    {
-        goPrevious(me);
-        return me;
-    }
-    else if (delta > 1)                         // runtime O(Q)
+    else
     {
         // jump full patterns
         host(me) -= (delta / weight(cargo(me))) * cargo(me).span;
@@ -710,10 +690,6 @@ operator-=(ModifiedIterator<THost, ModCyclicShape<CyclicShape<TSpec> > >&me, TDe
         // number of jumps in dist that remain
         for (delta = delta % weight(cargo(me)); delta != 0; --delta)
             goPrevious(me);
-    }
-    else
-    {
-        me -= -delta;
     }
     return me;
 }

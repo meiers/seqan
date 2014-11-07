@@ -89,6 +89,9 @@ inline void clear(BamAlignmentRecord & record);
  *
  * @val BamFlags BAM_FLAG_DUPLICATE = 0x0400;
  * @brief PCR or optical duplicate.
+ *
+ * @var BamFlags BAM_FLAG_SUPPLEMENTARY = 0x0800;
+ * @brief Supplementary alignment.
  */
 
 /**
@@ -123,8 +126,42 @@ enum BamFlags
     BAM_FLAG_LAST          = 0x0080,
     BAM_FLAG_SECONDARY     = 0x0100,
     BAM_FLAG_QC_NO_PASS    = 0x0200,
-    BAM_FLAG_DUPLICATE     = 0x0400
+    BAM_FLAG_DUPLICATE     = 0x0400,
+    BAM_FLAG_SUPPLEMENTARY = 0x0800
 };
+
+template <typename TValue>
+struct BamTypeChar
+{
+    enum
+    {
+        VALUE =
+            (IsSameType<TValue, char>::VALUE)?              'A':
+            (IsSameType<TValue, signed char>::VALUE)?       'c':
+            (IsSameType<TValue, unsigned char>::VALUE)?     'C':
+            (IsSameType<TValue, short>::VALUE)?             's':
+            (IsSameType<TValue, unsigned short>::VALUE)?    'S':
+            (IsSameType<TValue, int>::VALUE)?               'i':
+            (IsSameType<TValue, unsigned int>::VALUE)?      'I':
+            (IsSameType<TValue, float>::VALUE)?             'f':
+//          (IsSameType<TValue, double>::VALUE)?            'd':
+            (IsSequence<TValue>::VALUE)?                    'Z':
+                                                            '?'
+    };
+};
+
+// List of primitive BAM types (ordered by expected usage frequency)
+typedef TagList<int,
+        TagList<unsigned int,
+        TagList<float,
+        TagList<short,
+        TagList<unsigned short,
+        TagList<char,
+        TagList<unsigned char,
+        TagList<signed char
+//      TagList<double
+        > > > > > > > > BamTagTypes;
+
 
 /*!
  * @class BamAlignmentRecord
@@ -147,14 +184,14 @@ enum BamFlags
  */
 
 /*!
- * @var __uint32 BamAlignmentRecord::INVALID_POS;
- * @brief Static member with invalid sentinel/position value.
+ * @var __uint32 BamAlignmentRecord::INVALID_POS
+ * @brief Static member with invalid sentinel/position value (-1).
  *
- * @var __uint32 BamAlignmentRecord::INVALID_REFID;
- * @brief Static member with invalid sentinel/position value.
+ * @var __uint32 BamAlignmentRecord::INVALID_REFID
+ * @brief Static member with invalid sentinel/position value (-1).
  *
- * @var __uint32 BamAlignmentRecord::INVALID_LEN;
- * @brief Static member with invalid/sentinel reference ids (-1 as in BAM/SAM).
+ * @var __uint32 BamAlignmentRecord::INVALID_LEN
+ * @brief Static member with invalid/sentinel reference ids (0 as in BAM/SAM).
  *
  * @var CharString BamAlignmentRecord::qName;
  * @brief The query/read name.
@@ -167,11 +204,11 @@ enum BamFlags
  *
  * See @link BamFlags @endlink for flag constants and also see the <tt>hasFlag*()</tt> functions.
  *
- * @var __int32 BamAlignmentRecord::rID;
- * @brief ID of reference for this fragment mapping (0-based, <tt>INVALID_REFID</tt> for '*').
+ * @var __int32 BamAlignmentRecord::rID
+ * @brief ID of reference for this fragment mapping (0-based, <tt>INVALID_REFID</tt> for '*' in SAM).
  *
- * @var __int32 BamAlignmentRecord::beginPos;
- * @brief Begin position of the alignment (0-based, <tt>INVALID_POS</tt> for '*').
+ * @var __int32 BamAlignmentRecord::beginPos
+ * @brief Begin position of the alignment (0-based, <tt>INVALID_POS</tt> for '0' in SAM).
  *
  * @var __uint8 BamAlignmentRecord::mapQ;
  * @brief Mapping quality (255 for '*').
@@ -223,17 +260,17 @@ enum BamFlags
 
 .Memvar.BamAlignmentRecord#INVALID_POS
 ..class:Class.BamAlignmentRecord
-..summary:Static member with invalid/sentinel position value.
+..summary:Static member with invalid/sentinel position value (-1).
 ..type:nolink:$__uint32$
 
 .Memvar.BamAlignmentRecord#INVALID_REFID
 ..class:Class.BamAlignmentRecord
-..summary:Static member with invalid/sentinel reference id (-1 as in BAM/SAM).
+..summary:Static member with invalid/sentinel reference id (-1).
 ..type:nolink:$__int32$
 
 .Memvar.BamAlignmentRecord#INVALID_LEN
 ..class:Class.BamAlignmentRecord
-..summary:Static member with invalid/sentinel position value.
+..summary:Static member with invalid/sentinel position value (0 as in BAM/SAM).
 ..type:nolink:$__int32$
 
 .Memvar.BamAlignmentRecord#qName
@@ -248,12 +285,12 @@ enum BamFlags
 
 .Memvar.BamAlignmentRecord#rID
 ..class:Class.BamAlignmentRecord
-..summary:ID of reference for this fragment mapping (0-based, $INVALID_REFID$ for '*').
+..summary:ID of reference for this fragment mapping (0-based, $INVALID_REFID$ for '*' in SAM).
 ..type:nolink:$__int32$
 
 .Memvar.BamAlignmentRecord#beginPos
 ..class:Class.BamAlignmentRecord
-..summary:The position of this fragment mapping (0-based, $INVALID_POS$ for '*').
+..summary:The position of this fragment mapping (0-based, $INVALID_POS$ for '*' in SAM).
 ..type:nolink:$__int32$
 
 .Memvar.BamAlignmentRecord#mapQ
@@ -302,29 +339,36 @@ enum BamFlags
 ..type:Shortcut.CharString
 */
 
-class BamAlignmentRecord
+struct BamAlignmentRecordCore
+{
+            __int32 rID;
+            __int32 beginPos;
+    mutable __uint32 _l_qname:8;
+            __uint32 mapQ:8;
+    mutable __uint32 bin:16;
+    mutable __uint32 _n_cigar:16;
+            __uint32 flag:16;
+    mutable __int32 _l_qseq;  // _l_qname, _n_cigar and _l_qseq for internal usage
+            __int32 rNextId;
+            __int32 pNext;
+            __int32 tLen;
+};
+
+class BamAlignmentRecord : public BamAlignmentRecordCore
 {
 public:
-    static __int32 const INVALID_POS = 2147483647;  // TODO(holtgrew): Should be MaxValue<__int32>::VALUE, but that is not a constant expression :(
-    static __int32 const INVALID_REFID = -1;  // TODO(holtgrew): Rename to ...REF_ID.
-    static __int32 const INVALID_LEN = 2147483647;
-    static __uint32 const INVALID_QID = 4294967295u;  // TODO(holtgrew): Undocumented as of yet.
-
     __uint32 _qID;  // TODO(holtgrew): Undocumented as of yet.
-    CharString qName;
-    __uint16 flag;
-    __int32 rID;
-    __int32 beginPos;
-    __uint8 mapQ;
-    __uint16 bin;
     String<CigarElement<> > cigar;
-    __int32 rNextId;
-    __int32 pNext;
-    __int32 tLen;
-    CharString seq;
+    CharString qName;
+    IupacString seq;
     CharString qual;
     CharString tags;  // raw tags in BAM format
     CharString _buffer; // reusable internal buffer (used for I/O)
+
+    static __int32 const INVALID_POS = -1;
+    static __int32 const INVALID_REFID = -1;  // TODO(holtgrew): Rename to ...REF_ID.
+    static __int32 const INVALID_LEN = 0;
+    static __uint32 const INVALID_QID = 4294967295u;  // TODO(holtgrew): Undocumented as of yet.
 
     BamAlignmentRecord() : _qID(MaxValue<unsigned>::VALUE) { clear(*this); }
 };
@@ -359,6 +403,7 @@ inline void
 clear(BamAlignmentRecord & record)
 {
     clear(record.qName);
+    record.flag = 0;
     record._qID = MaxValue<__uint32>::VALUE;
     record.rID = BamAlignmentRecord::INVALID_REFID;
     record.beginPos = BamAlignmentRecord::INVALID_POS;
@@ -877,6 +922,28 @@ inline bool
 hasFlagDuplicate(BamAlignmentRecord const & record)
 {
     return (record.flag & BAM_FLAG_DUPLICATE) == BAM_FLAG_DUPLICATE;
+}
+
+// ----------------------------------------------------------------------------
+// Function hasFlagSupplementary()
+// ----------------------------------------------------------------------------
+
+/*!
+ * @fn BamAlignmentRecord#hasFlagSupplementary
+ * @headerfile <seqan/bam_io.h>
+ * @brief Return true if a @link BamAlignmentRecord @endlink has the "supplementary" flag set.
+ *
+ * @signature bool hasFlagSupplementary(record);
+ *
+ * @param record The BamAlignmentRecord to query.
+ *
+ * @return bool <tt>true</tt> if the flag is set, <tt>false</tt> otherwise.
+ */
+
+inline bool
+hasFlagSupplementary(BamAlignmentRecord const & record)
+{
+    return (record.flag & BAM_FLAG_SUPPLEMENTARY) == BAM_FLAG_SUPPLEMENTARY;
 }
 
 // ----------------------------------------------------------------------------
