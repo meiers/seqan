@@ -35,7 +35,7 @@
 // by Birte Kehr, others might be taken from Martin Friths LAST code
 // (last.cbrc.jp).
 
-#include <seqan/sequence.h>
+#include <seqan/seq_io.h>
 #include <seqan/arg_parse.h>
 #include <seqan/index.h>
 #include <seqan/seeds.h>
@@ -258,9 +258,9 @@ int main(int argc, char const ** argv)
     addDescription(parser, "Choose OUTPUT NAME carefully, as many files can be generated. "
                            "We recommend to use a subfolder for them.");
     addDescription(parser, "Note: Only Dna5 supported! Only up to 255 sequences (e.g. chromosomes) in database file allowed");
-    addArgument(parser, ArgParseArgument(ArgParseArgument::INPUTFILE, "FASTA FILE"));
+    addArgument(parser, ArgParseArgument(ArgParseArgument::INPUT_FILE, "FASTA FILE"));
     setValidValues(parser, 0, "fa fasta");
-    addArgument(parser, ArgParseArgument(ArgParseArgument::OUTPUTFILE, "OUTPUT NAME"));
+    addArgument(parser, ArgParseArgument(ArgParseArgument::OUTPUT_FILE, "OUTPUT NAME"));
     addOption(parser, ArgParseOption("v", "verbose", "Set verbosity mode."));
     addOption(parser, ArgParseOption("V", "very-verbose", "Set stronger verbosity mode."));
     addOption(parser, ArgParseOption("Q", "quiet", "No output, please."));

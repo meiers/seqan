@@ -141,7 +141,7 @@ struct SeqanLastDbOptions
 // =============================================================================
 
 template <typename TSize, typename TType>
-int _writePropertyFile(CharString const & fileName, TSize k, TType shapeChoice, TSize strSetSize)
+int _writePropertyFile(CharString const & fileName, TSize k, TType shapeChoice, TSize)
 {
     std::fstream file(toCString(fileName), std::ios::binary | std::ios::out);
     if (!file.good()) {
@@ -181,13 +181,13 @@ void _setLastParser(ArgumentParser & parser)
     addDescription(parser, "(c) 2013-2014 by Sascha Meiers");
 
     addArgument(parser, ArgParseArgument(ArgParseArgument::STRING, "INDEX PREFIX"));
-    addArgument(parser, ArgParseArgument(ArgParseArgument::INPUTFILE, "QUERY FILE"));
+    addArgument(parser, ArgParseArgument(ArgParseArgument::INPUT_FILE, "QUERY FILE"));
     setValidValues(parser, 1, "fa fasta");
 
     addSection(parser, "Output Options");
 
     addOption(parser, ArgParseOption("o", "output", "File to write results into (gff format)",
-                                     ArgParseArgument::OUTPUTFILE));
+                                     ArgParseArgument::OUTPUT_FILE));
     setDefaultValue(parser, "o", "stdout");
     addOption(parser, ArgParseOption("v", "verbose", "Set verbosity mode."));
     addOption(parser, ArgParseOption("V", "very-verbose", "Set stronger verbosity mode."));
@@ -323,38 +323,47 @@ _importSequences(TSeqSet & seqs, TIdSet & ids, CharString const & fileName, int 
     typedef typename Value<typename Value<TSeqSet>::Type>::Type  TAlph;
     typedef String<TAlph> TSequence;
     typedef typename Value<TIdSet>::Type  TId;
-
-    MultiSeqFile multiSeqFile;
-    if (!open(multiSeqFile.concat, toCString(fileName), OPEN_RDONLY))
+    
+    
+// new reading
+    
+    SeqFileIn file;
+    if (!open(file, toCString(fileName)))
     {
         if(verbosity)
             std::cout << "Failed to open " << fileName << "." << std::endl;
         return false;
     }
 
-    AutoSeqFormat format;
-    guessFormat(multiSeqFile.concat, format);
-    split(multiSeqFile, format);
-
-    unsigned seqCount = length(multiSeqFile);
-    reserve(seqs, seqCount, Exact());
-    reserve(ids, seqCount, Exact());
-
+    TSequence seq;
+    CharString idstr;
+    
     std::set<TId> uniqueIds; // set of short IDs (cut at first whitespace)
     bool idsUnique = true;
-
-    TSequence seq;
-    TId idstr;
-    for (unsigned i = 0; i < seqCount; ++i)
+    unsigned seqCount = 0;
+    while (!atEnd(file))
     {
-        assignSeq(seq, multiSeqFile[i], format);
-        assignSeqId(idstr, multiSeqFile[i], format);
-
-        idsUnique &= _checkUniqueId(uniqueIds, idstr);
-
-        appendValue(seqs, seq, Generous());
-        appendValue(ids, idstr, Generous());
+        try
+        {
+            readRecord(idstr, seq, file);
+            idsUnique &= _checkUniqueId(uniqueIds, idstr);
+            appendValue(ids, idstr);
+            appendValue(seqs, seq);
+            ++seqCount;
+        }
+        catch (UnexpectedEnd &)
+        {
+            break;
+        }
+        catch (ParseError & e)
+        {
+            std::cerr << "Problem reading record: " << e.what() << std::endl;
+            continue;
+        }
     }
+    
+// end new
+    
 
     if(verbosity) std::cout << "Loaded " << seqCount << " sequence" <<
         ((seqCount > 1) ? "s" : "") << " with total length " <<
