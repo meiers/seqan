@@ -660,7 +660,7 @@ operator+=(ModifiedIterator<THost, ModCyclicShape<CyclicShape<FixedShape<L,TInne
         TDiff blocks = (delta + idx) / weight(cargo(me));
         me._idx = delta + idx - blocks * weight(cargo(me));
 
-        host(me) +=  - carePos[idx] + blocks * cargo(me).span + me._idx;
+        host(me) +=  - carePos[idx] + blocks * cargo(me).span + carePos[me._idx];
     }
     else
     {
