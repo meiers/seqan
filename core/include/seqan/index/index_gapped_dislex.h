@@ -731,7 +731,8 @@ inline void createGappedSuffixArray(
     #endif
 
     // reverse Transform of Index:
-    _dislexReverse(SA, lexText, SA, s, shape) ;
+    // Note: 2nd argument not used in the specialization for String
+    _dislexReverse(SA, SA, SA, s, shape) ;
 
     #ifdef DISLEX_INTERNAL_RUNNING_TIMES
     std::cout << "   |  reverse: " << sysTime() - teim << "s (len = " << length(SA) << ")" << std::endl; teim = sysTime();
