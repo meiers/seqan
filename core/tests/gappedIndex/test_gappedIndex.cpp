@@ -39,13 +39,14 @@
 #include "test_gappedIndex.h"
 #include "test_gappedIndex_find.h"
 #include "test_gappedIndex_stree.h"
-//#include "test_gappedIndex_construction.h"
-
+#include "test_gappedIndex_construction.h"
 
 
 SEQAN_BEGIN_TESTSUITE(test_gappedIndex)
 {
     // Construction
+    SEQAN_CALL_TEST(test_gappedIndex_construction_str);
+    SEQAN_CALL_TEST(test_gappedIndex_construction_strSet);
     
     
     
