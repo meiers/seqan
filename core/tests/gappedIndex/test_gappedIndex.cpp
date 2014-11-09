@@ -36,15 +36,24 @@
 #include <seqan/file.h>
 
 #include "../index/test_index_helpers.h"
+#include "test_gappedIndex.h"
 #include "test_gappedIndex_find.h"
 #include "test_gappedIndex_stree.h"
+//#include "test_gappedIndex_construction.h"
 
 
 
 SEQAN_BEGIN_TESTSUITE(test_gappedIndex)
 {
+    // Construction
+    
+    
+    
+    // S-tree traversal
     SEQAN_CALL_TEST(test_gappedIndex_top_down_traversal);
 
+    
+    // Finder
 	SEQAN_CALL_TEST(test_gappedIndex_find_10_DnaString);
     SEQAN_CALL_TEST(test_gappedIndex_find_10_DnaString_Set);
 	SEQAN_CALL_TEST(test_gappedIndex_find_10_Dna5String);

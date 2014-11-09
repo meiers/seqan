@@ -160,36 +160,6 @@ void call_testFinder(StringSet<TText, TSpec> &text, TShape const & shape, bool v
     testFinder(text, queries, shape, verbose);
 }
 
-
-struct _ShapeDefs
-{
-    CyclicShape<FixedShape<0,GappedShape<HardwiredShape<> >, 1> >       S_10;
-    CyclicShape<FixedShape<0,GappedShape<HardwiredShape<1,2> >, 1> >    S_11010;
-    CyclicShape<FixedShape<0,GappedShape<HardwiredShape<1,1,1> >, 2> >  S_111100;
-    CyclicShape<FixedShape<0,GappedShape<HardwiredShape<4> >, 0> >      S_10001;
-    CyclicShape<FixedShape<1,GappedShape<HardwiredShape<> >, 0> >       S_01;
-    CyclicShape<FixedShape<2,GappedShape<HardwiredShape<1> >, 0> >      S_0011;
-
-    CyclicShape<GenericShape> s_10;
-    CyclicShape<GenericShape> s_11010;
-    CyclicShape<GenericShape> s_111100;
-    CyclicShape<GenericShape> s_10001;
-    CyclicShape<GenericShape> s_01;
-    CyclicShape<GenericShape> s_0011;
-
-    _ShapeDefs()
-    {
-        stringToCyclicShape(s_10,       "10");
-        stringToCyclicShape(s_11010,    "11010");
-        stringToCyclicShape(s_111100,   "111100");
-        stringToCyclicShape(s_10001,    "10001");
-        stringToCyclicShape(s_01,       "01");
-        stringToCyclicShape(s_0011,     "0011");
-    }
-};
-
-
-
 // Test Find for Shape 10
 
 SEQAN_DEFINE_TEST(test_gappedIndex_find_10_DnaString)
