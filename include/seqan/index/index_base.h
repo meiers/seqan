@@ -135,7 +135,6 @@ for @Class.Index@ based substring searches.
 // ----------------------------------------------------------------------------
 // Metafunction DefaultIndexSpec
 // ----------------------------------------------------------------------------
-/*_DDDOC_PLACEHOLDER*/
 /*!
  * @mfn Index#DefaultIndexSpec
  * @headerfile <seqan/index.h>
@@ -166,8 +165,6 @@ for @Class.Index@ based substring searches.
 // ----------------------------------------------------------------------------
 //NOTE(esiragusa): Deprecated in favor of StringSpec.
 
-/*_DDDOC_PLACEHOLDER*/
-
 /*!
  * @mfn Index#DefaultIndexStringSpec
  * @headerfile <seqan/index.h>
@@ -193,8 +190,6 @@ for @Class.Index@ based substring searches.
 
 
 //////////////////////////////////////////////////////////////////////////////
-/*_DDDOC_PLACEHOLDER*/
-
 template < 
         typename TObject, 
         typename TSpec = typename DefaultIndexSpec<TObject>::Type > 
@@ -267,8 +262,6 @@ template <
 	struct Spec< Index<TObject, TSpec> > {
 		typedef TSpec Type;
 	};
-/*_DDDOC_PLACEHOLDER*/
-
 /*!
  * @mfn Fibre
  * @headerfile <seqan/index.h>
@@ -321,8 +314,6 @@ template <
 	};
 
 //////////////////////////////////////////////////////////////////////////////
-/*_DDDOC_PLACEHOLDER*/
-
 /*!
  * @mfn Index#DefaultIndexCreator
  * @headerfile <seqan/index.h>
@@ -450,8 +441,6 @@ template <
     typedef Tag<FibreBwt_> const       FibreBwt;
 
 //////////////////////////////////////////////////////////////////////////////
-/*_DDDOC_PLACEHOLDER*/
-
 /*!
  * @mfn SAValue
  * @headerfile <seqan/index.h>
@@ -757,8 +746,6 @@ struct Suffix<Index<TText, TSpec> const> :
     }
 
 //////////////////////////////////////////////////////////////////////////////
-/*_DDDOC_PLACEHOLDER*/
-
 /*!
  * @fn Index#getFibre
  * @headerfile <seqan/index.h>
@@ -935,8 +922,6 @@ struct Suffix<Index<TText, TSpec> const> :
 	}
 
 //////////////////////////////////////////////////////////////////////////////
-/*_DDDOC_PLACEHOLDER*/
-
 /*!
  * @fn Index#length
  * @headerfile <seqan/index.h>
@@ -969,8 +954,6 @@ struct Suffix<Index<TText, TSpec> const> :
 	}
 
 //////////////////////////////////////////////////////////////////////////////
-/*_DDDOC_PLACEHOLDER*/
-
 /*!
  * @fn Index#countSequences
  * @headerfile <seqan/index.h>
@@ -1062,8 +1045,6 @@ struct Suffix<Index<TText, TSpec> const> :
 */
 
 //////////////////////////////////////////////////////////////////////////////
-/*_DDDOC_PLACEHOLDER*/
-
 	template <typename TPos, typename TIndex>
 	inline typename Reference<typename Fibre<TIndex, FibreRawText>::Type>::Type 
 	textAt(TPos i, TIndex &index) {
@@ -1155,7 +1136,6 @@ suffix(Index<TText, TSpec> const &t, TPosBegin pos_begin)
 }
 
 //////////////////////////////////////////////////////////////////////////////
-/*_DDDOC_PLACEHOLDER*/
 /*!
  * @fn Index#rawtextAt
  * @headerfile <seqan/index.h>
@@ -1183,8 +1163,6 @@ suffix(Index<TText, TSpec> const &t, TPosBegin pos_begin)
 	}
 
 //////////////////////////////////////////////////////////////////////////////
-/*_DDDOC_PLACEHOLDER*/
-
 	template <typename TPos, typename TIndex>
 	SEQAN_HOST_DEVICE inline typename Reference<typename Fibre<TIndex, FibreSA>::Type>::Type saAt(TPos i, TIndex &index) {
 		return value(getFibre(index, FibreSA()), i);
@@ -1195,8 +1173,6 @@ suffix(Index<TText, TSpec> const &t, TPosBegin pos_begin)
 	}
 
 //////////////////////////////////////////////////////////////////////////////
-/*_DDDOC_PLACEHOLDER*/
-
 // TODO(weese): I disabled the doc, as we don't want to encourage users to use it
 
 /*
@@ -1242,7 +1218,6 @@ suffix(Index<TText, TSpec> const &t, TPosBegin pos_begin)
         return value(getFibre(index, FibreIsa()), i);
     }
 //////////////////////////////////////////////////////////////////////////////
-/*_DDDOC_PLACEHOLDER*/
 /*!
  * @fn IndexEsa#lcpAt
  * @headerfile <seqan/index.h>
@@ -1266,7 +1241,6 @@ suffix(Index<TText, TSpec> const &t, TPosBegin pos_begin)
 	}
 
 //////////////////////////////////////////////////////////////////////////////
-/*_DDDOC_PLACEHOLDER*/
 /*!
  * @fn IndexEsa#lcpeAt
  * @headerfile <seqan/index.h>
@@ -1290,7 +1264,6 @@ suffix(Index<TText, TSpec> const &t, TPosBegin pos_begin)
 	}
 
 //////////////////////////////////////////////////////////////////////////////
-/*_DDDOC_PLACEHOLDER*/
 /*!
  * @fn IndexEsa#childAt
  * @headerfile <seqan/index.h>
@@ -1314,7 +1287,6 @@ suffix(Index<TText, TSpec> const &t, TPosBegin pos_begin)
 	}
 
 //////////////////////////////////////////////////////////////////////////////
-/*_DDDOC_PLACEHOLDER*/
 /*!
  * @fn IndexEsa#bwtAt
  * @headerfile <seqan/index.h>
@@ -1363,7 +1335,6 @@ suffix(Index<TText, TSpec> const &t, TPosBegin pos_begin)
 	}
 
 //////////////////////////////////////////////////////////////////////////////
-/*_DDDOC_PLACEHOLDER*/
 /*!
  * @fn Index#indexText
  * @headerfile <seqan/index.h>
@@ -1433,8 +1404,6 @@ suffix(Index<TText, TSpec> const &t, TPosBegin pos_begin)
 	}
 
 //////////////////////////////////////////////////////////////////////////////
-/*_DDDOC_PLACEHOLDER*/
-
 /*!
  * @fn Index#indexRawText
  * @headerfile <seqan/index.h>
@@ -1465,16 +1434,12 @@ suffix(Index<TText, TSpec> const &t, TPosBegin pos_begin)
 	}
 
 //////////////////////////////////////////////////////////////////////////////
-/*_DDDOC_PLACEHOLDER*/
-
 	template <typename TText, typename TSpec>
 	SEQAN_HOST_DEVICE inline typename Fibre<Index<TText, TSpec>, FibreSA>::Type & indexSA(Index<TText, TSpec> &index) { return getFibre(index, FibreSA()); }
 	template <typename TText, typename TSpec>
 	SEQAN_HOST_DEVICE inline typename Fibre<Index<TText, TSpec> const, FibreSA>::Type & indexSA(Index<TText, TSpec> const &index) { return getFibre(index, FibreSA()); }
 
 //////////////////////////////////////////////////////////////////////////////
-/*_DDDOC_PLACEHOLDER*/
-
 // TODO(singer): should this be documented? 
 // TODO(weese): better not, we don't want to encourage users to use it
 /*
@@ -1519,7 +1484,6 @@ suffix(Index<TText, TSpec> const &t, TPosBegin pos_begin)
     SEQAN_HOST_DEVICE inline typename Fibre<Index<TText, TSpec> const, FibreIsa>::Type & indexIsa(Index<TText, TSpec> const &index) { return getFibre(index, FibreIsa()); }
 
 //////////////////////////////////////////////////////////////////////////////
-/*_DDDOC_PLACEHOLDER*/
 /*!
  * @fn IndexEsa#indexLcp
  * @headerfile <seqan/index.h>
@@ -1538,7 +1502,6 @@ suffix(Index<TText, TSpec> const &t, TPosBegin pos_begin)
 	SEQAN_HOST_DEVICE inline typename Fibre<Index<TText, TSpec> const, FibreLcp>::Type & indexLcp(Index<TText, TSpec> const &index) { return getFibre(index, FibreLcp()); }
 
 //////////////////////////////////////////////////////////////////////////////
-/*_DDDOC_PLACEHOLDER*/
 /*!
  * @fn IndexEsa#indexLcpe
  * @headerfile <seqan/index.h>
@@ -1557,7 +1520,6 @@ suffix(Index<TText, TSpec> const &t, TPosBegin pos_begin)
 	inline typename Fibre<Index<TText, TSpec> const, FibreLcpe>::Type & indexLcpe(Index<TText, TSpec> const &index) { return getFibre(index, FibreLcpe()); }
 
 //////////////////////////////////////////////////////////////////////////////
-/*_DDDOC_PLACEHOLDER*/
 /*!
  * @fn IndexEsa#indexBwt
  * @headerfile <seqan/index.h>
@@ -1576,7 +1538,6 @@ suffix(Index<TText, TSpec> const &t, TPosBegin pos_begin)
 	SEQAN_HOST_DEVICE inline typename Fibre<Index<TText, TSpec> const, FibreBwt>::Type & indexBwt(Index<TText, TSpec> const &index) { return getFibre(index, FibreBwt()); }
 
 //////////////////////////////////////////////////////////////////////////////
-/*_DDDOC_PLACEHOLDER*/
 /*!
  * @fn IndexEsa#indexChildtab
  * @headerfile <seqan/index.h>
@@ -1598,7 +1559,6 @@ suffix(Index<TText, TSpec> const &t, TPosBegin pos_begin)
 // ----------------------------------------------------------------------------
 // Function open
 // ----------------------------------------------------------------------------
-/*_DDDOC_PLACEHOLDER*/
 /*!
  * @fn Index#open
  * @headerfile <seqan/index.h>
@@ -1658,8 +1618,6 @@ suffix(Index<TText, TSpec> const &t, TPosBegin pos_begin)
  *
  * @include demos/index/index_open_save.cpp.stdout
  */
-/*_DDDOC_PLACEHOLDER*/
-
 }
 
 #endif
