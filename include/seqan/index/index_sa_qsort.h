@@ -68,13 +68,15 @@ struct SuffixLess_<TSAValue, TText, void> :
 
     SuffixLess_(TText const &text):
         _begin(begin(text, Standard())),
-        _end(end(text, Standard())) {}
+        _end(end(text, Standard()))
+    {}
 
     // skip the first <offset> characters
     template <typename TSize>
     SuffixLess_(TText const &text, TSize offset):
         _begin(begin(text, Standard()) + offset),
-        _end(end(text, Standard())) {}
+        _end(end(text, Standard()))
+    {}
 
     inline bool operator() (TSAValue const a, TSAValue const b) const 
     {
@@ -112,13 +114,15 @@ struct SuffixLess_<TSAValue, StringSet<TString, TSetSpec> const, void > :
     typename Size<TString>::Type _offset;
 
     SuffixLess_(TText &text):
-        _text(text), _offset(0) {}
+        _text(text), _offset(0)
+    {}
 
     // skip the first <offset> characters
     template <typename TSize>
     SuffixLess_(TText &text, TSize offset):
         _text(text),
-        _offset(offset) {}
+        _offset(offset)
+    {}
     
     inline bool operator() (TSAValue const a, TSAValue const b) const 
     {
@@ -354,6 +358,7 @@ inline void _initializeSA(TSA & sa, TString const & /**/)
     for(TSAVal i = 0; it != itEnd; ++it, ++i)
         *it = i;
 }
+
 template <typename TSA, typename TString, typename TSpec>
 inline void _initializeSA(TSA & sa, StringSet<TString, TSpec> const & strSet)
 {
@@ -502,11 +507,13 @@ inline void createGappedSuffixArray(
 			createSuffixArray(sa, text, SAQSort());
 		}
 
-		inline typename Value<TSource>::Type const & operator*() {
+		inline typename Value<TSource>::Type const & operator*()
+        {
             return *in;
         }
         
-        inline Pipe& operator++() {
+        inline Pipe& operator++()
+        {
             ++in;
             return *this;
         }        
