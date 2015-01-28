@@ -475,6 +475,13 @@ format(SmartFile<TFileType, TDirection, TSpec> & file)
     return file.format;
 }
 
+template <typename TFileFormat, typename TDirection, typename TSpec>
+inline typename FileFormat<FormattedFile<TFileFormat, TDirection, TSpec> >::Type const &
+format(FormattedFile<TFileFormat, TDirection, TSpec> const & file)
+{
+    return file.format;
+}
+
 // ----------------------------------------------------------------------------
 // Function setFormat()
 // ----------------------------------------------------------------------------
